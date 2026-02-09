@@ -24,11 +24,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ultra-simple POST test (before any middleware)
-app.post('/health/raw-post', (req, res) => {
-  res.json({ ok: true, method: 'POST', timestamp: new Date().toISOString() });
-});
-
 // Middlewares
 app.use(helmet());
 app.use(cors());
@@ -44,49 +39,6 @@ app.use('/api/', limiter);
 // Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Test POST body parsing (temporary debug)
-app.post('/health/test-post', async (req, res) => {
-  try {
-    return res.json({ 
-      bodyReceived: !!req.body,
-      bodyKeys: req.body ? Object.keys(req.body) : [],
-      email: req.body?.email || 'NOT_FOUND',
-      hasPassword: !!req.body?.password,
-      contentType: req.headers['content-type'],
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-// Test login directly (temporary debug)
-app.get('/health/test-login', async (_req, res) => {
-  try {
-    const { prisma } = await import('./utils/prisma');
-    const bcrypt = await import('bcryptjs');
-    
-    const user = await prisma.user.findUnique({ 
-      where: { email: 'felicio@taxcreditenterprise.com' } 
-    });
-    
-    if (!user) {
-      return res.json({ status: 'error', message: 'User not found' });
-    }
-    
-    const validPw = await bcrypt.default.compare('Ffc318798@', user.password);
-    
-    return res.json({ 
-      status: 'ok',
-      userFound: true,
-      userName: user.name,
-      role: user.role,
-      passwordValid: validPw,
-    });
-  } catch (err: any) {
-    return res.status(500).json({ status: 'error', message: err.message, stack: err.stack?.substring(0, 300) });
-  }
 });
 
 // DB health check
