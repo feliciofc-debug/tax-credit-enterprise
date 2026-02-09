@@ -53,25 +53,20 @@ export default function AdminParceirosPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (data.success) {
-        fetchPartners();
-      }
+      if (data.success) fetchPartners();
     } catch {} finally {
       setActionLoading(null);
     }
   };
 
-  const filtered = partners.filter(p => {
-    if (filter === 'all') return true;
-    return p.status === filter;
-  });
+  const filtered = partners.filter(p => filter === 'all' || p.status === filter);
 
   const statusColor = (s: string) => {
     switch (s) {
-      case 'active': return 'text-green-400 bg-green-900/30';
-      case 'pending': return 'text-yellow-400 bg-yellow-900/30';
-      case 'rejected': return 'text-red-400 bg-red-900/30';
-      default: return 'text-gray-400 bg-gray-800';
+      case 'active': return 'text-green-700 bg-green-100';
+      case 'pending': return 'text-yellow-700 bg-yellow-100';
+      case 'rejected': return 'text-red-700 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -102,19 +97,19 @@ export default function AdminParceirosPage() {
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Gerenciar Parceiros</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Gerenciar Parceiros</h1>
         <p className="text-gray-500 mt-1">Visualize, aprove e gerencie os parceiros da plataforma</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Total', value: counts.all, color: 'text-white' },
-          { label: 'Pendentes', value: counts.pending, color: 'text-yellow-400' },
-          { label: 'Ativos', value: counts.active, color: 'text-green-400' },
-          { label: 'Rejeitados', value: counts.rejected, color: 'text-red-400' },
+          { label: 'Total', value: counts.all, color: 'text-gray-900' },
+          { label: 'Pendentes', value: counts.pending, color: 'text-yellow-600' },
+          { label: 'Ativos', value: counts.active, color: 'text-green-600' },
+          { label: 'Rejeitados', value: counts.rejected, color: 'text-red-600' },
         ].map(s => (
-          <div key={s.label} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <div key={s.label} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <p className="text-gray-500 text-xs">{s.label}</p>
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
           </div>
@@ -122,7 +117,7 @@ export default function AdminParceirosPage() {
       </div>
 
       {/* Filter tabs */}
-      <div className="flex items-center gap-1 mb-4 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit">
+      <div className="flex items-center gap-1 mb-4 bg-white border border-gray-200 rounded-xl p-1 w-fit shadow-sm">
         {([
           { key: 'all', label: 'Todos' },
           { key: 'pending', label: 'Pendentes' },
@@ -134,8 +129,8 @@ export default function AdminParceirosPage() {
             onClick={() => setFilter(tab.key)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               filter === tab.key
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                ? 'bg-indigo-700 text-white'
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
             {tab.label} ({counts[tab.key]})
@@ -144,29 +139,29 @@ export default function AdminParceirosPage() {
       </div>
 
       {/* Partner List */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         {filtered.length === 0 ? (
           <div className="p-12 text-center">
-            <svg className="w-12 h-12 text-gray-700 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+            <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             <p className="text-gray-500 font-medium">Nenhum parceiro encontrado</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
+          <div className="divide-y divide-gray-100">
             {filtered.map(partner => (
-              <div key={partner.id} className="p-5 hover:bg-gray-800/50 transition-colors">
+              <div key={partner.id} className="p-5 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
-                      <div className="w-10 h-10 bg-indigo-600/20 rounded-full flex items-center justify-center">
-                        <span className="text-indigo-400 font-bold text-sm">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <span className="text-indigo-700 font-bold text-sm">
                           {partner.name.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="text-white font-semibold text-sm">{partner.name}</h3>
+                          <h3 className="text-gray-900 font-semibold text-sm">{partner.name}</h3>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${statusColor(partner.status)}`}>
                             {statusLabel(partner.status)}
                           </span>
@@ -193,7 +188,7 @@ export default function AdminParceirosPage() {
                           {partner.phone}
                         </span>
                       )}
-                      <span>Comissao: <strong className="text-white">{partner.commissionPercent}%</strong></span>
+                      <span>Comissao: <strong className="text-gray-900">{partner.commissionPercent}%</strong></span>
                       <span>{partner._count.viabilityAnalyses} viabilidades</span>
                       <span>{partner._count.contracts} contratos</span>
                       <span>{partner._count.invites} convites</span>
@@ -215,7 +210,7 @@ export default function AdminParceirosPage() {
                         <button
                           onClick={() => handleAction(partner.id, 'reject')}
                           disabled={actionLoading === partner.id}
-                          className="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                          className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 border border-red-200"
                         >
                           Rejeitar
                         </button>
@@ -225,13 +220,13 @@ export default function AdminParceirosPage() {
                       <button
                         onClick={() => handleAction(partner.id, 'approve')}
                         disabled={actionLoading === partner.id}
-                        className="px-4 py-2 bg-green-600/20 hover:bg-green-600/40 text-green-400 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                        className="px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 border border-green-200"
                       >
                         Reativar
                       </button>
                     )}
                     {partner.status === 'active' && (
-                      <span className="text-green-400 text-xs flex items-center gap-1">
+                      <span className="text-green-600 text-xs flex items-center gap-1">
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>

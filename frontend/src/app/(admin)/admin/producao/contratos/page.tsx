@@ -46,11 +46,11 @@ export default function AdminContratosPage() {
 
   const statusColor = (s: string) => {
     switch (s) {
-      case 'active': return 'text-green-400 bg-green-900/30';
-      case 'draft': return 'text-yellow-400 bg-yellow-900/30';
-      case 'pending_signature': return 'text-blue-400 bg-blue-900/30';
-      case 'completed': return 'text-purple-400 bg-purple-900/30';
-      default: return 'text-gray-400 bg-gray-800';
+      case 'active': return 'text-green-700 bg-green-100';
+      case 'draft': return 'text-yellow-700 bg-yellow-100';
+      case 'pending_signature': return 'text-blue-700 bg-blue-100';
+      case 'completed': return 'text-purple-700 bg-purple-100';
+      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -76,52 +76,52 @@ export default function AdminContratosPage() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Contratos</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Contratos</h1>
         <p className="text-gray-500 mt-1">Todos os contratos da plataforma</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <p className="text-gray-500 text-xs">Total</p>
-          <p className="text-2xl font-bold text-white">{contracts.length}</p>
+          <p className="text-2xl font-bold text-gray-900">{contracts.length}</p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <p className="text-gray-500 text-xs">Ativos</p>
-          <p className="text-2xl font-bold text-green-400">{contracts.filter(c => c.status === 'active').length}</p>
+          <p className="text-2xl font-bold text-green-600">{contracts.filter(c => c.status === 'active').length}</p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <p className="text-gray-500 text-xs">Taxas Pagas</p>
-          <p className="text-2xl font-bold text-indigo-400">{contracts.filter(c => c.setupFeePaid).length}</p>
+          <p className="text-2xl font-bold text-indigo-600">{contracts.filter(c => c.setupFeePaid).length}</p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
           <p className="text-gray-500 text-xs">Total Recuperado</p>
-          <p className="text-2xl font-bold text-emerald-400">
+          <p className="text-2xl font-bold text-green-700">
             {formatCurrency(contracts.reduce((sum, c) => sum + (c.totalRecovered || 0), 0))}
           </p>
         </div>
       </div>
 
       {/* Contracts List */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         {contracts.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-gray-500">Nenhum contrato criado ainda.</p>
-            <p className="text-gray-600 text-sm mt-1">Crie convites e os clientes poderao assinar contratos.</p>
+            <p className="text-gray-400 text-sm mt-1">Crie convites e os clientes poderao assinar contratos.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
+          <div className="divide-y divide-gray-100">
             {contracts.map(c => (
-              <div key={c.id} className="p-4 hover:bg-gray-800/50 transition-colors">
+              <div key={c.id} className="p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-3">
-                      <p className="text-white font-medium">{c.contractNumber}</p>
+                      <p className="text-gray-900 font-medium">{c.contractNumber}</p>
                       <span className={`text-xs px-2 py-0.5 rounded ${statusColor(c.status)}`}>
                         {statusLabel(c.status)}
                       </span>
                     </div>
-                    <p className="text-gray-400 text-sm mt-1">
+                    <p className="text-gray-500 text-sm mt-1">
                       Cliente: {c.client?.name || c.client?.company || 'N/A'} 
                       {c.client?.email && ` (${c.client.email})`}
                     </p>
@@ -133,8 +133,8 @@ export default function AdminContratosPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-green-400 font-bold">{formatCurrency(c.totalRecovered || 0)}</p>
-                    <p className="text-gray-500 text-xs">recuperado</p>
+                    <p className="text-green-700 font-bold">{formatCurrency(c.totalRecovered || 0)}</p>
+                    <p className="text-gray-400 text-xs">recuperado</p>
                   </div>
                 </div>
               </div>

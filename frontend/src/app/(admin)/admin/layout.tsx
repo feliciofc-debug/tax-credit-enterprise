@@ -79,22 +79,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isActive = (href: string) => pathname === href || pathname?.startsWith(href + '/');
 
   return (
-    <div className="min-h-screen bg-gray-950 flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-gray-900 border-r border-gray-800 flex flex-col transition-all duration-200 shrink-0`}>
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white border-r border-gray-200 flex flex-col transition-all duration-200 shrink-0`}>
         {/* Logo */}
-        <div className="p-4 border-b border-gray-800">
+        <div className="p-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shrink-0 hover:bg-red-700 transition-colors"
+              className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shrink-0 hover:bg-red-700 transition-colors shadow-sm"
             >
               <span className="text-white font-bold text-lg">T</span>
             </button>
             {sidebarOpen && (
               <div>
-                <h1 className="text-white font-bold text-sm">TaxCredit</h1>
-                <p className="text-gray-500 text-xs">Administrador</p>
+                <h1 className="text-gray-900 font-bold text-sm">TaxCredit</h1>
+                <p className="text-gray-400 text-xs">Administrador</p>
               </div>
             )}
           </div>
@@ -103,7 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Menu */}
         <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
           {sidebarOpen && (
-            <p className="text-[10px] text-gray-600 uppercase tracking-widest px-3 py-2 font-bold">Gestao</p>
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest px-3 py-2 font-bold">Gestao</p>
           )}
           {menuItems.filter(i => i.section === 'gestao').map(item => {
             const active = isActive(item.href);
@@ -113,15 +113,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   active
-                    ? 'bg-red-600/20 text-red-400 font-semibold' 
-                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                    ? 'bg-red-50 text-red-700 font-semibold' 
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
                 title={item.label}
               >
                 <span className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${
-                  active ? 'bg-red-600/30' : 'bg-gray-800'
+                  active ? 'bg-red-100' : 'bg-gray-100'
                 }`}>
-                  <svg className={`w-4 h-4 ${active ? 'text-red-400' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className={`w-4 h-4 ${active ? 'text-red-600' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                   </svg>
                 </span>
@@ -132,7 +132,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <div className="pt-2">
             {sidebarOpen && (
-              <p className="text-[10px] text-gray-600 uppercase tracking-widest px-3 py-2 font-bold">Producao</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest px-3 py-2 font-bold">Producao</p>
             )}
             {menuItems.filter(i => i.section === 'producao').map(item => {
               const active = isActive(item.href);
@@ -142,15 +142,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                     active
-                      ? 'bg-indigo-600/20 text-indigo-400 font-semibold' 
-                      : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                      ? 'bg-indigo-50 text-indigo-700 font-semibold' 
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                   title={item.label}
                 >
                   <span className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${
-                    active ? 'bg-indigo-600/30' : 'bg-gray-800'
+                    active ? 'bg-indigo-100' : 'bg-gray-100'
                   }`}>
-                    <svg className={`w-4 h-4 ${active ? 'text-indigo-400' : 'text-gray-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <svg className={`w-4 h-4 ${active ? 'text-indigo-600' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                     </svg>
                   </span>
@@ -162,21 +162,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         {/* User */}
-        <div className="p-3 border-t border-gray-800">
+        <div className="p-3 border-t border-gray-100">
           {sidebarOpen ? (
             <div className="flex items-center justify-between">
               <div className="min-w-0">
-                <p className="text-white text-sm font-medium truncate">{user?.name || 'Admin'}</p>
-                <p className="text-gray-500 text-xs truncate">{user?.email}</p>
+                <p className="text-gray-900 text-sm font-medium truncate">{user?.name || 'Admin'}</p>
+                <p className="text-gray-400 text-xs truncate">{user?.email}</p>
               </div>
-              <button onClick={handleLogout} className="text-gray-500 hover:text-red-400 transition-colors ml-2" title="Sair">
+              <button onClick={handleLogout} className="text-gray-400 hover:text-red-600 transition-colors ml-2" title="Sair">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                 </svg>
               </button>
             </div>
           ) : (
-            <button onClick={handleLogout} className="w-full flex justify-center text-gray-500 hover:text-red-400" title="Sair">
+            <button onClick={handleLogout} className="w-full flex justify-center text-gray-400 hover:text-red-600" title="Sair">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
               </svg>
