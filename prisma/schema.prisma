@@ -1,0 +1,343 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String?
+  company       String?
+  cnpj          String?
+  regime        String?  // lucro_real, lucro_presumido, simples
+  role          String   @default("user") // user, admin, partner
+
+  // Se for cliente convidado por parceiro
+  invitedByPartnerId String?
+  invitedByPartner   Partner? @relation("InvitedUsers", fields: [invitedByPartnerId], references: [id])
+  inviteCode         String?  // codigo usado no cadastro
+
+  // Docs de identidade do responsavel legal
+  legalRepName       String?
+  legalRepCpf        String?
+  legalRepIdDocUrl   String?  // URL do doc de identidade
+  contratoSocialUrl  String?  // URL do contrato social
+  onboardingComplete Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  batchJobs     BatchJob[]
+  documents     Document[]
+  contracts     Contract[] @relation("ClientContracts")
+  
+  @@index([email])
+  @@index([invitedByPartnerId])
+}
+
+// ============================================
+// PARCEIRO (Advogado Tributarista, Escritorio)
+// ============================================
+model Partner {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String
+  oabNumber     String?  // Registro OAB
+  oabState      String?  // UF da OAB
+  company       String?  // Nome do escritorio
+  cnpj          String?
+  phone         String?
+  
+  // Configuracao de comissao sobre creditos recuperados
+  commissionPercent Float   @default(50) // % que o parceiro recebe (50/50)
+  
+  // Status: pending_approval, active, suspended
+  status        String   @default("pending_approval")
+  approvedAt    DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relacoes
+  viabilityAnalyses ViabilityAnalysis[]
+  invites           ClientInvite[]
+  contracts         Contract[]
+  invitedUsers      User[] @relation("InvitedUsers")
+  
+  @@index([email])
+  @@index([status])
+}
+
+// ============================================
+// ANALISE DE VIABILIDADE (score rapido)
+// ============================================
+model ViabilityAnalysis {
+  id            String   @id @default(uuid())
+  partnerId     String
+  partner       Partner  @relation(fields: [partnerId], references: [id])
+  
+  // Dados da empresa alvo
+  companyName   String
+  cnpj          String?
+  regime        String?  // lucro_real, lucro_presumido, simples
+  sector        String?  // Setor de atuacao
+  annualRevenue Float?   // Faturamento anual estimado
+  
+  // Documentos enviados para analise rapida
+  docsUploaded  Int      @default(0)
+  docsText      String?  @db.Text // texto extraido para analise
+  
+  // Resultado da IA
+  viabilityScore  Int?     // 0-100
+  scoreLabel      String?  // "excelente", "bom", "medio", "baixo", "inviavel"
+  estimatedCredit Float?   // Valor estimado de credito
+  opportunities   String?  @db.Text // JSON resumo de oportunidades
+  aiSummary       String?  @db.Text // Parecer rapido da IA
+  risks           String?  @db.Text // JSON riscos identificados
+  
+  // Status: pending, analyzing, completed, expired
+  status        String   @default("pending")
+  
+  // Se virou contrato
+  convertedToContractId String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([partnerId])
+  @@index([status])
+  @@index([viabilityScore])
+}
+
+// ============================================
+// CONVITE (parceiro gera codigo para cliente)
+// ============================================
+model ClientInvite {
+  id            String   @id @default(uuid())
+  partnerId     String
+  partner       Partner  @relation(fields: [partnerId], references: [id])
+  
+  // Codigo de acesso unico
+  inviteCode    String   @unique
+  
+  // Dados do cliente alvo
+  clientEmail   String?
+  clientName    String?
+  companyName   String
+  cnpj          String?
+  
+  // Referencia a viabilidade
+  viabilityAnalysisId String?
+  
+  // Status: active, used, expired, revoked
+  status        String   @default("active")
+  usedAt        DateTime?
+  usedByUserId  String?  // User que usou o convite
+  
+  expiresAt     DateTime // Validade do convite
+  createdAt     DateTime @default(now())
+  
+  @@index([inviteCode])
+  @@index([partnerId])
+  @@index([status])
+}
+
+// ============================================
+// CONTRATO DIGITAL
+// ============================================
+model Contract {
+  id            String   @id @default(uuid())
+  
+  // Partes
+  partnerId     String
+  partner       Partner  @relation(fields: [partnerId], references: [id])
+  clientId      String
+  client        User     @relation("ClientContracts", fields: [clientId], references: [id])
+  
+  // Taxa inicial R$ 2.000 (R$ 800 parceiro + R$ 1.200 plataforma)
+  setupFee            Float    @default(2000)
+  setupFeePartner     Float    @default(800)   // R$ 800 para o advogado
+  setupFeePlatform    Float    @default(1200)   // R$ 1.200 para a plataforma
+  setupFeePaid        Boolean  @default(false)
+  setupFeePaidAt      DateTime?
+  
+  // Split de receita sobre creditos recuperados (50/50)
+  partnerSplitPercent  Float  @default(50)  // % parceiro
+  platformSplitPercent Float  @default(50)  // % TaxCredit
+  
+  // Apos pagamento da taxa, libera:
+  consultaLiberada     Boolean @default(false) // Consulta completa
+  formalizacaoLiberada Boolean @default(false) // Formalizacao do processo
+  
+  // Detalhes do contrato
+  contractNumber  String  @unique
+  contractText    String? @db.Text  // Texto completo do contrato
+  
+  // Assinaturas
+  partnerSignedAt  DateTime?
+  clientSignedAt   DateTime?
+  partnerSignatureIp String?
+  clientSignatureIp  String?
+  
+  // Status: draft, pending_payment, pending_signatures, active, completed, cancelled
+  status          String  @default("draft")
+  
+  // Valores realizados
+  totalRecovered  Float   @default(0)
+  partnerEarnings Float   @default(0)
+  platformEarnings Float  @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([partnerId])
+  @@index([clientId])
+  @@index([status])
+}
+
+model BatchJob {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name              String?
+  status            String   @default("pending") // pending, processing, completed, failed
+  totalDocuments    Int      @default(0)
+  processedDocs     Int      @default(0)
+  failedDocs        Int      @default(0)
+  
+  // Totais consolidados
+  totalEstimatedValue Float  @default(0)
+  totalOpportunities  Int    @default(0)
+  
+  // Metadados
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  documents         Document[]
+  consolidatedReport String?  @db.Text // JSON do relatório consolidado
+  
+  @@index([userId, status])
+  @@index([createdAt])
+}
+
+model Document {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  batchJobId        String?
+  batchJob          BatchJob? @relation(fields: [batchJobId], references: [id], onDelete: SetNull)
+  
+  // Informações do documento
+  fileName          String
+  fileSize          Int
+  mimeType          String
+  documentType      String   // dre, balanço, balancete
+  
+  // Extração automática
+  extractedPeriod   String?  // "2024-Q1", "2023", "2024-01"
+  extractedYear     Int?
+  extractedMonth    Int?
+  extractedQuarter  Int?
+  
+  // Dados da empresa
+  companyName       String?
+  cnpj              String?
+  regime            String?
+  
+  // Status do processamento
+  status            String   @default("pending") // pending, processing, completed, failed, ocr_needed
+  processingError   String?  @db.Text
+  
+  // Texto extraído
+  extractedText     String?  @db.Text
+  
+  // Timestamps
+  uploadedAt        DateTime @default(now())
+  processedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  analysis          Analysis?
+  
+  @@index([userId, status])
+  @@index([batchJobId])
+  @@index([extractedYear, extractedMonth])
+}
+
+model Analysis {
+  id                String   @id @default(uuid())
+  documentId        String   @unique
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  // Resultado da análise
+  opportunities     String   @db.Text // JSON array of TaxCreditOpportunity
+  executiveSummary  String   @db.Text
+  totalEstimatedValue Float
+  recommendations   String   @db.Text // JSON array
+  alerts            String   @db.Text // JSON array
+  
+  // Metadados da análise
+  modelUsed         String   // claude-opus-4-20250514 ou claude-sonnet-4-20250514
+  tokensUsed        Int?
+  processingTimeMs  Int?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  taxCreditProcesses TaxCreditProcess[]
+  
+  @@index([totalEstimatedValue])
+  @@index([createdAt])
+}
+
+model TaxCreditProcess {
+  id                String   @id @default(uuid())
+  analysisId        String
+  analysis          Analysis @relation(fields: [analysisId], references: [id])
+  
+  opportunityIndex  Int
+  opportunityType   String
+  estimatedValue    Float
+  
+  // Status: docs_generated, ready_to_file, filed, approved, rejected
+  status            String   @default("docs_generated")
+  
+  // Documentacao
+  docsGeneratedAt   DateTime @default(now())
+  docsZipPath       String?
+  
+  // Protocolo
+  protocolNumber    String?
+  protocolDate      DateTime?
+  
+  // Acompanhamento
+  responseStatus    String?
+  recoveredValue    Float?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([status])
+}
+
+model SystemConfig {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  value             String   @db.Text
+  description       String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

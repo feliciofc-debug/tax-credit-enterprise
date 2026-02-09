@@ -1,0 +1,136 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String?
+  company       String?
+  cnpj          String?
+  regime        String?  // lucro_real, lucro_presumido, simples
+  role          String   @default("user") // user, admin
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  batchJobs     BatchJob[]
+  documents     Document[]
+  
+  @@index([email])
+}
+
+model BatchJob {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name              String?
+  status            String   @default("pending") // pending, processing, completed, failed
+  totalDocuments    Int      @default(0)
+  processedDocs     Int      @default(0)
+  failedDocs        Int      @default(0)
+  
+  // Totais consolidados
+  totalEstimatedValue Float  @default(0)
+  totalOpportunities  Int    @default(0)
+  
+  // Metadados
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  documents         Document[]
+  consolidatedReport String?  @db.Text // JSON do relatório consolidado
+  
+  @@index([userId, status])
+  @@index([createdAt])
+}
+
+model Document {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  batchJobId        String?
+  batchJob          BatchJob? @relation(fields: [batchJobId], references: [id], onDelete: SetNull)
+  
+  // Informações do documento
+  fileName          String
+  fileSize          Int
+  mimeType          String
+  documentType      String   // dre, balanço, balancete
+  
+  // Extração automática
+  extractedPeriod   String?  // "2024-Q1", "2023", "2024-01"
+  extractedYear     Int?
+  extractedMonth    Int?
+  extractedQuarter  Int?
+  
+  // Dados da empresa
+  companyName       String?
+  cnpj              String?
+  regime            String?
+  
+  // Status do processamento
+  status            String   @default("pending") // pending, processing, completed, failed, ocr_needed
+  processingError   String?  @db.Text
+  
+  // Texto extraído
+  extractedText     String?  @db.Text
+  
+  // Timestamps
+  uploadedAt        DateTime @default(now())
+  processedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  analysis          Analysis?
+  
+  @@index([userId, status])
+  @@index([batchJobId])
+  @@index([extractedYear, extractedMonth])
+}
+
+model Analysis {
+  id                String   @id @default(uuid())
+  documentId        String   @unique
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  // Resultado da análise
+  opportunities     String   @db.Text // JSON array of TaxCreditOpportunity
+  executiveSummary  String   @db.Text
+  totalEstimatedValue Float
+  recommendations   String   @db.Text // JSON array
+  alerts            String   @db.Text // JSON array
+  
+  // Metadados da análise
+  modelUsed         String   // claude-opus-4-20250514 ou claude-sonnet-4-20250514
+  tokensUsed        Int?
+  processingTimeMs  Int?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([totalEstimatedValue])
+  @@index([createdAt])
+}
+
+model SystemConfig {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  value             String   @db.Text
+  description       String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
