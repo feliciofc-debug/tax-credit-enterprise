@@ -17,6 +17,7 @@ import viabilityRoutes from './routes/viability.routes';
 import inviteRoutes from './routes/invite.routes';
 import contractRoutes from './routes/contract.routes';
 import adminRoutes from './routes/admin.routes';
+import authRoutes from './routes/auth.routes';
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ app.use('/api/viability', viabilityRoutes);
 app.use('/api/invite', inviteRoutes);
 app.use('/api/contract', contractRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
 
 // Error handling
 app.use(errorHandler);
