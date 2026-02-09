@@ -41,6 +41,21 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test POST body parsing (temporary debug)
+app.post('/health/test-post', async (req, res) => {
+  try {
+    return res.json({ 
+      bodyReceived: !!req.body,
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+      email: req.body?.email || 'NOT_FOUND',
+      hasPassword: !!req.body?.password,
+      contentType: req.headers['content-type'],
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // Test login directly (temporary debug)
 app.get('/health/test-login', async (_req, res) => {
   try {
