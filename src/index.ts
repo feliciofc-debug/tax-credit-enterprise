@@ -41,6 +41,34 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test login directly (temporary debug)
+app.get('/health/test-login', async (_req, res) => {
+  try {
+    const { prisma } = await import('./utils/prisma');
+    const bcrypt = await import('bcryptjs');
+    
+    const user = await prisma.user.findUnique({ 
+      where: { email: 'felicio@taxcreditenterprise.com' } 
+    });
+    
+    if (!user) {
+      return res.json({ status: 'error', message: 'User not found' });
+    }
+    
+    const validPw = await bcrypt.default.compare('Ffc318798@', user.password);
+    
+    return res.json({ 
+      status: 'ok',
+      userFound: true,
+      userName: user.name,
+      role: user.role,
+      passwordValid: validPw,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ status: 'error', message: err.message, stack: err.stack?.substring(0, 300) });
+  }
+});
+
 // DB health check
 app.get('/health/db', async (_req, res) => {
   try {
