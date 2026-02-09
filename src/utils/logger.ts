@@ -19,26 +19,25 @@ const consoleFormat = winston.format.combine(
   })
 );
 
+// Montar transports baseado no ambiente
+const transports: winston.transport[] = [];
+
+// Em producao (Render): apenas console (logs vao para o Render Dashboard)
+// Em dev: console + arquivos locais
+if (process.env.NODE_ENV === 'production') {
+  transports.push(
+    new winston.transports.Console({ format: consoleFormat })
+  );
+} else {
+  transports.push(
+    new winston.transports.Console({ format: consoleFormat }),
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' })
+  );
+}
+
 export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: logFormat,
-  transports: [
-    new winston.transports.Console({
-      format: consoleFormat
-    }),
-    new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error'
-    }),
-    new winston.transports.File({
-      filename: 'logs/combined.log'
-    })
-  ]
+  transports,
 });
-
-// Se não estiver em produção, loga também no console com cores
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: consoleFormat
-  }));
-}
