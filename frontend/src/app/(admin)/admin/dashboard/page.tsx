@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 interface DashboardData {
   users: { total: number };
@@ -18,7 +17,6 @@ interface DashboardData {
 }
 
 export default function AdminDashboardPage() {
-  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,13 +24,9 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
     const savedUser = localStorage.getItem('user');
 
-    if (!token || role !== 'admin') {
-      router.push('/admin');
-      return;
-    }
+    if (!token) return;
 
     if (savedUser) {
       try { setUser(JSON.parse(savedUser)); } catch {}
@@ -59,13 +53,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
-    router.push('/admin');
-  };
-
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
@@ -82,33 +69,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      {/* Header */}
-      <header className="bg-gray-900 border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">A</span>
-            </div>
-            <div>
-              <h1 className="text-white font-bold text-lg">Admin TaxCredit</h1>
-              <p className="text-gray-500 text-xs">Painel Administrativo</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            {user && (
-              <span className="text-gray-400 text-sm hidden sm:block">{user.name}</span>
-            )}
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors"
-            >
-              Sair
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
         {/* Welcome */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-white">
@@ -260,7 +221,7 @@ export default function AdminDashboardPage() {
             </div>
           </>
         )}
-      </main>
+      </div>
     </div>
   );
 }

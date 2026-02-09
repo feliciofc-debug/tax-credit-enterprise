@@ -3,6 +3,7 @@ import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import { sendPaymentConfirmationEmail } from '../services/email.service';
+import { getOperatorPartnerId } from '../utils/operator';
 import crypto from 'crypto';
 
 const router = Router();
@@ -17,9 +18,9 @@ const router = Router();
  */
 router.post('/create', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const partnerId = (req as any).user.partnerId;
+    const partnerId = await getOperatorPartnerId((req as any).user);
     if (!partnerId) {
-      return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros' });
+      return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros e administradores' });
     }
 
     const { clientId, setupFee, partnerSplitPercent, platformSplitPercent, adminPassword } = req.body;
@@ -131,12 +132,19 @@ router.post('/:id/sign', authenticateToken, async (req: Request, res: Response) 
 
     const updateData: any = {};
 
-    if (user.partnerId && user.partnerId === contract.partnerId) {
+    // Admin pode assinar como parceiro da plataforma
+    const operatorPartnerId = user.partnerId || (user.role === 'admin' ? await getOperatorPartnerId(user) : null);
+    
+    if (operatorPartnerId && operatorPartnerId === contract.partnerId) {
       updateData.partnerSignedAt = new Date();
       updateData.partnerSignatureIp = String(ip);
     } else if (user.userId && user.userId === contract.clientId) {
       updateData.clientSignedAt = new Date();
       updateData.clientSignatureIp = String(ip);
+    } else if (user.role === 'admin') {
+      // Admin pode assinar qualquer contrato como representante da plataforma
+      updateData.partnerSignedAt = new Date();
+      updateData.partnerSignatureIp = String(ip);
     } else {
       return res.status(403).json({ success: false, error: 'Voce nao e parte deste contrato' });
     }
@@ -231,7 +239,9 @@ router.get('/list', authenticateToken, async (req: Request, res: Response) => {
     const user = (req as any).user;
     const where: any = {};
 
-    if (user.partnerId) {
+    if (user.role === 'admin') {
+      // Admin ve todos os contratos
+    } else if (user.partnerId) {
       where.partnerId = user.partnerId;
     } else if (user.userId) {
       where.clientId = user.userId;

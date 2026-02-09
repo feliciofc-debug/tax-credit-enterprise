@@ -3,6 +3,7 @@ import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import { sendInviteEmail } from '../services/email.service';
+import { getOperatorPartnerId } from '../utils/operator';
 import crypto from 'crypto';
 
 const router = Router();
@@ -13,9 +14,9 @@ const router = Router();
  */
 router.post('/create', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const partnerId = (req as any).user.partnerId;
+    const partnerId = await getOperatorPartnerId((req as any).user);
     if (!partnerId) {
-      return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros' });
+      return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros e administradores' });
     }
 
     const { clientEmail, clientName, companyName, cnpj, viabilityAnalysisId } = req.body;
@@ -82,7 +83,7 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
  */
 router.get('/list', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const partnerId = (req as any).user.partnerId;
+    const partnerId = await getOperatorPartnerId((req as any).user);
     if (!partnerId) {
       return res.status(403).json({ success: false, error: 'Acesso restrito' });
     }
@@ -150,10 +151,10 @@ router.get('/validate/:code', async (req: Request, res: Response) => {
  */
 router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const partnerId = (req as any).user.partnerId;
+    const partnerId = await getOperatorPartnerId((req as any).user);
     const { id } = req.params;
 
-    const invite = await prisma.clientInvite.findFirst({ where: { id, partnerId } });
+    const invite = await prisma.clientInvite.findFirst({ where: { id, partnerId: partnerId || undefined } });
     if (!invite) {
       return res.status(404).json({ success: false, error: 'Convite nao encontrado' });
     }

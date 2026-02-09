@@ -8,6 +8,7 @@ import os from 'os';
 import fs from 'fs/promises';
 import Anthropic from '@anthropic-ai/sdk';
 import pdfParse from 'pdf-parse';
+import { getOperatorPartnerId } from '../utils/operator';
 
 let aiClient: Anthropic | null = null;
 try {
@@ -43,9 +44,9 @@ const upload = multer({
  */
 router.post('/analyze', authenticateToken, upload.array('documents', 10), async (req: Request, res: Response) => {
   try {
-    const partnerId = (req as any).user.partnerId;
+    const partnerId = await getOperatorPartnerId((req as any).user);
     if (!partnerId) {
-      return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros' });
+      return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros e administradores' });
     }
 
     const { companyName, cnpj, regime, sector, annualRevenue } = req.body;
@@ -147,7 +148,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
  */
 router.get('/list', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const partnerId = (req as any).user.partnerId;
+    const partnerId = await getOperatorPartnerId((req as any).user);
     if (!partnerId) {
       return res.status(403).json({ success: false, error: 'Acesso restrito' });
     }
@@ -175,11 +176,11 @@ router.get('/list', authenticateToken, async (req: Request, res: Response) => {
  */
 router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const partnerId = (req as any).user.partnerId;
+    const partnerId = await getOperatorPartnerId((req as any).user);
     const { id } = req.params;
 
     const viability = await prisma.viabilityAnalysis.findFirst({
-      where: { id, partnerId },
+      where: { id, partnerId: partnerId || undefined },
     });
 
     if (!viability) {
