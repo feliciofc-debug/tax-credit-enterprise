@@ -185,7 +185,7 @@ export class TaxCreditDocumentationService {
     });
 
     // Totalizadores
-    const lastRow = sheet.lastRow.number + 2;
+    const lastRow = (sheet.lastRow?.number || 5) + 2;
     sheet.getCell(`A${lastRow}`).value = 'TOTAL';
     sheet.getCell(`A${lastRow}`).font = { bold: true };
     sheet.getCell(`E${lastRow}`).value = opportunity.valorEstimado || 0;
@@ -199,7 +199,7 @@ export class TaxCreditDocumentationService {
       fgColor: { argb: 'FF4472C4' }
     };
 
-    return await workbook.xlsx.writeBuffer() as Buffer;
+    return await workbook.xlsx.writeBuffer() as unknown as Buffer;
   }
 
   /**
