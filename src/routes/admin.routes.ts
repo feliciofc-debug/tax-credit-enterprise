@@ -60,7 +60,12 @@ router.post('/register', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error('Error registering admin:', error);
-    return res.status(500).json({ success: false, error: 'Erro ao registrar admin' });
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Erro ao registrar admin',
+      debug: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+      debugDetail: error.message || 'unknown error',
+    });
   }
 });
 
