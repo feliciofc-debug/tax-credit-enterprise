@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
+import { sendPaymentConfirmationEmail } from '../services/email.service';
 import crypto from 'crypto';
 
 const router = Router();
@@ -197,6 +198,12 @@ router.post('/:id/confirm-payment', authenticateToken, async (req: Request, res:
 
     logger.info(`Payment confirmed for contract ${contract.contractNumber}. Consultation and formalization unlocked.`);
     logger.info(`Fee split: R$ ${contract.setupFeePartner} partner / R$ ${contract.setupFeePlatform} platform`);
+
+    // Enviar email de confirmacao ao cliente
+    const client = await prisma.user.findUnique({ where: { id: contract.clientId } });
+    if (client?.email) {
+      await sendPaymentConfirmationEmail(client.email, client.name || 'Cliente');
+    }
 
     return res.json({
       success: true,

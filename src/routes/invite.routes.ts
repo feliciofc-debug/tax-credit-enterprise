@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
+import { sendInviteEmail } from '../services/email.service';
 import crypto from 'crypto';
 
 const router = Router();
@@ -46,14 +47,27 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
 
     logger.info(`Invite created: ${invite.inviteCode} by partner ${partnerId}`);
 
+    // Enviar email de convite se tiver email do cliente
+    let emailSent = false;
+    if (clientEmail) {
+      const partner = await prisma.partner.findUnique({ where: { id: partnerId } });
+      emailSent = await sendInviteEmail(
+        clientEmail,
+        clientName || '',
+        partner?.name || partner?.company || 'Escritorio Parceiro',
+        companyName,
+        invite.inviteCode,
+      );
+    }
+
     return res.status(201).json({
       success: true,
       data: {
         inviteCode: invite.inviteCode,
         companyName: invite.companyName,
         expiresAt: invite.expiresAt,
-        // Link que o parceiro envia pro cliente
-        inviteLink: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/cadastro?code=${invite.inviteCode}`,
+        emailSent,
+        inviteLink: `${process.env.FRONTEND_URL || 'https://tax-credit-enterprise-92lv.vercel.app'}/cadastro?code=${invite.inviteCode}`,
       },
     });
   } catch (error: any) {
