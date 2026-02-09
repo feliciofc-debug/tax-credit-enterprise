@@ -250,22 +250,22 @@ export default function ViabilidadePage() {
                 {/* Split de creditos */}
                 <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-3">
                   <p className="text-sm text-indigo-800">
-                    <strong>Creditos recuperados: 50% / 50%</strong> (padrao)
+                    <strong>Creditos recuperados: 40% parceiro / 60% plataforma</strong> (padrao)
                   </p>
                   <p className="text-sm text-indigo-700 mt-1">
-                    Sem limite de ganho! Quanto maior o credito recuperado, maior seu retorno.
+                    Quanto maior o credito recuperado, maior seu retorno.
                   </p>
                 </div>
 
                 {/* Regra de negociacao */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
                   <p className="text-sm text-green-800">
-                    <strong>Acima de 20%:</strong> Aprovado automaticamente. Negocie livremente!
+                    <strong>40% padrao:</strong> Aprovado automaticamente, sem necessidade de autorizacao.
                   </p>
                 </div>
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <p className="text-sm text-yellow-800">
-                    <strong>Abaixo de 20%:</strong> Requer autorizacao do administrador TaxCredit.
+                    <strong>Negociacao diferente:</strong> Qualquer alteracao no percentual requer senha do administrador TaxCredit.
                   </p>
                 </div>
               </div>

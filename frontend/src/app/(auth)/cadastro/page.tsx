@@ -171,7 +171,7 @@ function ClientRegisterContent() {
                   <li>Acompanhamento juridico pelo escritorio parceiro</li>
                 </ul>
                 <p className="text-xs text-indigo-600 mt-2 font-medium">
-                  Sobre os creditos recuperados: 50% ficam com voce. Sem limite de ganho!
+                  Recupere creditos tributarios com apoio de IA e assessoria juridica completa.
                 </p>
               </div>
 

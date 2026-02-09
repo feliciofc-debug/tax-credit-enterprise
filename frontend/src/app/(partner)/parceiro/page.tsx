@@ -13,7 +13,7 @@ const demoStats = {
     totalInvites: 18,
     usedInvites: 12,
     activeContracts: 8,
-    totalEarnings: 225000,
+    totalEarnings: 180000,
   },
   recentViabilities: [
     { id: '1', companyName: 'Metalurgica ABC Ltda', viabilityScore: 92, scoreLabel: 'excelente', estimatedCredit: 450000, status: 'completed', createdAt: '2026-02-08T10:00:00Z' },

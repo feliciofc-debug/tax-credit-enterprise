@@ -27,14 +27,14 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
       return res.status(400).json({ success: false, error: 'clientId e obrigatorio' });
     }
 
-    const partnerSplit = partnerSplitPercent || 50;
+    const partnerSplit = partnerSplitPercent || 40;
 
-    // REGRA: Comissao abaixo de 20% requer senha do administrador
-    if (partnerSplit < 20) {
+    // REGRA: Qualquer percentual diferente de 40% requer senha do administrador
+    if (partnerSplit !== 40) {
       if (!adminPassword) {
         return res.status(403).json({
           success: false,
-          error: 'Comissao abaixo de 20% requer autorizacao do administrador',
+          error: 'Alterar o percentual padrao (40%) requer autorizacao do administrador',
           requiresAdminAuth: true,
         });
       }
@@ -49,7 +49,7 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
         });
       }
 
-      logger.info(`Admin authorized low commission contract: ${partnerSplit}% for partner ${partnerId}`);
+      logger.info(`Admin authorized custom commission contract: ${partnerSplit}% for partner ${partnerId}`);
     }
 
     // Verificar se o cliente existe

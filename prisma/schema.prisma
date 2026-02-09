@@ -57,7 +57,7 @@ model Partner {
   phone         String?
   
   // Configuracao de comissao sobre creditos recuperados
-  commissionPercent Float   @default(50) // % que o parceiro recebe (50/50)
+  commissionPercent Float   @default(40) // % que o parceiro recebe
   
   // Status: pending_approval, active, suspended
   status        String   @default("pending_approval")
@@ -169,9 +169,9 @@ model Contract {
   setupFeePaid        Boolean  @default(false)
   setupFeePaidAt      DateTime?
   
-  // Split de receita sobre creditos recuperados (50/50)
-  partnerSplitPercent  Float  @default(50)  // % parceiro
-  platformSplitPercent Float  @default(50)  // % TaxCredit
+  // Split de receita sobre creditos recuperados (40/60)
+  partnerSplitPercent  Float  @default(40)  // % parceiro
+  platformSplitPercent Float  @default(60)  // % TaxCredit
   
   // Apos pagamento da taxa, libera:
   consultaLiberada     Boolean @default(false) // Consulta completa

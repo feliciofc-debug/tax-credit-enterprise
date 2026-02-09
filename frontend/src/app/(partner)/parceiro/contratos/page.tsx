@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 // Modal para criar contrato com regra de negociacao
 function NewContractModal({ onClose }: { onClose: () => void }) {
-  const [partnerPercent, setPartnerPercent] = useState(50);
+  const [partnerPercent, setPartnerPercent] = useState(40);
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminField, setShowAdminField] = useState(false);
   const [error, setError] = useState('');
@@ -13,13 +13,13 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
 
   const handlePercentChange = (val: number) => {
     setPartnerPercent(val);
-    setShowAdminField(val < 20);
+    setShowAdminField(val !== 40);
     setError('');
   };
 
   const handleCreate = async () => {
-    if (partnerPercent < 20 && !adminPassword) {
-      setError('Comissao abaixo de 20% requer senha de autorizacao do administrador');
+    if (partnerPercent !== 40 && !adminPassword) {
+      setError('Alterar o percentual padrao (40%) requer senha de autorizacao do administrador');
       return;
     }
     // Aqui conectaria com a API /api/contract/create
@@ -61,7 +61,7 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
           {/* Split de creditos recuperados */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Split sobre Creditos Recuperados</label>
-            <p className="text-xs text-gray-500 mb-3">Padrao: 50/50. Sem limite de ganho - quanto maior o credito, maior o retorno.</p>
+            <p className="text-xs text-gray-500 mb-3">Padrao: 40% parceiro / 60% plataforma. Para alterar, requer senha do administrador.</p>
             <div className="flex items-center gap-4 mb-2">
               <span className="text-sm text-gray-500 w-28">Parceiro:</span>
               <input
@@ -100,19 +100,19 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
 
           {/* Indicador visual */}
           <div className={`rounded-lg p-4 ${
-            partnerPercent >= 20
+            partnerPercent === 40
               ? 'bg-green-50 border border-green-200'
               : 'bg-yellow-50 border border-yellow-200'
           }`}>
-            {partnerPercent >= 20 ? (
+            {partnerPercent === 40 ? (
               <p className="text-sm text-green-800 flex items-center gap-2">
                 <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                <strong>Aprovado automaticamente.</strong> Sem limite superior - negocie livremente!
+                <strong>Percentual padrao (40%).</strong> Aprovado automaticamente.
               </p>
             ) : (
               <p className="text-sm text-yellow-800 flex items-center gap-2">
                 <svg className="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                <strong>Requer autorizacao.</strong> Comissao abaixo de 20% precisa de senha do administrador.
+                <strong>Requer autorizacao.</strong> Percentual diferente de 40% precisa de senha do administrador.
               </p>
             )}
           </div>
@@ -157,9 +157,9 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
 }
 
 const demoContracts = [
-  { id: '1', contractNumber: 'TC-2026-A1B2C3D4', clientName: 'Joao Silva', clientCompany: 'Metalurgica ABC Ltda', setupFee: 2000, setupFeePartner: 800, setupFeePlatform: 1200, setupFeePaid: true, partnerSplitPercent: 50, platformSplitPercent: 50, status: 'active', partnerSigned: true, clientSigned: true, totalRecovered: 450000, partnerEarnings: 225000, createdAt: '2026-01-15' },
-  { id: '2', contractNumber: 'TC-2026-E5F6G7H8', clientName: 'Maria Santos', clientCompany: 'Comercio XYZ S.A.', setupFee: 2000, setupFeePartner: 800, setupFeePlatform: 1200, setupFeePaid: true, partnerSplitPercent: 50, platformSplitPercent: 50, status: 'active', partnerSigned: true, clientSigned: true, totalRecovered: 0, partnerEarnings: 0, createdAt: '2026-02-01' },
-  { id: '3', contractNumber: 'TC-2026-I9J0K1L2', clientName: 'Carlos Oliveira', clientCompany: 'Industria Moderna ME', setupFee: 2000, setupFeePartner: 800, setupFeePlatform: 1200, setupFeePaid: false, partnerSplitPercent: 50, platformSplitPercent: 50, status: 'pending_payment', partnerSigned: true, clientSigned: false, totalRecovered: 0, partnerEarnings: 0, createdAt: '2026-02-08' },
+  { id: '1', contractNumber: 'TC-2026-A1B2C3D4', clientName: 'Joao Silva', clientCompany: 'Metalurgica ABC Ltda', setupFee: 2000, setupFeePartner: 800, setupFeePlatform: 1200, setupFeePaid: true, partnerSplitPercent: 40, platformSplitPercent: 60, status: 'active', partnerSigned: true, clientSigned: true, totalRecovered: 450000, partnerEarnings: 180000, createdAt: '2026-01-15' },
+  { id: '2', contractNumber: 'TC-2026-E5F6G7H8', clientName: 'Maria Santos', clientCompany: 'Comercio XYZ S.A.', setupFee: 2000, setupFeePartner: 800, setupFeePlatform: 1200, setupFeePaid: true, partnerSplitPercent: 40, platformSplitPercent: 60, status: 'active', partnerSigned: true, clientSigned: true, totalRecovered: 0, partnerEarnings: 0, createdAt: '2026-02-01' },
+  { id: '3', contractNumber: 'TC-2026-I9J0K1L2', clientName: 'Carlos Oliveira', clientCompany: 'Industria Moderna ME', setupFee: 2000, setupFeePartner: 800, setupFeePlatform: 1200, setupFeePaid: false, partnerSplitPercent: 40, platformSplitPercent: 60, status: 'pending_payment', partnerSigned: true, clientSigned: false, totalRecovered: 0, partnerEarnings: 0, createdAt: '2026-02-08' },
 ];
 
 export default function ContratosPage() {
@@ -203,7 +203,7 @@ export default function ContratosPage() {
           <p className="text-2xl font-bold text-brand-700">R$ {totalRecovered.toLocaleString('pt-BR')}</p>
         </div>
         <div className="card p-5">
-          <p className="text-sm text-gray-500">Seus Ganhos (50%)</p>
+          <p className="text-sm text-gray-500">Seus Ganhos (40%)</p>
           <p className="text-2xl font-bold text-green-600">R$ {totalEarnings.toLocaleString('pt-BR')}</p>
         </div>
         <div className="card p-5">
