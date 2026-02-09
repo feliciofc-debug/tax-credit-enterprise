@@ -24,6 +24,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Ultra-simple POST test (before any middleware)
+app.post('/health/raw-post', (req, res) => {
+  res.json({ ok: true, method: 'POST', timestamp: new Date().toISOString() });
+});
+
 // Middlewares
 app.use(helmet());
 app.use(cors());
