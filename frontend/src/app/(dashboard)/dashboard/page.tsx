@@ -73,8 +73,9 @@ export default function ClientDashboardPage() {
               <p className="text-gray-500 text-xs">Area do Cliente</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600 hidden sm:block">{user?.name}</span>
+            <a href="/perfil" className="px-3 py-1.5 text-sm text-brand-600 hover:bg-brand-50 rounded-lg transition-colors font-medium">Meus Dados</a>
             <button
               onClick={handleLogout}
               className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"

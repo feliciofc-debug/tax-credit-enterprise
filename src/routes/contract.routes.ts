@@ -68,12 +68,35 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
 
     const contractText = generateContractText({
       contractNumber,
+      // Parceiro
       partnerName: partner?.name || '',
       partnerCompany: partner?.company || '',
       partnerOab: partner?.oabNumber ? `OAB/${partner.oabState} ${partner.oabNumber}` : '',
+      partnerCnpj: partner?.cnpj || '',
+      partnerEndereco: partner?.endereco || '',
+      partnerCidade: partner?.cidade || '',
+      partnerEstado: partner?.estado || '',
+      partnerBank: partner?.bankName || '',
+      partnerBankAgency: partner?.bankAgency || '',
+      partnerBankAccount: partner?.bankAccount || '',
+      partnerBankPix: partner?.bankPixKey || '',
+      // Cliente
       clientName: client.name || client.email,
       clientCompany: client.company || '',
       clientCnpj: client.cnpj || '',
+      clientEndereco: client.endereco || '',
+      clientCidade: client.cidade || '',
+      clientEstado: client.estado || '',
+      clientLegalRep: client.legalRepName || client.name || '',
+      clientLegalRepCpf: client.legalRepCpf || '',
+      clientLegalRepCargo: client.legalRepCargo || '',
+      clientBank: client.bankName || '',
+      clientBankAgency: client.bankAgency || '',
+      clientBankAccount: client.bankAccount || '',
+      clientBankPix: client.bankPixKey || '',
+      clientBankHolder: client.bankAccountHolder || '',
+      clientBankCpfCnpj: client.bankCpfCnpj || '',
+      // Valores
       setupFee: setupFee || 2000,
       partnerSplit: partnerSplit,
       platformSplit: 100 - partnerSplit,
@@ -317,75 +340,142 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
  */
 function generateContractText(data: {
   contractNumber: string;
-  partnerName: string;
-  partnerCompany: string;
-  partnerOab: string;
-  clientName: string;
-  clientCompany: string;
-  clientCnpj: string;
-  setupFee: number;
-  partnerSplit: number;
-  platformSplit: number;
+  partnerName: string; partnerCompany: string; partnerOab: string; partnerCnpj: string;
+  partnerEndereco: string; partnerCidade: string; partnerEstado: string;
+  partnerBank: string; partnerBankAgency: string; partnerBankAccount: string; partnerBankPix: string;
+  clientName: string; clientCompany: string; clientCnpj: string;
+  clientEndereco: string; clientCidade: string; clientEstado: string;
+  clientLegalRep: string; clientLegalRepCpf: string; clientLegalRepCargo: string;
+  clientBank: string; clientBankAgency: string; clientBankAccount: string; clientBankPix: string;
+  clientBankHolder: string; clientBankCpfCnpj: string;
+  setupFee: number; partnerSplit: number; platformSplit: number;
 }): string {
   return `
 CONTRATO DE PRESTACAO DE SERVICOS DE RECUPERACAO DE CREDITOS TRIBUTARIOS
 Contrato N.: ${data.contractNumber}
+Data: ${new Date().toLocaleDateString('pt-BR')}
 
-PARTES:
+=====================================
+PARTES CONTRATANTES
+=====================================
 
-CONTRATANTE: ${data.clientCompany || data.clientName}
-CNPJ: ${data.clientCnpj || '[A definir]'}
-Representante Legal: ${data.clientName}
+1. PLATAFORMA (Gestora da Operacao):
+ATOM BRASIL DIGITAL LTDA
+CNPJ: [CNPJ ATOM BRASIL DIGITAL]
+Endereco: [Endereco ATOM BRASIL DIGITAL]
+Doravante denominada "PLATAFORMA"
 
-ESCRITORIO PARCEIRO: ${data.partnerCompany || data.partnerName}
+2. ESCRITORIO PARCEIRO (Supervisao Juridica):
+${data.partnerCompany || data.partnerName}
+${data.partnerCnpj ? `CNPJ: ${data.partnerCnpj}` : ''}
 Responsavel: ${data.partnerName}
 ${data.partnerOab ? `Inscricao: ${data.partnerOab}` : ''}
+${data.partnerEndereco ? `Endereco: ${data.partnerEndereco}, ${data.partnerCidade}/${data.partnerEstado}` : ''}
+Doravante denominado "PARCEIRO"
 
-PLATAFORMA: TaxCredit Enterprise
-CNPJ: [CNPJ da TaxCredit]
+3. CONTRATANTE (Cliente Demandante):
+${data.clientCompany || data.clientName}
+${data.clientCnpj ? `CNPJ: ${data.clientCnpj}` : '[CNPJ A DEFINIR]'}
+${data.clientEndereco ? `Endereco: ${data.clientEndereco}, ${data.clientCidade}/${data.clientEstado}` : ''}
+Representante Legal: ${data.clientLegalRep}
+${data.clientLegalRepCpf ? `CPF: ${data.clientLegalRepCpf}` : ''}
+${data.clientLegalRepCargo ? `Cargo: ${data.clientLegalRepCargo}` : ''}
+Doravante denominado "CONTRATANTE"
+
+=====================================
+DADOS BANCARIOS DAS PARTES
+=====================================
+
+PLATAFORMA - ATOM BRASIL DIGITAL:
+Banco: [BANCO ATOM BRASIL]
+Agencia: [AGENCIA]
+Conta: [CONTA]
+PIX: [CHAVE PIX ATOM]
+
+PARCEIRO:
+${data.partnerBank ? `Banco: ${data.partnerBank}` : 'Banco: [A INFORMAR]'}
+${data.partnerBankAgency ? `Agencia: ${data.partnerBankAgency}` : ''}
+${data.partnerBankAccount ? `Conta: ${data.partnerBankAccount}` : 'Conta: [A INFORMAR]'}
+${data.partnerBankPix ? `PIX: ${data.partnerBankPix}` : ''}
+
+CONTRATANTE:
+${data.clientBank ? `Banco: ${data.clientBank}` : 'Banco: [A INFORMAR]'}
+${data.clientBankAgency ? `Agencia: ${data.clientBankAgency}` : ''}
+${data.clientBankAccount ? `Conta: ${data.clientBankAccount}` : 'Conta: [A INFORMAR]'}
+${data.clientBankPix ? `PIX: ${data.clientBankPix}` : ''}
+${data.clientBankHolder ? `Titular: ${data.clientBankHolder}` : ''}
+${data.clientBankCpfCnpj ? `CPF/CNPJ Titular: ${data.clientBankCpfCnpj}` : ''}
+
+=====================================
+CLAUSULAS CONTRATUAIS
+=====================================
 
 CLAUSULA 1 - DO OBJETO
-O presente contrato tem por objeto a prestacao de servicos de analise, identificacao e formalizacao de creditos tributarios da CONTRATANTE, utilizando a plataforma TaxCredit Enterprise com inteligencia artificial, sob supervisao tecnica e juridica do ESCRITORIO PARCEIRO.
+O presente contrato tem por objeto a prestacao de servicos de analise, identificacao e formalizacao de creditos tributarios do CONTRATANTE, utilizando a plataforma TaxCredit Enterprise com inteligencia artificial, sob gestao da PLATAFORMA e supervisao tecnica e juridica do PARCEIRO.
 
-CLAUSULA 2 - DA TAXA INICIAL (PAGA PELO CLIENTE)
-A CONTRATANTE (cliente demandante da operacao) pagara, a titulo de taxa de adesao, o valor unico de R$ 2.000,00 (dois mil reais), distribuidos da seguinte forma:
-- R$ 800,00 (oitocentos reais) destinados ao ESCRITORIO PARCEIRO (advogado signatario responsavel pela supervisao juridica);
-- R$ 1.200,00 (mil e duzentos reais) destinados a PLATAFORMA TaxCredit (custos operacionais, tecnologia e IA).
-Paragrafo unico: Apos a confirmacao do pagamento da taxa pelo CONTRATANTE, serao imediatamente liberados:
-a) Consulta completa com inteligencia artificial para identificacao de creditos tributarios;
-b) Formalizacao integral do processo tributario (peticoes, memorias de calculo, pareceres tecnicos).
+CLAUSULA 2 - DA TAXA INICIAL (PAGA PELO CONTRATANTE)
+O CONTRATANTE pagara, a titulo de taxa de adesao, o valor unico de R$ 2.000,00 (dois mil reais), distribuidos da seguinte forma:
+a) R$ 800,00 (oitocentos reais) destinados ao PARCEIRO;
+b) R$ 1.200,00 (mil e duzentos reais) destinados a PLATAFORMA.
+Paragrafo unico: Apos a confirmacao do pagamento, serao liberados:
+I - Consulta completa com inteligencia artificial para identificacao de creditos tributarios;
+II - Formalizacao integral do processo tributario (peticoes, memorias de calculo, pareceres tecnicos).
 
 CLAUSULA 3 - DA REMUNERACAO SOBRE CREDITOS RECUPERADOS
-Sobre os valores efetivamente recuperados pela CONTRATANTE, sera aplicada a seguinte divisao:
-- ${data.partnerSplit}% (${data.partnerSplit} por cento) para o ESCRITORIO PARCEIRO
-- ${data.platformSplit}% (${data.platformSplit} por cento) para a PLATAFORMA TaxCredit
-Nao ha limite maximo de ganho. Quanto maior o credito recuperado, maior o retorno para ambas as partes.
+Sobre os valores efetivamente recuperados pelo CONTRATANTE:
+a) ${data.partnerSplit}% (${data.partnerSplit} por cento) para o PARCEIRO;
+b) ${data.platformSplit}% (${data.platformSplit} por cento) para a PLATAFORMA.
+Paragrafo unico: Nao ha limite maximo de ganho sobre creditos recuperados.
 
-CLAUSULA 4 - DAS OBRIGACOES DA CONTRATANTE
+CLAUSULA 4 - DOS PAGAMENTOS E TRANSFERENCIAS
+4.1. Todos os pagamentos e transferencias decorrentes deste contrato serao realizados exclusivamente para as contas bancarias descritas na secao "DADOS BANCARIOS DAS PARTES".
+4.2. E de INTEIRA RESPONSABILIDADE do CONTRATANTE verificar as empresas contratadas, seus respectivos percentuais e os dados bancarios informados.
+4.3. Em caso de erro em transferencias ou depositos para contas dos beneficiarios deste contrato, decorrente de informacoes incorretas fornecidas pelo CONTRATANTE, a responsabilidade e 100% (cem por cento) do CONTRATANTE.
+4.4. A PLATAFORMA e o PARCEIRO nao se responsabilizam por transferencias realizadas para contas incorretas informadas pelo CONTRATANTE.
+
+CLAUSULA 5 - DAS OBRIGACOES DO CONTRATANTE
 a) Fornecer todos os documentos necessarios (DREs, Balancos, Balancetes, notas fiscais);
-b) Disponibilizar documentos de identificacao do responsavel legal;
-c) Manter atualizados os dados cadastrais;
-d) Efetuar o pagamento da taxa de adesao no prazo estipulado.
+b) Fornecer dados corretos e atualizados do representante legal e dados bancarios;
+c) Verificar as informacoes constantes neste contrato antes da assinatura;
+d) Efetuar o pagamento da taxa de adesao no prazo estipulado;
+e) Manter seus dados cadastrais e bancarios atualizados na plataforma.
 
-CLAUSULA 5 - DAS OBRIGACOES DO ESCRITORIO PARCEIRO
+CLAUSULA 6 - DAS OBRIGACOES DO PARCEIRO
 a) Revisar e validar a documentacao gerada pela plataforma;
 b) Acompanhar os processos junto aos orgaos competentes;
-c) Manter sigilo sobre as informacoes da CONTRATANTE;
+c) Manter sigilo sobre as informacoes do CONTRATANTE;
 d) Prestar assessoria juridica durante todo o processo.
 
-CLAUSULA 6 - DAS OBRIGACOES DA PLATAFORMA
+CLAUSULA 7 - DAS OBRIGACOES DA PLATAFORMA
 a) Realizar a analise dos documentos com inteligencia artificial;
 b) Gerar pareceres tecnicos, peticoes e memorias de calculo;
 c) Manter a plataforma em funcionamento e com seguranca;
-d) Processar os pagamentos e splits conforme acordado.
+d) Processar os pagamentos e splits conforme acordado neste contrato.
 
-CLAUSULA 7 - DA VIGENCIA
-Este contrato tem vigencia de 12 (doze) meses a partir da assinatura, renovavel automaticamente.
+CLAUSULA 8 - DA RESPONSABILIDADE
+8.1. O CONTRATANTE declara ter verificado e conferido todos os dados constantes neste contrato, incluindo dados bancarios, percentuais e informacoes das partes contratadas.
+8.2. Qualquer divergencia nos dados informados e de exclusiva responsabilidade da parte que os forneceu.
+8.3. A PLATAFORMA atua como intermediadora tecnologica e nao se responsabiliza por eventuais divergencias entre as partes.
 
-CLAUSULA 8 - DO FORO
-Fica eleito o foro da Comarca de [Cidade/UF] para dirimir quaisquer controversias.
+CLAUSULA 9 - DA VIGENCIA
+Este contrato tem vigencia de 12 (doze) meses a partir da assinatura, renovavel automaticamente por igual periodo.
 
-Data: ${new Date().toLocaleDateString('pt-BR')}
+CLAUSULA 10 - DO FORO
+Fica eleito o foro da Comarca de Sao Paulo/SP para dirimir quaisquer controversias oriundas deste contrato.
+
+=====================================
+ASSINATURAS
+=====================================
+
+PLATAFORMA - ATOM BRASIL DIGITAL:
+Data: ___/___/______  Assinatura: _________________________
+
+PARCEIRO - ${data.partnerCompany || data.partnerName}:
+Data: ___/___/______  Assinatura: _________________________
+
+CONTRATANTE - ${data.clientCompany || data.clientName}:
+Data: ___/___/______  Assinatura: _________________________
+Rep. Legal: ${data.clientLegalRep}
   `.trim();
 }
 

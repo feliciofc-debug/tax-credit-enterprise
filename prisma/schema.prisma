@@ -25,11 +25,29 @@ model User {
   invitedByPartner   Partner? @relation("InvitedUsers", fields: [invitedByPartnerId], references: [id])
   inviteCode         String?  // codigo usado no cadastro
 
-  // Docs de identidade do responsavel legal
+  // Endereco da empresa
+  endereco           String?
+  cidade             String?
+  estado             String?
+  cep                String?
+  
+  // Dados do representante legal
   legalRepName       String?
   legalRepCpf        String?
-  legalRepIdDocUrl   String?  // URL do doc de identidade
-  contratoSocialUrl  String?  // URL do contrato social
+  legalRepRg         String?
+  legalRepCargo      String?  // Ex: Socio-Administrador, Diretor
+  legalRepEmail      String?
+  legalRepPhone      String?
+  
+  // Dados bancarios do cliente
+  bankName           String?  // Ex: Banco do Brasil, Itau
+  bankAgency         String?  // Agencia
+  bankAccount        String?  // Conta corrente
+  bankAccountType    String?  // corrente, poupanca
+  bankPixKey         String?  // Chave PIX
+  bankAccountHolder  String?  // Titular da conta
+  bankCpfCnpj        String?  // CPF/CNPJ do titular
+  
   onboardingComplete Boolean  @default(false)
   
   createdAt     DateTime @default(now())
@@ -56,6 +74,21 @@ model Partner {
   company       String?  // Nome do escritorio
   cnpj          String?
   phone         String?
+  
+  // Endereco do escritorio
+  endereco      String?
+  cidade        String?
+  estado        String?
+  cep           String?
+  
+  // Dados bancarios do parceiro
+  bankName           String?
+  bankAgency         String?
+  bankAccount        String?
+  bankAccountType    String?
+  bankPixKey         String?
+  bankAccountHolder  String?
+  bankCpfCnpj        String?
   
   // Configuracao de comissao sobre creditos recuperados
   commissionPercent Float   @default(40) // % que o parceiro recebe
