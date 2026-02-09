@@ -41,6 +41,18 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// DB health check
+app.get('/health/db', async (_req, res) => {
+  try {
+    const { prisma } = await import('./utils/prisma');
+    const result = await prisma.$queryRaw`SELECT 1 as test`;
+    const userCount = await prisma.user.count();
+    res.json({ status: 'ok', db: 'connected', users: userCount });
+  } catch (err: any) {
+    res.status(500).json({ status: 'error', db: 'failed', error: err.message });
+  }
+});
+
 // Rotas
 app.use('/api/batch', batchRoutes);
 app.use('/api/dashboard', dashboardRoutes);
