@@ -6,6 +6,19 @@ import multer from 'multer';
 import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
+import Anthropic from '@anthropic-ai/sdk';
+import pdfParse from 'pdf-parse';
+
+let aiClient: Anthropic | null = null;
+try {
+  if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your_api_key_here') {
+    aiClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+} catch (e) {
+  console.warn('Anthropic client not available for viability analysis');
+}
+
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
 
 const router = Router();
 
@@ -56,9 +69,37 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
       },
     });
 
-    // Simular analise com score (depois integrar com Claude AI)
-    // A IA analisaria os documentos e daria o score real
-    const score = generateViabilityScore(regime, annualRevenue, files?.length || 0, sector);
+    // Extrair texto dos documentos PDF enviados
+    let extractedText = '';
+    if (files && files.length > 0) {
+      for (const file of files) {
+        try {
+          if (file.originalname.toLowerCase().endsWith('.pdf')) {
+            const buffer = await fs.readFile(file.path);
+            const pdfData = await pdfParse(buffer);
+            extractedText += `\n--- ${file.originalname} ---\n${pdfData.text}\n`;
+          } else {
+            // Para outros tipos de arquivo, ler como texto
+            const content = await fs.readFile(file.path, 'utf-8').catch(() => '');
+            if (content) extractedText += `\n--- ${file.originalname} ---\n${content}\n`;
+          }
+        } catch (e) {
+          logger.warn(`Could not extract text from ${file.originalname}`);
+        }
+      }
+    }
+
+    let score;
+    
+    // Se a IA estiver disponivel E houver documentos, usar Claude para analise real
+    if (aiClient && extractedText.length > 100) {
+      logger.info(`Using Claude AI for viability analysis ${viability.id}`);
+      score = await analyzeWithClaude(extractedText, companyName, cnpj, regime, sector, annualRevenue);
+    } else {
+      // Fallback: score simulado baseado nos dados informados
+      logger.info(`Using simulated score for viability analysis ${viability.id} (AI: ${!!aiClient}, docs: ${extractedText.length} chars)`);
+      score = generateViabilityScore(regime, annualRevenue, files?.length || 0, sector);
+    }
 
     const updatedViability = await prisma.viabilityAnalysis.update({
       where: { id: viability.id },
@@ -73,7 +114,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
       },
     });
 
-    logger.info(`Viability analysis completed: ${viability.id} - Score: ${score.score}`);
+    logger.info(`Viability analysis completed: ${viability.id} - Score: ${score.score} (AI: ${score.aiPowered || false})`);
 
     // Limpar arquivos temp
     if (files) {
@@ -91,6 +132,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
         opportunities: score.opportunities,
         summary: updatedViability.aiSummary,
         risks: score.risks,
+        aiPowered: score.aiPowered || false,
       },
     });
   } catch (error: any) {
@@ -159,8 +201,91 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
 });
 
 /**
- * Gera score de viabilidade baseado nos dados
- * (Depois sera substituido pela analise real do Claude AI)
+ * Analisa viabilidade usando Claude AI com os documentos reais
+ */
+async function analyzeWithClaude(
+  documentText: string,
+  companyName: string,
+  cnpj?: string,
+  regime?: string,
+  sector?: string,
+  annualRevenue?: string
+) {
+  try {
+    const prompt = `Voce e um consultor tributario especializado em recuperacao de creditos tributarios no Brasil.
+
+Analise os documentos fiscais abaixo e forneca uma avaliacao de viabilidade para recuperacao de creditos tributarios.
+
+DADOS DA EMPRESA:
+- Empresa: ${companyName}
+- CNPJ: ${cnpj || 'Nao informado'}
+- Regime Tributario: ${regime || 'Nao informado'}
+- Setor: ${sector || 'Nao informado'}
+- Faturamento Anual: ${annualRevenue ? `R$ ${parseFloat(annualRevenue).toLocaleString('pt-BR')}` : 'Nao informado'}
+
+DOCUMENTOS FISCAIS:
+${documentText.substring(0, 15000)}
+
+RESPONDA EXATAMENTE no formato JSON abaixo (sem markdown, sem codigo, apenas o JSON puro):
+{
+  "score": <numero de 0 a 100>,
+  "label": "<excelente|bom|medio|baixo|inviavel>",
+  "estimatedCredit": <valor numerico estimado em reais>,
+  "summary": "<resumo executivo em 2-3 paragrafos sobre o potencial de recuperacao>",
+  "opportunities": [
+    {
+      "tipo": "<tipo do credito - ex: PIS/COFINS sobre Insumos>",
+      "estimativa": "<faixa de valor - ex: R$ 50.000 - R$ 200.000>",
+      "probabilidade": <numero de 0 a 100>,
+      "fundamentacao": "<artigo de lei ou IN>"
+    }
+  ],
+  "risks": ["<risco 1>", "<risco 2>"]
+}`;
+
+    const message = await aiClient!.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 3000,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+    
+    // Tentar extrair JSON da resposta
+    let parsed;
+    try {
+      // Tentar parse direto
+      parsed = JSON.parse(responseText);
+    } catch {
+      // Tentar extrair JSON de dentro do texto
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('Could not parse AI response as JSON');
+      }
+    }
+
+    return {
+      score: Math.max(0, Math.min(100, parsed.score || 50)),
+      label: parsed.label || 'medio',
+      estimatedCredit: parsed.estimatedCredit || 0,
+      summary: parsed.summary || 'Analise concluida pela IA.',
+      opportunities: parsed.opportunities || [],
+      risks: parsed.risks || [],
+      aiPowered: true,
+    };
+  } catch (error: any) {
+    logger.error('Claude AI analysis failed, falling back to simulated:', error.message);
+    // Fallback para score simulado
+    const fallback = generateViabilityScore(regime, annualRevenue, 1, sector);
+    fallback.summary = `[Analise por IA indisponivel] ${fallback.summary}`;
+    return fallback;
+  }
+}
+
+/**
+ * Gera score de viabilidade baseado nos dados (fallback sem IA)
  */
 function generateViabilityScore(
   regime?: string,
@@ -239,7 +364,7 @@ function generateViabilityScore(
   if (score < 50) risks.push('Score baixo indica risco elevado de indeferimento');
   if (!regime) risks.push('Regime tributario nao informado - score pode variar');
 
-  return { score, label, estimatedCredit, opportunities, risks, summary };
+  return { score, label, estimatedCredit, opportunities, risks, summary, aiPowered: false };
 }
 
 export default router;

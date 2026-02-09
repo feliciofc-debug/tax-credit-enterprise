@@ -4,7 +4,16 @@ import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import Anthropic from '@anthropic-ai/sdk';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let client: Anthropic | null = null;
+try {
+  if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your_api_key_here') {
+    client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+} catch (e) {
+  console.warn('Anthropic client not initialized - API key missing or invalid');
+}
+
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
 
 export interface TaxCreditDocumentation {
   tipo: string;
@@ -236,15 +245,17 @@ O parecer deve conter:
 Use linguagem técnica e formal. Seja detalhado e preciso.
 `;
 
-    const message = await client.messages.create({
-      model: 'claude-opus-4-20250514',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }]
-    });
-
-    const parecerText = message.content[0].type === 'text' 
-      ? message.content[0].text 
-      : '';
+    let parecerText = '';
+    if (client) {
+      const message = await client.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      parecerText = message.content[0].type === 'text' ? message.content[0].text : '';
+    } else {
+      parecerText = `PARECER TECNICO - ${opportunity.tipo}\n\nEmpresa: ${analysis.document.companyName || 'N/A'}\nCNPJ: ${analysis.document.cnpj || 'N/A'}\nPeriodo: ${analysis.document.extractedPeriod || 'N/A'}\nValor Estimado: R$ ${(opportunity.valorEstimado || 0).toLocaleString('pt-BR')}\n\nFundamentacao Legal: ${opportunity.fundamentacaoLegal}\n\nDescricao: ${opportunity.descricao}\n\n[Parecer tecnico completo sera gerado quando a API Claude estiver configurada]`;
+    }
 
     // Converter para PDF
     return new Promise((resolve, reject) => {
@@ -304,15 +315,17 @@ A petição deve conter:
 Use linguagem jurídica formal e técnica.
 `;
 
-    const message = await client.messages.create({
-      model: 'claude-opus-4-20250514',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }]
-    });
-
-    const peticaoText = message.content[0].type === 'text'
-      ? message.content[0].text
-      : '';
+    let peticaoText = '';
+    if (client) {
+      const message = await client.messages.create({
+        model: CLAUDE_MODEL,
+        max_tokens: 4000,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      peticaoText = message.content[0].type === 'text' ? message.content[0].text : '';
+    } else {
+      peticaoText = `PETICAO ADMINISTRATIVA\n\nREQUERENTE: ${analysis.document.companyName || '[NOME DA EMPRESA]'}\nCNPJ: ${analysis.document.cnpj || '[CNPJ]'}\nTIPO DE CREDITO: ${opportunity.tipo}\nVALOR: R$ ${(opportunity.valorEstimado || 0).toLocaleString('pt-BR')}\nPERIODO: ${analysis.document.extractedPeriod || '[PERIODO]'}\n\nFundamentacao: ${opportunity.fundamentacaoLegal}\n\n[Peticao completa sera gerada quando a API Claude estiver configurada]`;
+    }
 
     // Converter para PDF
     return new Promise((resolve, reject) => {
