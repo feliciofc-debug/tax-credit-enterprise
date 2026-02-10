@@ -1,6 +1,6 @@
 // src/services/claude.service.ts
 // Serviço dedicado de integração com Claude AI para análise tributária
-// Usa Opus 4.5 para análises profundas e Sonnet 4.5 para tarefas leves
+// Usa Opus 4.6 para análises profundas e Sonnet 4.5 para tarefas leves
 
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger';
@@ -9,8 +9,8 @@ import { logger } from '../utils/logger';
 // CONFIGURAÇÃO DE MODELOS
 // ============================================================
 const MODELS = {
-  // Opus 4.5 — raciocínio profundo, análise tributária complexa
-  ANALYSIS: 'claude-opus-4-5-20250929',
+  // Opus 4.6 — o mais inteligente, análise tributária complexa
+  ANALYSIS: 'claude-opus-4-6',
   // Sonnet 4.5 — geração de documentos, tarefas mais simples
   DOCUMENTS: 'claude-sonnet-4-5-20250929',
 } as const;
@@ -363,7 +363,7 @@ class ClaudeService {
   }
 
   /**
-   * Analisa documento tributário com Claude Opus 4.5
+   * Analisa documento tributário com Claude Opus 4.6
    * Este é o método principal — usa Opus para máxima qualidade
    */
   async analyzeDocument(
@@ -402,7 +402,7 @@ class ClaudeService {
     const limit = TEXT_LIMITS[documentType] || TEXT_LIMITS.default;
     const truncatedText = this.smartTruncate(documentText, limit);
 
-    logger.info(`Iniciando análise com Opus 4.5`, {
+    logger.info(`Iniciando análise com Opus 4.6`, {
       documentType,
       company: companyInfo.name,
       textLength: truncatedText.length,

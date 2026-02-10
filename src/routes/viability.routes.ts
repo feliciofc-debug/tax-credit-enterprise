@@ -27,7 +27,7 @@ const upload = multer({
 
 /**
  * POST /api/viability/analyze
- * Parceiro envia docs e recebe análise de viabilidade com Opus 4.5
+ * Parceiro envia docs e recebe análise de viabilidade com Opus 4.6
  */
 router.post('/analyze', authenticateToken, upload.array('documents', 10), async (req: Request, res: Response) => {
   try {
@@ -117,7 +117,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
       sector,
     };
 
-    // Analisar com Claude Opus 4.5
+    // Analisar com Claude Opus 4.6
     const analysis = await claudeService.analyzeDocument(
       combinedText,
       documentType || 'dre',
@@ -145,7 +145,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
       },
     });
 
-    logger.info(`Viability analysis completed: ${viability.id} - Score: ${analysis.score} (AI: true, Opus 4.5)`);
+    logger.info(`Viability analysis completed: ${viability.id} - Score: ${analysis.score} (AI: true, Opus 4.6)`);
 
     return res.json({
       success: true,
