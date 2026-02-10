@@ -9,7 +9,7 @@ import { documentProcessor } from '../services/documentProcessor.service';
 
 const router = Router();
 
-// Upload config — agora usa memoryStorage (buffer direto, sem salvar em disco)
+// Upload config — memoryStorage (buffer direto, sem salvar em disco)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
@@ -25,9 +25,45 @@ const upload = multer({
   },
 });
 
+// ============================================================
+// HELPER: Processar documentos e extrair texto
+// ============================================================
+async function processUploadedFiles(files: Express.Multer.File[]) {
+  let combinedText = '';
+  let totalPages = 0;
+  let anyOcrUsed = false;
+  let overallQuality: 'high' | 'medium' | 'low' = 'high';
+
+  for (const file of files) {
+    try {
+      const processed = await documentProcessor.processDocument(
+        file.buffer,
+        file.originalname,
+        file.mimetype
+      );
+
+      combinedText += `\n--- ${file.originalname} ---\n${processed.text}\n`;
+      totalPages += processed.pageCount;
+      if (processed.ocrUsed) anyOcrUsed = true;
+
+      if (processed.quality === 'low') overallQuality = 'low';
+      else if (processed.quality === 'medium' && overallQuality === 'high') overallQuality = 'medium';
+    } catch (docError: any) {
+      logger.warn(`Falha ao processar ${file.originalname}: ${docError.message}`);
+    }
+  }
+
+  return { combinedText, totalPages, anyOcrUsed, overallQuality };
+}
+
+// ============================================================
+// ROTA 1: SCORE DE VIABILIDADE (parceiro pode fazer livremente)
+// ============================================================
 /**
  * POST /api/viability/analyze
- * Parceiro envia docs e recebe análise de viabilidade com Sonnet 4.5
+ * Parceiro envia docs e recebe SCORE de viabilidade (análise rápida)
+ * NÃO requer pagamento nem contrato — é a pré-triagem
+ * Retorna: score, resumo, oportunidades resumidas
  */
 router.post('/analyze', authenticateToken, upload.array('documents', 10), async (req: Request, res: Response) => {
   try {
@@ -61,32 +97,8 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
       },
     });
 
-    // Processar todos os documentos e concatenar textos
-    let combinedText = '';
-    let totalPages = 0;
-    let anyOcrUsed = false;
-    let overallQuality: 'high' | 'medium' | 'low' = 'high';
-
-    for (const file of files) {
-      try {
-        const processed = await documentProcessor.processDocument(
-          file.buffer,
-          file.originalname,
-          file.mimetype
-        );
-
-        combinedText += `\n--- ${file.originalname} ---\n${processed.text}\n`;
-        totalPages += processed.pageCount;
-        if (processed.ocrUsed) anyOcrUsed = true;
-
-        // Qualidade geral é a menor encontrada
-        if (processed.quality === 'low') overallQuality = 'low';
-        else if (processed.quality === 'medium' && overallQuality === 'high') overallQuality = 'medium';
-      } catch (docError: any) {
-        logger.warn(`Falha ao processar ${file.originalname}: ${docError.message}`);
-        // Continuar com os outros documentos
-      }
-    }
+    // Processar documentos
+    const { combinedText, totalPages, anyOcrUsed, overallQuality } = await processUploadedFiles(files);
 
     // Verificar qualidade
     if (overallQuality === 'low' || combinedText.trim().length < 200) {
@@ -103,55 +115,223 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
       });
     }
 
-    // Construir info da empresa (usar metadados extraídos como fallback)
-    const lastProcessed = await documentProcessor.processDocument(
-      files[0].buffer,
-      files[0].originalname,
-      files[0].mimetype
-    ).catch(() => null);
-
+    // Construir info da empresa
     const companyInfo = {
-      name: companyName || lastProcessed?.metadata.extractedCompanyName || 'Não informado',
-      cnpj: cnpj || lastProcessed?.metadata.extractedCNPJ,
+      name: companyName,
+      cnpj,
       regime: regime as 'lucro_real' | 'lucro_presumido' | 'simples' | undefined,
       sector,
     };
 
-    // Analisar com Claude Sonnet 4.5
-    const analysis = await claudeService.analyzeDocument(
-      combinedText,
-      documentType || 'dre',
-      companyInfo
-    );
+    // SCORE DE VIABILIDADE — análise rápida (Sonnet, não Opus)
+    const quickResult = await claudeService.quickAnalysis(combinedText, companyInfo);
 
     // Determinar label a partir do score
     let scoreLabel = 'inviavel';
-    if (analysis.score >= 85) scoreLabel = 'excelente';
-    else if (analysis.score >= 70) scoreLabel = 'bom';
-    else if (analysis.score >= 50) scoreLabel = 'medio';
-    else if (analysis.score >= 30) scoreLabel = 'baixo';
+    if (quickResult.score >= 85) scoreLabel = 'excelente';
+    else if (quickResult.score >= 70) scoreLabel = 'bom';
+    else if (quickResult.score >= 50) scoreLabel = 'medio';
+    else if (quickResult.score >= 30) scoreLabel = 'baixo';
 
-    // Atualizar registro com resultado
+    // Atualizar registro com resultado do score
     const updatedViability = await prisma.viabilityAnalysis.update({
       where: { id: viability.id },
       data: {
-        viabilityScore: analysis.score,
+        viabilityScore: quickResult.score,
         scoreLabel,
-        estimatedCredit: analysis.valorTotalEstimado,
-        opportunities: JSON.stringify(analysis.oportunidades),
-        aiSummary: analysis.resumoExecutivo,
-        risks: JSON.stringify(analysis.alertas),
+        aiSummary: quickResult.summary,
         status: 'completed',
       },
     });
 
-    logger.info(`Viability analysis completed: ${viability.id} - Score: ${analysis.score} (AI: true, Sonnet 4.5)`);
+    logger.info(`Viability SCORE completed: ${viability.id} - Score: ${quickResult.score} (quick analysis)`);
 
     return res.json({
       success: true,
       data: {
         id: updatedViability.id,
         companyName: updatedViability.companyName,
+        score: quickResult.score,
+        scoreLabel,
+        viable: quickResult.viable,
+        summary: quickResult.summary,
+        aiPowered: true,
+        // Mensagem informando próximos passos
+        nextSteps: quickResult.viable
+          ? 'Score positivo! Para a consulta completa: 1) Convide o cliente, 2) Cliente paga a taxa de adesão (R$ 2.000), 3) Assine o contrato entre as 3 partes, 4) Cliente insere os documentos na plataforma.'
+          : 'Score baixo. Recomendamos revisar os documentos ou avaliar outro período fiscal.',
+        metadata: {
+          documentType: documentType || 'dre',
+          ocrUsed: anyOcrUsed,
+          quality: overallQuality,
+          pageCount: totalPages,
+        },
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error in viability score:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Erro na análise de viabilidade',
+    });
+  }
+});
+
+// ============================================================
+// ROTA 2: CONSULTA COMPLETA (requer pagamento + contrato + docs do cliente)
+// ============================================================
+/**
+ * POST /api/viability/full-analysis
+ * Consulta completa com IA profunda (Opus 4.6)
+ * REQUER:
+ *   1. Contrato assinado pelo parceiro E cliente
+ *   2. Taxa de adesão paga (R$ 2.000)
+ *   3. Documentos enviados pelo cliente
+ */
+router.post('/full-analysis', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const partnerId = await getOperatorPartnerId(user);
+    if (!partnerId) {
+      return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros e administradores' });
+    }
+
+    const { contractId, documentType } = req.body;
+
+    if (!contractId) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID do contrato é obrigatório para consulta completa',
+      });
+    }
+
+    // Buscar contrato e verificar todas as condições
+    const contract = await prisma.contract.findFirst({
+      where: { id: contractId, partnerId },
+      include: {
+        client: {
+          include: {
+            documents: true, // Documentos que o cliente fez upload
+          },
+        },
+      },
+    });
+
+    if (!contract) {
+      return res.status(404).json({ success: false, error: 'Contrato não encontrado' });
+    }
+
+    // VERIFICAÇÃO 1: Taxa paga?
+    if (!contract.setupFeePaid) {
+      return res.status(403).json({
+        success: false,
+        error: 'Taxa de adesão não paga',
+        details: `O cliente precisa pagar a taxa de adesão de R$ ${contract.setupFee.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} antes da consulta completa.`,
+        requirement: 'payment',
+      });
+    }
+
+    // VERIFICAÇÃO 2: Contrato assinado pelo parceiro?
+    if (!contract.partnerSignedAt) {
+      return res.status(403).json({
+        success: false,
+        error: 'Contrato não assinado pelo parceiro',
+        details: 'O parceiro precisa assinar o contrato antes da consulta completa.',
+        requirement: 'partner_signature',
+      });
+    }
+
+    // VERIFICAÇÃO 3: Contrato assinado pelo cliente?
+    if (!contract.clientSignedAt) {
+      return res.status(403).json({
+        success: false,
+        error: 'Contrato não assinado pelo cliente',
+        details: 'O cliente precisa assinar o contrato antes da consulta completa.',
+        requirement: 'client_signature',
+      });
+    }
+
+    // VERIFICAÇÃO 4: Cliente tem documentos na plataforma?
+    const clientDocs = contract.client.documents;
+    if (!clientDocs || clientDocs.length === 0) {
+      return res.status(403).json({
+        success: false,
+        error: 'Nenhum documento do cliente na plataforma',
+        details: 'O cliente precisa fazer upload dos documentos contábeis (DRE, Balanço, Balancete) diretamente na plataforma.',
+        requirement: 'client_documents',
+      });
+    }
+
+    // VERIFICAÇÃO 5: Consulta liberada?
+    if (!contract.consultaLiberada) {
+      // Liberar automaticamente se todas as condições acima foram atendidas
+      await prisma.contract.update({
+        where: { id: contract.id },
+        data: { consultaLiberada: true },
+      });
+    }
+
+    // Buscar buffers dos documentos do cliente no banco
+    // Os documentos do cliente ficam na tabela Document
+    const docsWithContent = await prisma.document.findMany({
+      where: { userId: contract.clientId },
+      orderBy: { createdAt: 'desc' },
+      take: 10, // Últimos 10 documentos
+    });
+
+    if (docsWithContent.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Documentos do cliente não encontrados',
+      });
+    }
+
+    // Processar documentos do cliente
+    let combinedText = '';
+    let totalPages = 0;
+
+    for (const doc of docsWithContent) {
+      if (doc.extractedText) {
+        combinedText += `\n--- ${doc.fileName} ---\n${doc.extractedText}\n`;
+        totalPages += 1;
+      }
+    }
+
+    if (combinedText.trim().length < 200) {
+      return res.status(422).json({
+        success: false,
+        error: 'Documentos do cliente não contêm texto suficiente para análise completa',
+      });
+    }
+
+    // Construir info da empresa com dados do cliente
+    const companyInfo = {
+      name: contract.client.company || contract.client.name || 'Não informado',
+      cnpj: contract.client.cnpj || undefined,
+      regime: (contract.client.regime as 'lucro_real' | 'lucro_presumido' | 'simples') || undefined,
+    };
+
+    // ANÁLISE COMPLETA com Claude (modelo ANALYSIS — Opus 4.6 quando disponível)
+    const analysis = await claudeService.analyzeDocument(
+      combinedText,
+      documentType || 'dre',
+      companyInfo
+    );
+
+    // Determinar label
+    let scoreLabel = 'inviavel';
+    if (analysis.score >= 85) scoreLabel = 'excelente';
+    else if (analysis.score >= 70) scoreLabel = 'bom';
+    else if (analysis.score >= 50) scoreLabel = 'medio';
+    else if (analysis.score >= 30) scoreLabel = 'baixo';
+
+    logger.info(`Full analysis completed for contract ${contractId} - Score: ${analysis.score}`);
+
+    return res.json({
+      success: true,
+      data: {
+        contractId: contract.id,
+        companyName: companyInfo.name,
         score: analysis.score,
         scoreLabel,
         estimatedCredit: analysis.valorTotalEstimado,
@@ -164,21 +344,14 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
         regimeTributario: analysis.regimeTributario,
         riscoGeral: analysis.riscoGeral,
         aiPowered: true,
-        metadata: {
-          documentType: documentType || 'dre',
-          ocrUsed: anyOcrUsed,
-          quality: overallQuality,
-          pageCount: totalPages,
-          extractedPeriod: lastProcessed?.metadata.extractedPeriod,
-          extractedCNPJ: lastProcessed?.metadata.extractedCNPJ,
-        },
+        fullAnalysis: true,
       },
     });
   } catch (error: any) {
-    logger.error('Error in viability analysis:', error);
+    logger.error('Error in full analysis:', error);
     return res.status(500).json({
       success: false,
-      error: error.message || 'Erro na análise de viabilidade',
+      error: error.message || 'Erro na consulta completa',
     });
   }
 });
