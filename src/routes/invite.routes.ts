@@ -55,7 +55,7 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
       emailSent = await sendInviteEmail(
         clientEmail,
         clientName || '',
-        partner?.name || partner?.company || 'Escritorio Parceiro',
+        partner?.company || partner?.name || 'TaxCredit Enterprise',
         companyName,
         invite.inviteCode,
       );

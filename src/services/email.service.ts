@@ -103,7 +103,7 @@ export async function sendInviteEmail(
       <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
         <h2 style="color: #111827; margin-top: 0;">Ola${clientName ? ', ' + clientName : ''}!</h2>
         <p style="color: #4b5563; line-height: 1.6;">
-          O escritorio <strong>${partnerName}</strong> identificou oportunidades de recuperacao de creditos tributarios para a empresa <strong>${companyName}</strong>.
+          A <strong>TaxCredit Enterprise</strong>, em parceria com <strong>${partnerName}</strong>, identificou oportunidades de recuperacao de creditos tributarios para a empresa <strong>${companyName}</strong>.
         </p>
         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin: 20px 0;">
           <p style="color: #1e40af; margin: 0; font-weight: bold;">O que voce ganha:</p>
@@ -124,7 +124,7 @@ export async function sendInviteEmail(
           </a>
         </div>
         <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">
-          Este convite foi gerado pelo escritorio ${partnerName}. Se voce nao reconhece este convite, ignore este email.
+          Este convite foi gerado pela TaxCredit Enterprise em parceria com ${partnerName}. Se voce nao reconhece este convite, ignore este email.
         </p>
       </div>
       <div style="text-align: center; padding: 16px; color: #9ca3af; font-size: 12px;">
