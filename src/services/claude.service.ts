@@ -413,7 +413,7 @@ class ClaudeService {
     try {
       const response = await this.client.messages.create({
         model: MODELS.ANALYSIS,
-        max_tokens: 8192,
+        max_tokens: 16384,
         system: systemPrompt,
         messages: [
           {
@@ -428,6 +428,11 @@ class ClaudeService {
         .filter((block): block is Anthropic.TextBlock => block.type === 'text')
         .map((block) => block.text)
         .join('');
+
+      // Verificar se a resposta foi truncada
+      if (response.stop_reason === 'max_tokens') {
+        logger.warn('Resposta do Claude truncada por max_tokens. Tentando reparar JSON...');
+      }
 
       // Parsear JSON da resposta
       const result = this.parseAnalysisResponse(responseText);
@@ -644,8 +649,13 @@ class ClaudeService {
         regimeTributario: parsed.regimeTributario || 'Não identificado',
         riscoGeral: parsed.riscoGeral || 'medio',
       };
-    } catch (error) {
-      logger.error('Falha ao parsear resposta do Claude:', { responseText: responseText.substring(0, 500) });
+    } catch (error: any) {
+      logger.error('Falha ao parsear resposta do Claude:', { 
+        responseStart: responseText.substring(0, 500),
+        responseEnd: responseText.substring(Math.max(0, responseText.length - 200)),
+        responseLength: responseText.length,
+        parseError: error.message,
+      });
       throw new Error(
         'A resposta da IA não pôde ser processada. Tente novamente ou envie um documento com melhor qualidade de texto.'
       );
@@ -654,6 +664,7 @@ class ClaudeService {
 
   /**
    * Extrai JSON de texto que pode conter markdown ou outros caracteres
+   * Lida com respostas truncadas tentando reparar JSON incompleto
    */
   private extractJSON(text: string): string {
     // Tentar parsear diretamente
@@ -662,15 +673,161 @@ class ClaudeService {
       return text;
     } catch {}
 
-    // Remover blocos de código markdown
-    const jsonMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-    if (jsonMatch) return jsonMatch[1].trim();
+    // Remover blocos de código markdown (greedy match para pegar tudo)
+    const jsonMatchGreedy = text.match(/```(?:json)?\s*\n?([\s\S]*)```/);
+    if (jsonMatchGreedy) {
+      const extracted = jsonMatchGreedy[1].trim();
+      try {
+        JSON.parse(extracted);
+        return extracted;
+      } catch {}
+      // Se falhou, tentar reparar o JSON extraído do markdown
+      return this.repairTruncatedJSON(extracted);
+    }
+
+    // Se tem ``` no início mas não tem fechamento (resposta truncada)
+    const markdownStart = text.match(/```(?:json)?\s*\n?([\s\S]*)/);
+    if (markdownStart) {
+      const extracted = markdownStart[1].trim();
+      return this.repairTruncatedJSON(extracted);
+    }
 
     // Encontrar o primeiro { e último }
     const firstBrace = text.indexOf('{');
     const lastBrace = text.lastIndexOf('}');
     if (firstBrace !== -1 && lastBrace > firstBrace) {
-      return text.substring(firstBrace, lastBrace + 1);
+      const extracted = text.substring(firstBrace, lastBrace + 1);
+      try {
+        JSON.parse(extracted);
+        return extracted;
+      } catch {}
+      return this.repairTruncatedJSON(extracted);
+    }
+
+    // Último recurso: pegar tudo a partir do primeiro {
+    if (firstBrace !== -1) {
+      return this.repairTruncatedJSON(text.substring(firstBrace));
+    }
+
+    return text;
+  }
+
+  /**
+   * Tenta reparar um JSON truncado fechando brackets/braces abertos
+   */
+  private repairTruncatedJSON(text: string): string {
+    // Primeiro, tentar parsear como está
+    try {
+      JSON.parse(text);
+      return text;
+    } catch {}
+
+    // Remover trailing comma e whitespace
+    let repaired = text.replace(/,\s*$/, '');
+
+    // Remover valor de string incompleto (string aberta sem fechar)
+    // Ex: "descricao": "texto incompleto aqui...
+    repaired = repaired.replace(/,\s*"[^"]*":\s*"[^"]*$/, '');
+    repaired = repaired.replace(/,\s*"[^"]*$/, '');
+
+    // Contar brackets abertos
+    let openBraces = 0;
+    let openBrackets = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = 0; i < repaired.length; i++) {
+      const char = repaired[i];
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (!inString) {
+        if (char === '{') openBraces++;
+        if (char === '}') openBraces--;
+        if (char === '[') openBrackets++;
+        if (char === ']') openBrackets--;
+      }
+    }
+
+    // Se estamos dentro de uma string, fechar a string
+    if (inString) {
+      repaired += '"';
+    }
+
+    // Remover trailing comma novamente
+    repaired = repaired.replace(/,\s*$/, '');
+
+    // Fechar brackets e braces abertos
+    while (openBrackets > 0) {
+      repaired += ']';
+      openBrackets--;
+    }
+    while (openBraces > 0) {
+      repaired += '}';
+      openBraces--;
+    }
+
+    // Tentar parsear o resultado
+    try {
+      JSON.parse(repaired);
+      logger.info('JSON truncado reparado com sucesso');
+      return repaired;
+    } catch (e) {
+      // Última tentativa: cortar no último objeto/array válido
+      logger.warn('Tentativa de reparo de JSON falhou, tentando corte agressivo');
+      return this.aggressiveJSONRepair(text);
+    }
+  }
+
+  /**
+   * Reparo agressivo: tenta encontrar o maior pedaço válido de JSON
+   */
+  private aggressiveJSONRepair(text: string): string {
+    // Encontrar a última } completa e tentar fechar
+    const lines = text.split('\n');
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const partial = lines.slice(0, i + 1).join('\n');
+      
+      // Tentar fechar o JSON
+      let attempt = partial.replace(/,\s*$/, '');
+      
+      // Contar abertos
+      let braces = 0;
+      let brackets = 0;
+      let inStr = false;
+      let esc = false;
+      
+      for (const char of attempt) {
+        if (esc) { esc = false; continue; }
+        if (char === '\\') { esc = true; continue; }
+        if (char === '"') { inStr = !inStr; continue; }
+        if (!inStr) {
+          if (char === '{') braces++;
+          if (char === '}') braces--;
+          if (char === '[') brackets++;
+          if (char === ']') brackets--;
+        }
+      }
+
+      if (inStr) attempt += '"';
+      attempt = attempt.replace(/,\s*$/, '');
+      while (brackets > 0) { attempt += ']'; brackets--; }
+      while (braces > 0) { attempt += '}'; braces--; }
+
+      try {
+        JSON.parse(attempt);
+        logger.info(`JSON reparado agressivamente (cortou ${lines.length - i - 1} linhas do final)`);
+        return attempt;
+      } catch {}
     }
 
     return text;

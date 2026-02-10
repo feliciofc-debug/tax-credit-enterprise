@@ -28,6 +28,11 @@ const PORT = process.env.PORT || 3000;
 // ==============================
 // Middlewares de seguranca
 // ==============================
+
+// Trust proxy - necessario para Render/Heroku/Vercel (reverse proxy)
+// Corrige o erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR do express-rate-limit
+app.set('trust proxy', 1);
+
 app.use(helmet());
 
 // CORS restritivo - apenas origens autorizadas
