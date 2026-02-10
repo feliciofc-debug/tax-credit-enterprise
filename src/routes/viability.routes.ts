@@ -133,13 +133,14 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
     else if (quickResult.score >= 50) scoreLabel = 'medio';
     else if (quickResult.score >= 30) scoreLabel = 'baixo';
 
-    // Atualizar registro com resultado do score
+    // Atualizar registro com resultado do score + salvar texto para análise completa futura
     const updatedViability = await prisma.viabilityAnalysis.update({
       where: { id: viability.id },
       data: {
         viabilityScore: quickResult.score,
         scoreLabel,
         aiSummary: quickResult.summary,
+        docsText: combinedText, // Salvar texto para reutilizar na análise completa
         status: 'completed',
       },
     });
@@ -412,6 +413,147 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   } catch (error: any) {
     logger.error('Error fetching viability:', error);
     return res.status(500).json({ success: false, error: 'Erro ao buscar análise' });
+  }
+});
+
+// ============================================================
+// ROTA ADMIN: ANÁLISE COMPLETA (Opus 4.6 — sem checks de contrato)
+// ============================================================
+/**
+ * POST /api/viability/:id/admin-full-analysis
+ * Admin executa análise profunda com Opus 4.6 em uma viabilidade existente
+ * Usa os documentos já enviados no quick score
+ * Retorna extrato detalhado de oportunidades com valores
+ */
+router.post('/:id/admin-full-analysis', authenticateToken, upload.array('documents', 10), async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+
+    // Apenas admin pode usar esta rota
+    if (user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
+    }
+
+    const { id } = req.params;
+    const { documentType } = req.body;
+    const files = req.files as Express.Multer.File[];
+
+    // Buscar viabilidade existente
+    const viability = await prisma.viabilityAnalysis.findFirst({
+      where: { id },
+    });
+
+    if (!viability) {
+      return res.status(404).json({ success: false, error: 'Análise de viabilidade não encontrada' });
+    }
+
+    // Se tem novos arquivos enviados, processar eles
+    // Se não, usar o texto já extraído do quick score
+    let combinedText = '';
+
+    if (files && files.length > 0) {
+      const { combinedText: newText } = await processUploadedFiles(files);
+      combinedText = newText;
+    } else if (viability.docsText) {
+      combinedText = viability.docsText;
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Nenhum documento disponível. Envie documentos ou execute um quick score primeiro.',
+      });
+    }
+
+    if (combinedText.trim().length < 200) {
+      return res.status(422).json({
+        success: false,
+        error: 'Texto insuficiente para análise completa. Envie documentos de melhor qualidade.',
+      });
+    }
+
+    // Construir info da empresa
+    const companyInfo = {
+      name: viability.companyName,
+      cnpj: viability.cnpj || undefined,
+      regime: (viability.regime as 'lucro_real' | 'lucro_presumido' | 'simples') || undefined,
+      sector: viability.sector || undefined,
+    };
+
+    logger.info(`Admin full analysis started for viability ${id}`, {
+      company: companyInfo.name,
+      textLength: combinedText.length,
+    });
+
+    // Atualizar status
+    await prisma.viabilityAnalysis.update({
+      where: { id },
+      data: { status: 'analyzing' },
+    });
+
+    // ANÁLISE PROFUNDA COM OPUS 4.6
+    const analysis = await claudeService.analyzeDocument(
+      combinedText,
+      (documentType || 'dre') as 'dre' | 'balanco' | 'balancete',
+      companyInfo
+    );
+
+    // Salvar resultado detalhado no banco
+    await prisma.viabilityAnalysis.update({
+      where: { id },
+      data: {
+        viabilityScore: analysis.score,
+        scoreLabel: analysis.score >= 85 ? 'excelente' : analysis.score >= 70 ? 'bom' : analysis.score >= 50 ? 'medio' : analysis.score >= 30 ? 'baixo' : 'inviavel',
+        estimatedCredit: analysis.valorTotalEstimado,
+        opportunities: JSON.stringify(analysis.oportunidades),
+        aiSummary: analysis.resumoExecutivo,
+        risks: JSON.stringify(analysis.alertas),
+        status: 'completed',
+      },
+    });
+
+    logger.info(`Admin full analysis completed for viability ${id}`, {
+      score: analysis.score,
+      opportunities: analysis.oportunidades.length,
+      totalEstimated: analysis.valorTotalEstimado,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        id: viability.id,
+        companyName: viability.companyName,
+        cnpj: viability.cnpj,
+        score: analysis.score,
+        scoreLabel: analysis.score >= 85 ? 'excelente' : analysis.score >= 70 ? 'bom' : analysis.score >= 50 ? 'medio' : analysis.score >= 30 ? 'baixo' : 'inviavel',
+        estimatedCredit: analysis.valorTotalEstimado,
+        resumoExecutivo: analysis.resumoExecutivo,
+        fundamentacaoGeral: analysis.fundamentacaoGeral,
+        periodoAnalisado: analysis.periodoAnalisado,
+        regimeTributario: analysis.regimeTributario,
+        riscoGeral: analysis.riscoGeral,
+        recomendacoes: analysis.recomendacoes,
+        alertas: analysis.alertas,
+        // EXTRATO DETALHADO — cada oportunidade com valores
+        oportunidades: analysis.oportunidades.map(op => ({
+          tipo: op.tipo,
+          tributo: op.tributo,
+          descricao: op.descricao,
+          valorEstimado: op.valorEstimado,
+          fundamentacaoLegal: op.fundamentacaoLegal,
+          prazoRecuperacao: op.prazoRecuperacao,
+          complexidade: op.complexidade,
+          probabilidadeRecuperacao: op.probabilidadeRecuperacao,
+          risco: op.risco,
+          documentacaoNecessaria: op.documentacaoNecessaria,
+          passosPraticos: op.passosPraticos,
+        })),
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error in admin full analysis:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Erro na análise completa',
+    });
   }
 });
 
