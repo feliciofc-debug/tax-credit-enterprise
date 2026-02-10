@@ -37,8 +37,8 @@ router.post('/register', async (req: Request, res: Response) => {
         company,
         cnpj,
         phone,
-        status: 'active', // auto-aprovado por enquanto
-        approvedAt: new Date(),
+        status: 'pending', // aguarda aprovação do admin
+        approvedAt: null,
       },
     });
 
