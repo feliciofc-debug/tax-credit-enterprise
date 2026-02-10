@@ -7,10 +7,12 @@ interface ViabilityResult {
   companyName: string;
   score: number;
   scoreLabel: string;
-  estimatedCredit: number;
-  opportunities: any[];
+  estimatedCredit?: number | null;
+  opportunities?: any[];
   summary: string;
-  risks: string[];
+  risks?: string[];
+  viable?: boolean;
+  nextSteps?: string;
   aiPowered?: boolean;
 }
 
@@ -20,7 +22,7 @@ interface ViabilityListItem {
   cnpj: string;
   viabilityScore: number;
   scoreLabel: string;
-  estimatedCredit: number;
+  estimatedCredit: number | null;
   status: string;
   createdAt: string;
 }
@@ -226,11 +228,11 @@ export default function AdminViabilidadePage() {
                   <p className="text-gray-500 text-xs mt-1 capitalize">{result.scoreLabel}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-700">{formatCurrency(result.estimatedCredit)}</p>
+                  <p className="text-2xl font-bold text-green-700">{result.estimatedCredit ? formatCurrency(result.estimatedCredit) : 'Após consulta'}</p>
                   <p className="text-gray-500 text-xs">Credito Estimado</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-900">{result.opportunities.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{result.opportunities?.length || 0}</p>
                   <p className="text-gray-500 text-xs">Oportunidades</p>
                 </div>
               </div>
@@ -239,10 +241,17 @@ export default function AdminViabilidadePage() {
                 <p className="text-gray-700 text-sm">{result.summary}</p>
               </div>
 
-              {result.opportunities.length > 0 && (
+              {result.nextSteps && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-blue-800 text-sm font-semibold mb-1">Proximos Passos:</p>
+                  <p className="text-blue-700 text-sm">{result.nextSteps}</p>
+                </div>
+              )}
+
+              {(result.opportunities?.length || 0) > 0 && (
                 <div className="space-y-2 mb-4">
                   <p className="text-gray-700 text-sm font-semibold">Oportunidades:</p>
-                  {result.opportunities.map((op: any, i: number) => (
+                  {result.opportunities!.map((op: any, i: number) => (
                     <div key={i} className="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
                       <div>
                         <p className="text-gray-900 text-sm font-medium">{op.tipo}</p>
@@ -254,10 +263,10 @@ export default function AdminViabilidadePage() {
                 </div>
               )}
 
-              {result.risks.length > 0 && (
+              {(result.risks?.length || 0) > 0 && (
                 <div>
                   <p className="text-gray-700 text-sm font-semibold mb-2">Riscos:</p>
-                  {result.risks.map((r: string, i: number) => (
+                  {result.risks!.map((r: string, i: number) => (
                     <p key={i} className="text-yellow-700 text-xs mb-1">- {r}</p>
                   ))}
                 </div>
@@ -282,7 +291,7 @@ export default function AdminViabilidadePage() {
                       <span className={`text-sm font-bold ${scoreColor(h.scoreLabel)} px-2 py-1 rounded`}>
                         {h.viabilityScore}
                       </span>
-                      <p className="text-green-700 text-xs mt-1">{formatCurrency(h.estimatedCredit || 0)}</p>
+                      <p className="text-green-700 text-xs mt-1">{h.estimatedCredit ? formatCurrency(h.estimatedCredit) : 'Pré-triagem'}</p>
                     </div>
                   </div>
                 ))}

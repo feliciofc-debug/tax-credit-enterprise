@@ -334,7 +334,7 @@ export default function AdminDashboardPage() {
                                 </span>
                               </td>
                               <td className="px-6 py-4 text-sm font-semibold text-green-700">
-                                {fmt(v.estimatedCredit || 0)}
+                                {v.estimatedCredit ? fmt(v.estimatedCredit) : <span className="text-gray-400 font-normal">Após consulta</span>}
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-500">
                                 {v.partner?.name || v.partner?.company || '-'}

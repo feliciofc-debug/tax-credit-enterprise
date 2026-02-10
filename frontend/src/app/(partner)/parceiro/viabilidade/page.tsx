@@ -171,7 +171,7 @@ export default function ViabilidadePage() {
                       <div className="text-right">
                         <p className="text-sm text-gray-500">Credito Estimado</p>
                         <p className="text-2xl font-bold text-gray-900">
-                          R$ {(result.estimatedCredit || 0).toLocaleString('pt-BR')}
+                          {result.estimatedCredit ? `R$ ${result.estimatedCredit.toLocaleString('pt-BR')}` : 'Após consulta completa'}
                         </p>
                       </div>
                     </div>

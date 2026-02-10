@@ -9,13 +9,12 @@ import { logger } from '../utils/logger';
 // CONFIGURAÇÃO DE MODELOS
 // ============================================================
 const MODELS = {
-  // Sonnet 4.5 — rápido e inteligente, ideal para análise em tempo real
-  // (Opus 4.6 é mais poderoso mas leva ~2min, causando timeout no Render free tier)
-  ANALYSIS: 'claude-sonnet-4-5-20250929',
-  // Sonnet 4.5 — geração de documentos
+  // Opus 4.6 — análise tributária profunda (requer Render Starter $7/mês para evitar timeout)
+  ANALYSIS: 'claude-opus-4-6',
+  // Sonnet 4.5 — geração de documentos e quick score (rápido)
   DOCUMENTS: 'claude-sonnet-4-5-20250929',
-  // Opus 4.6 — reservado para análises profundas em background (futuro)
-  DEEP_ANALYSIS: 'claude-opus-4-6',
+  // Sonnet 4.5 — usado para quick score (pré-triagem rápida)
+  QUICK: 'claude-sonnet-4-5-20250929',
 } as const;
 
 // Limites de texto por tipo de documento
@@ -84,6 +83,21 @@ ${companyInfo.cnpj ? `- CNPJ: ${companyInfo.cnpj}` : ''}
 ${companyInfo.regime ? `- Regime Tributário: ${companyInfo.regime}` : '- Regime: Verificar no documento'}
 ${companyInfo.sector ? `- Setor: ${companyInfo.sector}` : ''}
 ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
+
+## REGRA CRÍTICA SOBRE UNIDADES MONETÁRIAS
+- ANTES DE TUDO: Verifique se o documento indica "Em milhares de Reais", "R$ mil" ou "Em Reais - R$".
+- Se estiver em "R$ mil" ou "milhares", o número 100.470 significa R$ 100.470.000 (cem milhões).
+- Se estiver em "R$" (reais cheios), 100.470.000 já é o valor real.
+- NÃO MULTIPLIQUE por 1.000 se o valor já está em milhares!
+- Quando reportar valorEstimado nos resultados, SEMPRE use o valor em REAIS (não em milhares).
+
+## REGRA CRÍTICA SOBRE CONSERVADORISMO
+- Seja EXTREMAMENTE conservador nos valores estimados
+- Créditos recuperáveis RARAMENTE ultrapassam 5-10% da receita bruta
+- Para empresas com receita de R$ 100M, o crédito total REALISTA tipicamente fica entre R$ 2M e R$ 8M
+- Se seu cálculo resultar em mais de 15% da receita bruta, REVISE — provavelmente há erro de unidade ou cálculo
+- Somente inclua oportunidades com ALTA probabilidade de êxito e fundamentação sólida
+- É melhor reportar MENOS oportunidades com valores REALISTAS do que muitas com valores inflados
 
 ## O QUE ANALISAR NA DRE
 
@@ -163,6 +177,19 @@ ${companyInfo.cnpj ? `- CNPJ: ${companyInfo.cnpj}` : ''}
 ${companyInfo.regime ? `- Regime Tributário: ${companyInfo.regime}` : '- Regime: Verificar no documento'}
 ${companyInfo.sector ? `- Setor: ${companyInfo.sector}` : ''}
 
+## REGRA CRÍTICA SOBRE UNIDADES MONETÁRIAS
+- ANTES DE TUDO: Verifique se o documento indica "Em milhares de Reais", "R$ mil" ou "Em Reais - R$".
+- Se estiver em "R$ mil" ou "milhares", o número 14.520 significa R$ 14.520.000 (quatorze milhões).
+- NÃO MULTIPLIQUE por 1.000 se o valor já está em milhares!
+- Quando reportar valorEstimado, SEMPRE use o valor em REAIS (não em milhares).
+
+## REGRA CRÍTICA SOBRE CONSERVADORISMO
+- Seja EXTREMAMENTE conservador nos valores estimados
+- Créditos recuperáveis RARAMENTE ultrapassam 5-10% da receita bruta da empresa
+- Somente reporte valores que você pode CALCULAR com base nos dados do documento
+- Se não tem dados suficientes para calcular, NÃO estime — informe nos alertas
+- É melhor subestimar do que superestimar
+
 ## O QUE ANALISAR NO BALANÇO PATRIMONIAL
 
 ### ATIVO
@@ -228,6 +255,20 @@ function buildBalancetePrompt(companyInfo: CompanyInfo): string {
 ${companyInfo.cnpj ? `- CNPJ: ${companyInfo.cnpj}` : ''}
 ${companyInfo.regime ? `- Regime Tributário: ${companyInfo.regime}` : '- Regime: Verificar no documento'}
 ${companyInfo.sector ? `- Setor: ${companyInfo.sector}` : ''}
+
+## REGRA CRÍTICA SOBRE UNIDADES MONETÁRIAS
+- ANTES DE TUDO: Verifique se o documento indica "Em Reais - R$" ou "Em milhares de Reais - R$ mil".
+- Um balancete pode ter valores em REAIS CHEIOS (ex: 100.470.000,00 = cem milhões) ou em MILHARES.
+- SEMPRE verifique o cabeçalho do documento para confirmar a unidade.
+- Quando reportar valorEstimado, SEMPRE use o valor em REAIS (não em milhares).
+
+## REGRA CRÍTICA SOBRE CONSERVADORISMO
+- Seja EXTREMAMENTE conservador nos valores estimados
+- Saldos de "tributos a recuperar" no balancete NÃO significam automaticamente créditos recuperáveis judicialmente
+- Muitos saldos a recuperar são compensações normais do mês seguinte
+- Para identificar créditos REAIS, compare: saldo atual vs. saldo anterior — crescimento contínuo indica acúmulo anormal
+- Créditos recuperáveis RARAMENTE ultrapassam 5-10% da receita bruta
+- Se não pode CALCULAR com dados do documento, NÃO estime — informe nos alertas
 
 ## O QUE ANALISAR NO BALANCETE DE VERIFICAÇÃO
 
@@ -417,11 +458,12 @@ class ClaudeService {
       const response = await this.client.messages.create({
         model: MODELS.ANALYSIS,
         max_tokens: 16384,
+        temperature: 0, // Determinístico: mesmos dados = mesmos resultados
         system: systemPrompt,
         messages: [
           {
             role: 'user',
-            content: `Analise o seguinte ${this.getDocumentTypeName(documentType)} e identifique TODAS as oportunidades de recuperação de créditos tributários:\n\n${truncatedText}`,
+            content: `ATENÇÃO SOBRE UNIDADES: Verifique CUIDADOSAMENTE se os valores do documento estão em "R$" (reais cheios) ou "R$ mil" / "em milhares de Reais". Muitos documentos contábeis usam valores em milhares — NÃO multiplique por 1.000 novamente. Se o documento diz "100.470" e está "em milhares", o valor real é R$ 100.470.000.\n\nAnalise o seguinte ${this.getDocumentTypeName(documentType)} e identifique TODAS as oportunidades de recuperação de créditos tributários:\n\n${truncatedText}`,
           },
         ],
       });
@@ -501,6 +543,7 @@ class ClaudeService {
       const parecerResponse = await this.client.messages.create({
         model: MODELS.DOCUMENTS,
         max_tokens: 6000,
+        temperature: 0,
         messages: [
           {
             role: 'user',
@@ -518,6 +561,7 @@ class ClaudeService {
       const peticaoResponse = await this.client.messages.create({
         model: MODELS.DOCUMENTS,
         max_tokens: 6000,
+        temperature: 0,
         messages: [
           {
             role: 'user',
@@ -566,13 +610,25 @@ class ClaudeService {
 
     try {
       const response = await this.client.messages.create({
-        model: MODELS.DOCUMENTS, // Sonnet para análise rápida
+        model: MODELS.QUICK, // Sonnet para análise rápida (pré-triagem)
         max_tokens: 2000,
-        system: `Você é um especialista tributário. Faça uma análise RÁPIDA de viabilidade de recuperação de créditos tributários. Responda em JSON: {"viable": true/false, "score": 0-100, "summary": "resumo em 2-3 frases", "mainOpportunities": ["oportunidade1", "oportunidade2"]}`,
+        temperature: 0, // Determinístico
+        system: `Você é um especialista tributário CONSERVADOR. Faça uma análise RÁPIDA de viabilidade de recuperação de créditos tributários.
+
+REGRAS CRÍTICAS:
+1. O score deve refletir a PROBABILIDADE de haver créditos recuperáveis, NÃO o valor.
+2. Score 0-30 = Baixo potencial, 31-60 = Moderado, 61-80 = Bom, 81-100 = Excelente (RARO).
+3. Seja CONSERVADOR — score acima de 80 APENAS se houver evidências claras e concretas nos números.
+4. ATENÇÃO com unidades: verifique se valores estão em "R$" ou "R$ mil" (milhares). NÃO multiplique por 1.000 se já estiver em milhares.
+5. NÃO invente valores — se não tem certeza do valor, NÃO estime. Foque na viabilidade qualitativa.
+6. Oportunidades COMUNS em indústrias: PIS/COFINS sobre ICMS (Tema 69 STF), créditos de PIS/COFINS sobre insumos, ICMS-ST pago a maior.
+7. O resumo deve ser REALISTA e profissional, sem exageros.
+
+Responda em JSON: {"viable": true/false, "score": 0-100, "summary": "resumo em 2-3 frases CONSERVADOR e realista", "mainOpportunities": ["oportunidade1", "oportunidade2"], "nextSteps": ["passo1", "passo2"]}`,
         messages: [
           {
             role: 'user',
-            content: `Avalie rapidamente a viabilidade de recuperação tributária para ${companyInfo.name}:\n\n${truncated}`,
+            content: `ATENÇÃO: Verifique se os valores estão em "R$" (reais) ou "R$ mil" (milhares). Muitos documentos contábeis brasileiros usam valores em milhares.\n\nAvalie rapidamente a viabilidade de recuperação tributária para ${companyInfo.name}:\n\n${truncated}`,
           },
         ],
       });
@@ -626,24 +682,48 @@ class ClaudeService {
       const parsed = JSON.parse(jsonStr);
 
       // Validação e normalização dos campos
+      const oportunidades = Array.isArray(parsed.oportunidades)
+        ? parsed.oportunidades.map((op: any) => ({
+            tipo: op.tipo || 'Não especificado',
+            tributo: op.tributo || 'N/A',
+            descricao: op.descricao || '',
+            valorEstimado: parseFloat(op.valorEstimado) || 0,
+            fundamentacaoLegal: op.fundamentacaoLegal || '',
+            prazoRecuperacao: op.prazoRecuperacao || 'Últimos 5 anos',
+            complexidade: op.complexidade || 'media',
+            probabilidadeRecuperacao: Math.min(100, Math.max(0, parseInt(op.probabilidadeRecuperacao) || 0)),
+            risco: op.risco || '',
+            documentacaoNecessaria: Array.isArray(op.documentacaoNecessaria) ? op.documentacaoNecessaria : [],
+            passosPraticos: Array.isArray(op.passosPraticos) ? op.passosPraticos : [],
+          }))
+        : [];
+
+      let valorTotalEstimado = parseFloat(parsed.valorTotalEstimado) || 0;
+
+      // VALIDAÇÃO DE SANIDADE: recalcular o total a partir das oportunidades individuais
+      const somaOportunidades = oportunidades.reduce((sum: number, op: any) => sum + (op.valorEstimado || 0), 0);
+      
+      // Se o total declarado difere muito da soma das oportunidades, usar a soma
+      if (somaOportunidades > 0 && Math.abs(valorTotalEstimado - somaOportunidades) > somaOportunidades * 0.1) {
+        logger.warn(`Valor total (${valorTotalEstimado}) difere da soma das oportunidades (${somaOportunidades}). Usando soma.`);
+        valorTotalEstimado = somaOportunidades;
+      }
+
+      // VALIDAÇÃO DE SANIDADE: alertar se valores parecem em unidade errada
+      // Se uma única oportunidade > R$ 50M, provavelmente há erro de unidade
+      for (const op of oportunidades) {
+        if (op.valorEstimado > 50_000_000) {
+          logger.warn(`Oportunidade "${op.tipo}" com valor suspeito: R$ ${op.valorEstimado.toLocaleString('pt-BR')} — possível erro de unidade monetária`);
+          // Adicionar alerta nos dados
+          if (!parsed.alertas) parsed.alertas = [];
+          parsed.alertas.push(`ATENÇÃO: O valor de R$ ${op.valorEstimado.toLocaleString('pt-BR')} para "${op.tipo}" pode conter erro de unidade. Revise manualmente.`);
+        }
+      }
+
       return {
-        oportunidades: Array.isArray(parsed.oportunidades)
-          ? parsed.oportunidades.map((op: any) => ({
-              tipo: op.tipo || 'Não especificado',
-              tributo: op.tributo || 'N/A',
-              descricao: op.descricao || '',
-              valorEstimado: parseFloat(op.valorEstimado) || 0,
-              fundamentacaoLegal: op.fundamentacaoLegal || '',
-              prazoRecuperacao: op.prazoRecuperacao || 'Últimos 5 anos',
-              complexidade: op.complexidade || 'media',
-              probabilidadeRecuperacao: Math.min(100, Math.max(0, parseInt(op.probabilidadeRecuperacao) || 0)),
-              risco: op.risco || '',
-              documentacaoNecessaria: Array.isArray(op.documentacaoNecessaria) ? op.documentacaoNecessaria : [],
-              passosPraticos: Array.isArray(op.passosPraticos) ? op.passosPraticos : [],
-            }))
-          : [],
+        oportunidades,
         resumoExecutivo: parsed.resumoExecutivo || 'Análise concluída sem resumo disponível.',
-        valorTotalEstimado: parseFloat(parsed.valorTotalEstimado) || 0,
+        valorTotalEstimado,
         score: Math.min(100, Math.max(0, parseInt(parsed.score) || 0)),
         recomendacoes: Array.isArray(parsed.recomendacoes) ? parsed.recomendacoes : [],
         alertas: Array.isArray(parsed.alertas) ? parsed.alertas : [],
