@@ -1,7 +1,7 @@
 import { logger } from '../utils/logger';
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'TaxCredit Enterprise <onboarding@resend.dev>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'TaxCredit Enterprise <noreply@send.taxcreditenterprise.com>';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://taxcreditenterprise.com';
 
 interface SendEmailParams {
