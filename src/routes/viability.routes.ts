@@ -3,44 +3,31 @@ import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import multer from 'multer';
-import path from 'path';
-import os from 'os';
-import fs from 'fs/promises';
-import Anthropic from '@anthropic-ai/sdk';
-import pdfParse from 'pdf-parse';
 import { getOperatorPartnerId } from '../utils/operator';
-
-let aiClient: Anthropic | null = null;
-try {
-  if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your_api_key_here') {
-    aiClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  }
-} catch (e) {
-  console.warn('Anthropic client not available for viability analysis');
-}
-
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+import { claudeService } from '../services/claude.service';
+import { documentProcessor } from '../services/documentProcessor.service';
 
 const router = Router();
 
-// Upload config
+// Upload config — agora usa memoryStorage (buffer direto, sem salvar em disco)
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: async (_req, _file, cb) => {
-      const dir = path.join(os.tmpdir(), 'viability-uploads');
-      await fs.mkdir(dir, { recursive: true });
-      cb(null, dir);
-    },
-    filename: (_req, file, cb) => {
-      cb(null, Date.now() + '-' + file.originalname);
-    },
-  }),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (_req, file, cb) => {
+    if (documentProcessor.isSupported(file.originalname)) {
+      cb(null, true);
+    } else {
+      cb(new Error(
+        `Tipo de arquivo não suportado: ${file.originalname}. ` +
+        `Extensões aceitas: ${documentProcessor.getSupportedExtensions().join(', ')}`
+      ));
+    }
+  },
 });
 
 /**
  * POST /api/viability/analyze
- * Parceiro envia docs e recebe score de viabilidade
+ * Parceiro envia docs e recebe análise de viabilidade com Opus 4.5
  */
 router.post('/analyze', authenticateToken, upload.array('documents', 10), async (req: Request, res: Response) => {
   try {
@@ -49,14 +36,18 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
       return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros e administradores' });
     }
 
-    const { companyName, cnpj, regime, sector, annualRevenue } = req.body;
+    const { companyName, cnpj, regime, sector, annualRevenue, documentType } = req.body;
     const files = req.files as Express.Multer.File[];
 
     if (!companyName) {
-      return res.status(400).json({ success: false, error: 'Nome da empresa e obrigatorio' });
+      return res.status(400).json({ success: false, error: 'Nome da empresa é obrigatório' });
     }
 
-    // Criar registro da analise
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, error: 'Envie pelo menos um documento para análise' });
+    }
+
+    // Criar registro da análise
     const viability = await prisma.viabilityAnalysis.create({
       data: {
         partnerId,
@@ -65,86 +56,136 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
         regime,
         sector,
         annualRevenue: annualRevenue ? parseFloat(annualRevenue) : null,
-        docsUploaded: files?.length || 0,
+        docsUploaded: files.length,
         status: 'analyzing',
       },
     });
 
-    // Extrair texto dos documentos PDF enviados
-    let extractedText = '';
-    if (files && files.length > 0) {
-      for (const file of files) {
-        try {
-          if (file.originalname.toLowerCase().endsWith('.pdf')) {
-            const buffer = await fs.readFile(file.path);
-            const pdfData = await pdfParse(buffer);
-            extractedText += `\n--- ${file.originalname} ---\n${pdfData.text}\n`;
-          } else {
-            // Para outros tipos de arquivo, ler como texto
-            const content = await fs.readFile(file.path, 'utf-8').catch(() => '');
-            if (content) extractedText += `\n--- ${file.originalname} ---\n${content}\n`;
-          }
-        } catch (e) {
-          logger.warn(`Could not extract text from ${file.originalname}`);
-        }
+    // Processar todos os documentos e concatenar textos
+    let combinedText = '';
+    let totalPages = 0;
+    let anyOcrUsed = false;
+    let overallQuality: 'high' | 'medium' | 'low' = 'high';
+
+    for (const file of files) {
+      try {
+        const processed = await documentProcessor.processDocument(
+          file.buffer,
+          file.originalname,
+          file.mimetype
+        );
+
+        combinedText += `\n--- ${file.originalname} ---\n${processed.text}\n`;
+        totalPages += processed.pageCount;
+        if (processed.ocrUsed) anyOcrUsed = true;
+
+        // Qualidade geral é a menor encontrada
+        if (processed.quality === 'low') overallQuality = 'low';
+        else if (processed.quality === 'medium' && overallQuality === 'high') overallQuality = 'medium';
+      } catch (docError: any) {
+        logger.warn(`Falha ao processar ${file.originalname}: ${docError.message}`);
+        // Continuar com os outros documentos
       }
     }
 
-    let score;
-    
-    // Se a IA estiver disponivel E houver documentos, usar Claude para analise real
-    if (aiClient && extractedText.length > 100) {
-      logger.info(`Using Claude AI for viability analysis ${viability.id}`);
-      score = await analyzeWithClaude(extractedText, companyName, cnpj, regime, sector, annualRevenue);
-    } else {
-      // Fallback: score simulado baseado nos dados informados
-      logger.info(`Using simulated score for viability analysis ${viability.id} (AI: ${!!aiClient}, docs: ${extractedText.length} chars)`);
-      score = generateViabilityScore(regime, annualRevenue, files?.length || 0, sector);
+    // Verificar qualidade
+    if (overallQuality === 'low' || combinedText.trim().length < 200) {
+      await prisma.viabilityAnalysis.update({
+        where: { id: viability.id },
+        data: { status: 'failed' },
+      });
+
+      return res.status(422).json({
+        success: false,
+        error: 'Documento com qualidade insuficiente para análise',
+        details: 'Texto extraído muito curto ou ilegível. Envie PDF de melhor qualidade ou use Excel.',
+        ocrUsed: anyOcrUsed,
+      });
     }
 
+    // Construir info da empresa (usar metadados extraídos como fallback)
+    const lastProcessed = await documentProcessor.processDocument(
+      files[0].buffer,
+      files[0].originalname,
+      files[0].mimetype
+    ).catch(() => null);
+
+    const companyInfo = {
+      name: companyName || lastProcessed?.metadata.extractedCompanyName || 'Não informado',
+      cnpj: cnpj || lastProcessed?.metadata.extractedCNPJ,
+      regime: regime as 'lucro_real' | 'lucro_presumido' | 'simples' | undefined,
+      sector,
+    };
+
+    // Analisar com Claude Opus 4.5
+    const analysis = await claudeService.analyzeDocument(
+      combinedText,
+      documentType || 'dre',
+      companyInfo
+    );
+
+    // Determinar label a partir do score
+    let scoreLabel = 'inviavel';
+    if (analysis.score >= 85) scoreLabel = 'excelente';
+    else if (analysis.score >= 70) scoreLabel = 'bom';
+    else if (analysis.score >= 50) scoreLabel = 'medio';
+    else if (analysis.score >= 30) scoreLabel = 'baixo';
+
+    // Atualizar registro com resultado
     const updatedViability = await prisma.viabilityAnalysis.update({
       where: { id: viability.id },
       data: {
-        viabilityScore: score.score,
-        scoreLabel: score.label,
-        estimatedCredit: score.estimatedCredit,
-        opportunities: JSON.stringify(score.opportunities),
-        aiSummary: score.summary,
-        risks: JSON.stringify(score.risks),
+        viabilityScore: analysis.score,
+        scoreLabel,
+        estimatedCredit: analysis.valorTotalEstimado,
+        opportunities: JSON.stringify(analysis.oportunidades),
+        aiSummary: analysis.resumoExecutivo,
+        risks: JSON.stringify(analysis.alertas),
         status: 'completed',
       },
     });
 
-    logger.info(`Viability analysis completed: ${viability.id} - Score: ${score.score} (AI: ${score.aiPowered || false})`);
-
-    // Limpar arquivos temp
-    if (files) {
-      await Promise.all(files.map(f => fs.unlink(f.path).catch(() => {})));
-    }
+    logger.info(`Viability analysis completed: ${viability.id} - Score: ${analysis.score} (AI: true, Opus 4.5)`);
 
     return res.json({
       success: true,
       data: {
         id: updatedViability.id,
         companyName: updatedViability.companyName,
-        score: updatedViability.viabilityScore,
-        scoreLabel: updatedViability.scoreLabel,
-        estimatedCredit: updatedViability.estimatedCredit,
-        opportunities: score.opportunities,
-        summary: updatedViability.aiSummary,
-        risks: score.risks,
-        aiPowered: score.aiPowered || false,
+        score: analysis.score,
+        scoreLabel,
+        estimatedCredit: analysis.valorTotalEstimado,
+        opportunities: analysis.oportunidades,
+        summary: analysis.resumoExecutivo,
+        risks: analysis.alertas,
+        recomendacoes: analysis.recomendacoes,
+        fundamentacaoGeral: analysis.fundamentacaoGeral,
+        periodoAnalisado: analysis.periodoAnalisado,
+        regimeTributario: analysis.regimeTributario,
+        riscoGeral: analysis.riscoGeral,
+        aiPowered: true,
+        metadata: {
+          documentType: documentType || 'dre',
+          ocrUsed: anyOcrUsed,
+          quality: overallQuality,
+          pageCount: totalPages,
+          extractedPeriod: lastProcessed?.metadata.extractedPeriod,
+          extractedCNPJ: lastProcessed?.metadata.extractedCNPJ,
+        },
       },
     });
   } catch (error: any) {
     logger.error('Error in viability analysis:', error);
-    return res.status(500).json({ success: false, error: 'Erro na analise de viabilidade' });
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Erro na análise de viabilidade',
+    });
   }
 });
 
 /**
  * GET /api/viability/list
- * Lista analises de viabilidade do parceiro
+ * Lista análises de viabilidade do parceiro
  */
 router.get('/list', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -166,13 +207,13 @@ router.get('/list', authenticateToken, async (req: Request, res: Response) => {
     return res.json({ success: true, data: analyses });
   } catch (error: any) {
     logger.error('Error listing viabilities:', error);
-    return res.status(500).json({ success: false, error: 'Erro ao listar analises' });
+    return res.status(500).json({ success: false, error: 'Erro ao listar análises' });
   }
 });
 
 /**
  * GET /api/viability/:id
- * Detalhe de uma analise de viabilidade
+ * Detalhe de uma análise de viabilidade
  */
 router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -184,7 +225,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     });
 
     if (!viability) {
-      return res.status(404).json({ success: false, error: 'Analise nao encontrada' });
+      return res.status(404).json({ success: false, error: 'Análise não encontrada' });
     }
 
     return res.json({
@@ -197,175 +238,8 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error('Error fetching viability:', error);
-    return res.status(500).json({ success: false, error: 'Erro ao buscar analise' });
+    return res.status(500).json({ success: false, error: 'Erro ao buscar análise' });
   }
 });
-
-/**
- * Analisa viabilidade usando Claude AI com os documentos reais
- */
-async function analyzeWithClaude(
-  documentText: string,
-  companyName: string,
-  cnpj?: string,
-  regime?: string,
-  sector?: string,
-  annualRevenue?: string
-) {
-  try {
-    const prompt = `Voce e um consultor tributario especializado em recuperacao de creditos tributarios no Brasil.
-
-Analise os documentos fiscais abaixo e forneca uma avaliacao de viabilidade para recuperacao de creditos tributarios.
-
-DADOS DA EMPRESA:
-- Empresa: ${companyName}
-- CNPJ: ${cnpj || 'Nao informado'}
-- Regime Tributario: ${regime || 'Nao informado'}
-- Setor: ${sector || 'Nao informado'}
-- Faturamento Anual: ${annualRevenue ? `R$ ${parseFloat(annualRevenue).toLocaleString('pt-BR')}` : 'Nao informado'}
-
-DOCUMENTOS FISCAIS:
-${documentText.substring(0, 15000)}
-
-RESPONDA EXATAMENTE no formato JSON abaixo (sem markdown, sem codigo, apenas o JSON puro):
-{
-  "score": <numero de 0 a 100>,
-  "label": "<excelente|bom|medio|baixo|inviavel>",
-  "estimatedCredit": <valor numerico estimado em reais>,
-  "summary": "<resumo executivo em 2-3 paragrafos sobre o potencial de recuperacao>",
-  "opportunities": [
-    {
-      "tipo": "<tipo do credito - ex: PIS/COFINS sobre Insumos>",
-      "estimativa": "<faixa de valor - ex: R$ 50.000 - R$ 200.000>",
-      "probabilidade": <numero de 0 a 100>,
-      "fundamentacao": "<artigo de lei ou IN>"
-    }
-  ],
-  "risks": ["<risco 1>", "<risco 2>"]
-}`;
-
-    const message = await aiClient!.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 3000,
-      messages: [{ role: 'user', content: prompt }]
-    });
-
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-    
-    // Tentar extrair JSON da resposta
-    let parsed;
-    try {
-      // Tentar parse direto
-      parsed = JSON.parse(responseText);
-    } catch {
-      // Tentar extrair JSON de dentro do texto
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('Could not parse AI response as JSON');
-      }
-    }
-
-    return {
-      score: Math.max(0, Math.min(100, parsed.score || 50)),
-      label: parsed.label || 'medio',
-      estimatedCredit: parsed.estimatedCredit || 0,
-      summary: parsed.summary || 'Analise concluida pela IA.',
-      opportunities: parsed.opportunities || [],
-      risks: parsed.risks || [],
-      aiPowered: true,
-    };
-  } catch (error: any) {
-    logger.error('Claude AI analysis failed, falling back to simulated:', error.message);
-    // Fallback para score simulado
-    const fallback = generateViabilityScore(regime, annualRevenue, 1, sector);
-    fallback.summary = `[Analise por IA indisponivel] ${fallback.summary}`;
-    return fallback;
-  }
-}
-
-/**
- * Gera score de viabilidade baseado nos dados (fallback sem IA)
- */
-function generateViabilityScore(
-  regime?: string,
-  annualRevenue?: string,
-  docsCount?: number,
-  sector?: string
-) {
-  let baseScore = 50;
-  const opportunities: any[] = [];
-  const risks: string[] = [];
-
-  // Regime tributario
-  if (regime === 'lucro_real') {
-    baseScore += 25;
-    opportunities.push({
-      tipo: 'PIS/COFINS sobre Insumos',
-      estimativa: 'R$ 150.000 - R$ 500.000',
-      probabilidade: 85,
-    });
-    opportunities.push({
-      tipo: 'Exclusao ICMS da Base PIS/COFINS',
-      estimativa: 'R$ 200.000 - R$ 800.000',
-      probabilidade: 95,
-    });
-  } else if (regime === 'lucro_presumido') {
-    baseScore += 15;
-    opportunities.push({
-      tipo: 'IRPJ/CSLL Pago a Maior',
-      estimativa: 'R$ 50.000 - R$ 200.000',
-      probabilidade: 70,
-    });
-  } else if (regime === 'simples') {
-    baseScore -= 10;
-    risks.push('Empresas do Simples possuem menos oportunidades de credito');
-  }
-
-  // Faturamento
-  const revenue = parseFloat(annualRevenue || '0');
-  if (revenue > 10000000) {
-    baseScore += 15;
-    opportunities.push({
-      tipo: 'ICMS-ST Retido Indevidamente',
-      estimativa: 'R$ 100.000 - R$ 400.000',
-      probabilidade: 72,
-    });
-  } else if (revenue > 1000000) {
-    baseScore += 8;
-  } else if (revenue > 0) {
-    baseScore += 3;
-  }
-
-  // Documentos enviados
-  if (docsCount && docsCount >= 3) baseScore += 5;
-
-  // Limitar entre 0 e 100
-  const score = Math.max(0, Math.min(100, baseScore));
-
-  // Label
-  let label = 'inviavel';
-  if (score >= 85) label = 'excelente';
-  else if (score >= 70) label = 'bom';
-  else if (score >= 50) label = 'medio';
-  else if (score >= 30) label = 'baixo';
-
-  // Credito estimado
-  const estimatedCredit = revenue > 0
-    ? Math.round(revenue * (score / 100) * 0.05)
-    : score * 5000;
-
-  const summary = score >= 70
-    ? `Empresa apresenta alto potencial de recuperacao de creditos tributarios. Regime ${regime || 'nao informado'} com faturamento compativel. Recomendamos prosseguir com a operacao.`
-    : score >= 50
-    ? `Empresa apresenta potencial moderado. Sugerimos analise mais detalhada dos documentos para confirmar oportunidades.`
-    : `Potencial limitado de recuperacao. Risco elevado de indeferimento. Avaliar custo-beneficio antes de prosseguir.`;
-
-  if (score < 50) risks.push('Score baixo indica risco elevado de indeferimento');
-  if (!regime) risks.push('Regime tributario nao informado - score pode variar');
-
-  return { score, label, estimatedCredit, opportunities, risks, summary, aiPowered: false };
-}
 
 export default router;

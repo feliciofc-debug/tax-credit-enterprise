@@ -68,7 +68,7 @@ router.post('/create', authenticateToken, async (req: Request, res: Response) =>
         companyName: invite.companyName,
         expiresAt: invite.expiresAt,
         emailSent,
-        inviteLink: `${process.env.FRONTEND_URL || 'https://tax-credit-enterprise-92lv.vercel.app'}/cadastro?code=${invite.inviteCode}`,
+        inviteLink: `${process.env.FRONTEND_URL || 'https://taxcreditenterprise.com'}/cadastro?code=${invite.inviteCode}`,
       },
     });
   } catch (error: any) {

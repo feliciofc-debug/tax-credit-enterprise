@@ -32,9 +32,11 @@ app.use(helmet());
 
 // CORS restritivo - apenas origens autorizadas
 const allowedOrigins = [
-  'https://tax-credit-enterprise-92lv.vercel.app',
+  'https://tax-credit-enterprise-92lv.vercel.app',  // Vercel default
+  'https://taxcreditenterprise.com',                 // Dominio principal
+  'https://www.taxcreditenterprise.com',             // WWW
   process.env.FRONTEND_URL,       // URL do frontend (configuravel)
-  process.env.CUSTOM_DOMAIN_URL,  // Dominio customizado quando tiver
+  process.env.CUSTOM_DOMAIN_URL,  // Dominio customizado extra
 ].filter(Boolean) as string[];
 
 // Em desenvolvimento, permitir localhost

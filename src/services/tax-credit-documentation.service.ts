@@ -2,18 +2,7 @@ import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
-import Anthropic from '@anthropic-ai/sdk';
-
-let client: Anthropic | null = null;
-try {
-  if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your_api_key_here') {
-    client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  }
-} catch (e) {
-  console.warn('Anthropic client not initialized - API key missing or invalid');
-}
-
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+import { claudeService, AnalysisOpportunity, CompanyInfo } from './claude.service';
 
 export interface TaxCreditDocumentation {
   tipo: string;
@@ -68,33 +57,72 @@ export class TaxCreditDocumentationService {
       throw new Error('Opportunity not found');
     }
 
-    // 2. Gerar cada documento
+    // Montar CompanyInfo e AnalysisOpportunity para o claudeService
+    const companyInfo: CompanyInfo = {
+      name: analysis.document.companyName || 'N/A',
+      cnpj: analysis.document.cnpj || undefined,
+    };
+
+    const analysisOpportunity: AnalysisOpportunity = {
+      tipo: opportunity.tipo || 'Não especificado',
+      tributo: opportunity.tributo || 'N/A',
+      descricao: opportunity.descricao || '',
+      valorEstimado: parseFloat(opportunity.valorEstimado) || 0,
+      fundamentacaoLegal: opportunity.fundamentacaoLegal || '',
+      prazoRecuperacao: opportunity.prazoRecuperacao || 'Últimos 5 anos',
+      complexidade: opportunity.complexidade || 'media',
+      probabilidadeRecuperacao: parseInt(opportunity.probabilidadeRecuperacao) || 0,
+      risco: opportunity.risco || '',
+      documentacaoNecessaria: Array.isArray(opportunity.documentacaoNecessaria) ? opportunity.documentacaoNecessaria : [],
+      passosPraticos: Array.isArray(opportunity.passosPraticos) ? opportunity.passosPraticos : [],
+    };
+
+    // 2. Gerar documentação via Claude Sonnet 4.5 (parecer + petição + memória + checklist)
+    let parecerText = '';
+    let peticaoText = '';
+    let memoriaText = '';
+    let checklistDocs: string[] = [];
+
+    try {
+      const docs = await claudeService.generateDocumentation(analysisOpportunity, companyInfo);
+      parecerText = docs.parecerTecnico;
+      peticaoText = docs.peticaoAdministrativa;
+      memoriaText = docs.memoriaCalculo;
+      checklistDocs = docs.checklistDocumentos;
+    } catch (aiError: any) {
+      logger.error(`Claude documentation generation failed: ${aiError.message}`);
+      // Fallback com texto básico (não fake, apenas placeholder indicando erro)
+      parecerText = `PARECER TÉCNICO - ${opportunity.tipo}\n\nEmpresa: ${companyInfo.name}\nCNPJ: ${companyInfo.cnpj || 'N/A'}\nValor Estimado: R$ ${(analysisOpportunity.valorEstimado).toLocaleString('pt-BR')}\nFundamentação: ${analysisOpportunity.fundamentacaoLegal}\n\n[Erro na geração automática: ${aiError.message}. Preencha manualmente.]`;
+      peticaoText = `PETIÇÃO ADMINISTRATIVA\n\nRequerente: ${companyInfo.name}\nCNPJ: ${companyInfo.cnpj || 'N/A'}\nTipo: ${opportunity.tipo}\nValor: R$ ${(analysisOpportunity.valorEstimado).toLocaleString('pt-BR')}\n\n[Erro na geração automática: ${aiError.message}. Preencha manualmente.]`;
+    }
+
+    // 3. Gerar documentos em paralelo (PDFs e Excel)
     const [
       memoriaCalculo,
       planilhaApuracao,
       parecerTecnico,
       peticaoModelo
     ] = await Promise.all([
-      this.generateMemoriaCalculo(analysis, opportunity),
-      this.generatePlanilhaApuracao(analysis, opportunity),
-      this.generateParecerTecnico(analysis, opportunity),
-      this.generatePeticaoModelo(analysis, opportunity)
+      this.generateMemoriaCalculoPDF(analysis, analysisOpportunity, memoriaText),
+      this.generatePlanilhaApuracao(analysis, analysisOpportunity),
+      this.textToPDF('PARECER TÉCNICO', parecerText),
+      this.textToPDF('PETIÇÃO ADMINISTRATIVA', peticaoText),
     ]);
 
-    // 3. Gerar checklist de validação
-    const checklist = await this.generateValidationChecklist(analysis, opportunity);
+    // 4. Gerar checklist de validação
+    const checklist = this.generateValidationChecklist(analysisOpportunity, checklistDocs);
 
     return {
       tipo: opportunity.tipo,
       periodo: analysis.document.extractedPeriod || 'N/A',
-      valorTotal: opportunity.valorEstimado || 0,
+      valorTotal: analysisOpportunity.valorEstimado,
       documentos: {
         memoriaCalculo,
         planilhaApuracao,
         parecerTecnico,
         peticaoModelo
       },
-      fundamentacaoLegal: [opportunity.fundamentacaoLegal],
+      fundamentacaoLegal: [analysisOpportunity.fundamentacaoLegal],
       checklistValidacao: checklist
     };
   }
@@ -102,11 +130,17 @@ export class TaxCreditDocumentationService {
   /**
    * Gera Memória de Cálculo em PDF
    */
-  private async generateMemoriaCalculo(
+  private async generateMemoriaCalculoPDF(
     analysis: any,
-    opportunity: any
+    opportunity: AnalysisOpportunity,
+    memoriaText?: string
   ): Promise<Buffer> {
-    
+    // Se temos texto gerado pelo claudeService, usar ele
+    if (memoriaText && memoriaText.trim().length > 50) {
+      return this.textToPDF('MEMÓRIA DE CÁLCULO', memoriaText);
+    }
+
+    // Fallback: gerar PDF estruturado localmente
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50 });
       const chunks: Buffer[] = [];
@@ -115,47 +149,40 @@ export class TaxCreditDocumentationService {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      // Cabeçalho
       doc.fontSize(20).text('MEMÓRIA DE CÁLCULO', { align: 'center' });
       doc.moveDown();
       doc.fontSize(16).text(opportunity.tipo, { align: 'center' });
       doc.moveDown(2);
 
-      // Dados da empresa
       doc.fontSize(12);
       doc.text(`Empresa: ${analysis.document.companyName || 'N/A'}`);
       doc.text(`CNPJ: ${analysis.document.cnpj || 'N/A'}`);
       doc.text(`Período: ${analysis.document.extractedPeriod || 'N/A'}`);
       doc.moveDown();
 
-      // Fundamentação Legal
       doc.fontSize(14).text('FUNDAMENTAÇÃO LEGAL', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(11).text(opportunity.fundamentacaoLegal);
       doc.moveDown();
 
-      // Descrição da Oportunidade
       doc.fontSize(14).text('DESCRIÇÃO', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(11).text(opportunity.descricao);
       doc.moveDown();
 
-      // Cálculo
       doc.fontSize(14).text('CÁLCULO DO CRÉDITO', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(11);
-      doc.text(`Valor Estimado: R$ ${(opportunity.valorEstimado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+      doc.text(`Valor Estimado: R$ ${opportunity.valorEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
       doc.text(`Prazo de Recuperação: ${opportunity.prazoRecuperacao}`);
       doc.text(`Probabilidade de Recuperação: ${opportunity.probabilidadeRecuperacao}%`);
       doc.moveDown();
 
-      // Observações
       doc.fontSize(14).text('OBSERVAÇÕES', { underline: true });
       doc.moveDown(0.5);
       doc.fontSize(10);
       doc.text('Este documento foi gerado automaticamente e deve ser revisado por profissional habilitado antes do protocolo.');
       
-      // Rodapé
       doc.moveDown(2);
       doc.fontSize(9);
       doc.text(`Documento gerado em ${new Date().toLocaleDateString('pt-BR')}`, { align: 'center' });
@@ -169,13 +196,12 @@ export class TaxCreditDocumentationService {
    */
   private async generatePlanilhaApuracao(
     analysis: any,
-    opportunity: any
+    opportunity: AnalysisOpportunity
   ): Promise<Buffer> {
     
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Apuração de Crédito');
 
-    // Configurar colunas
     sheet.columns = [
       { header: 'Descrição', key: 'descricao', width: 40 },
       { header: 'Competência', key: 'competencia', width: 15 },
@@ -184,23 +210,20 @@ export class TaxCreditDocumentationService {
       { header: 'Valor do Crédito (R$)', key: 'valorCredito', width: 20 }
     ];
 
-    // Adicionar linhas de exemplo
     sheet.addRow({
       descricao: opportunity.tipo,
       competencia: analysis.document.extractedPeriod || 'N/A',
-      baseCalculo: opportunity.valorEstimado || 0,
-      aliquota: this.estimateAliquota(opportunity.tipo),
-      valorCredito: opportunity.valorEstimado || 0
+      baseCalculo: opportunity.valorEstimado,
+      aliquota: this.estimateAliquota(opportunity.tributo),
+      valorCredito: opportunity.valorEstimado
     });
 
-    // Totalizadores
     const lastRow = (sheet.lastRow?.number || 5) + 2;
     sheet.getCell(`A${lastRow}`).value = 'TOTAL';
     sheet.getCell(`A${lastRow}`).font = { bold: true };
-    sheet.getCell(`E${lastRow}`).value = opportunity.valorEstimado || 0;
+    sheet.getCell(`E${lastRow}`).value = opportunity.valorEstimado;
     sheet.getCell(`E${lastRow}`).font = { bold: true };
 
-    // Formatação
     sheet.getRow(1).font = { bold: true };
     sheet.getRow(1).fill = {
       type: 'pattern',
@@ -212,52 +235,9 @@ export class TaxCreditDocumentationService {
   }
 
   /**
-   * Gera Parecer Técnico usando Claude
+   * Converte texto para PDF formatado
    */
-  private async generateParecerTecnico(
-    analysis: any,
-    opportunity: any
-  ): Promise<Buffer> {
-    
-    // Usar Claude para gerar parecer técnico detalhado
-    const prompt = `
-Você é um consultor tributário especializado em recuperação de créditos.
-
-Gere um PARECER TÉCNICO PROFISSIONAL sobre a seguinte oportunidade de crédito tributário:
-
-TIPO DE CRÉDITO: ${opportunity.tipo}
-EMPRESA: ${analysis.document.companyName || 'N/A'}
-CNPJ: ${analysis.document.cnpj || 'N/A'}
-PERÍODO: ${analysis.document.extractedPeriod || 'N/A'}
-VALOR ESTIMADO: R$ ${(opportunity.valorEstimado || 0).toLocaleString('pt-BR')}
-
-FUNDAMENTAÇÃO LEGAL: ${opportunity.fundamentacaoLegal}
-DESCRIÇÃO: ${opportunity.descricao}
-
-O parecer deve conter:
-1. INTRODUÇÃO - contexto e objetivo
-2. FUNDAMENTAÇÃO LEGAL - detalhada com artigos específicos
-3. ANÁLISE TÉCNICA - demonstração do direito ao crédito
-4. CÁLCULO - metodologia e apuração
-5. CONCLUSÃO - opinião técnica favorável
-6. REFERÊNCIAS - legislação e jurisprudência
-
-Use linguagem técnica e formal. Seja detalhado e preciso.
-`;
-
-    let parecerText = '';
-    if (client) {
-      const message = await client.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: prompt }]
-      });
-      parecerText = message.content[0].type === 'text' ? message.content[0].text : '';
-    } else {
-      parecerText = `PARECER TECNICO - ${opportunity.tipo}\n\nEmpresa: ${analysis.document.companyName || 'N/A'}\nCNPJ: ${analysis.document.cnpj || 'N/A'}\nPeriodo: ${analysis.document.extractedPeriod || 'N/A'}\nValor Estimado: R$ ${(opportunity.valorEstimado || 0).toLocaleString('pt-BR')}\n\nFundamentacao Legal: ${opportunity.fundamentacaoLegal}\n\nDescricao: ${opportunity.descricao}\n\n[Parecer tecnico completo sera gerado quando a API Claude estiver configurada]`;
-    }
-
-    // Converter para PDF
+  private async textToPDF(title: string, content: string): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50 });
       const chunks: Buffer[] = [];
@@ -266,14 +246,9 @@ Use linguagem técnica e formal. Seja detalhado e preciso.
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      // Título
-      doc.fontSize(18).text('PARECER TÉCNICO', { align: 'center' });
+      doc.fontSize(18).text(title, { align: 'center' });
       doc.moveDown(2);
-
-      // Conteúdo
-      doc.fontSize(11).text(parecerText, { align: 'justify' });
-
-      // Assinatura
+      doc.fontSize(11).text(content, { align: 'justify' });
       doc.moveDown(3);
       doc.text('_________________________________', { align: 'center' });
       doc.text('Responsável Técnico', { align: 'center' });
@@ -285,70 +260,12 @@ Use linguagem técnica e formal. Seja detalhado e preciso.
   }
 
   /**
-   * Gera Petição Modelo para protocolo
+   * Gera checklist de validação combinando fixos + gerados pela IA
    */
-  private async generatePeticaoModelo(
-    analysis: any,
-    opportunity: any
-  ): Promise<Buffer> {
-    
-    const prompt = `
-Você é um advogado tributarista especializado.
-
-Redija uma PETIÇÃO ADMINISTRATIVA para pedido de reconhecimento de crédito tributário:
-
-REQUERENTE: ${analysis.document.companyName || '[NOME DA EMPRESA]'}
-CNPJ: ${analysis.document.cnpj || '[CNPJ]'}
-TIPO DE CRÉDITO: ${opportunity.tipo}
-VALOR: R$ ${(opportunity.valorEstimado || 0).toLocaleString('pt-BR')}
-PERÍODO: ${analysis.document.extractedPeriod || '[PERÍODO]'}
-FUNDAMENTAÇÃO: ${opportunity.fundamentacaoLegal}
-
-A petição deve conter:
-1. Qualificação do requerente
-2. Dos fatos (contexto e histórico)
-3. Do direito (fundamentação legal completa)
-4. Do pedido (requerimentos específicos)
-5. Documentos anexos (lista)
-6. Encerramento
-
-Use linguagem jurídica formal e técnica.
-`;
-
-    let peticaoText = '';
-    if (client) {
-      const message = await client.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: prompt }]
-      });
-      peticaoText = message.content[0].type === 'text' ? message.content[0].text : '';
-    } else {
-      peticaoText = `PETICAO ADMINISTRATIVA\n\nREQUERENTE: ${analysis.document.companyName || '[NOME DA EMPRESA]'}\nCNPJ: ${analysis.document.cnpj || '[CNPJ]'}\nTIPO DE CREDITO: ${opportunity.tipo}\nVALOR: R$ ${(opportunity.valorEstimado || 0).toLocaleString('pt-BR')}\nPERIODO: ${analysis.document.extractedPeriod || '[PERIODO]'}\n\nFundamentacao: ${opportunity.fundamentacaoLegal}\n\n[Peticao completa sera gerada quando a API Claude estiver configurada]`;
-    }
-
-    // Converter para PDF
-    return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 50 });
-      const chunks: Buffer[] = [];
-
-      doc.on('data', chunk => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
-
-      doc.fontSize(12).text(peticaoText, { align: 'justify' });
-      doc.end();
-    });
-  }
-
-  /**
-   * Gera checklist de validação
-   */
-  private async generateValidationChecklist(
-    analysis: any,
-    opportunity: any
-  ): Promise<any[]> {
-    
+  private generateValidationChecklist(
+    opportunity: AnalysisOpportunity,
+    aiChecklist: string[]
+  ): any[] {
     const checklist = [
       {
         item: 'Documentação fiscal completa',
@@ -382,16 +299,33 @@ Use linguagem jurídica formal e técnica.
       }
     ];
 
+    // Adicionar itens da checklist gerada pela IA
+    if (aiChecklist && aiChecklist.length > 0) {
+      for (const item of aiChecklist) {
+        // Evitar duplicatas
+        if (!checklist.some(c => c.item.toLowerCase().includes(item.toLowerCase().substring(0, 20)))) {
+          checklist.push({
+            item,
+            status: 'pendente' as const,
+            detalhes: 'Identificado pela análise de IA'
+          });
+        }
+      }
+    }
+
     return checklist;
   }
 
   /**
-   * Estima alíquota baseada no tipo de crédito
+   * Estima alíquota baseada no tributo
    */
-  private estimateAliquota(tipoCredito: string): number {
-    if (tipoCredito.includes('PIS')) return 1.65;
-    if (tipoCredito.includes('COFINS')) return 7.6;
-    if (tipoCredito.includes('ICMS')) return 18;
+  private estimateAliquota(tributo: string): number {
+    if (tributo.includes('PIS')) return 1.65;
+    if (tributo.includes('COFINS')) return 7.6;
+    if (tributo.includes('ICMS')) return 18;
+    if (tributo.includes('IRPJ')) return 15;
+    if (tributo.includes('CSLL')) return 9;
+    if (tributo.includes('ISS')) return 5;
     return 0;
   }
 }

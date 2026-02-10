@@ -1,11 +1,9 @@
+// src/utils/logger.ts
+// Logger otimizado para Vercel (serverless) — sem file transport em produção
+
 import winston from 'winston';
 
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.errors({ stack: true }),
-  winston.format.splat(),
-  winston.format.json()
-);
+const isProduction = process.env.NODE_ENV === 'production';
 
 const consoleFormat = winston.format.combine(
   winston.format.colorize(),
@@ -19,25 +17,30 @@ const consoleFormat = winston.format.combine(
   })
 );
 
-// Montar transports baseado no ambiente
-const transports: winston.transport[] = [];
+const jsonFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.errors({ stack: true }),
+  winston.format.json()
+);
 
-// Em producao (Render): apenas console (logs vao para o Render Dashboard)
-// Em dev: console + arquivos locais
-if (process.env.NODE_ENV === 'production') {
+// Em produção (Vercel): apenas console com JSON (Vercel captura stdout/stderr)
+// Em desenvolvimento: console com cores + arquivos locais
+const transports: winston.transport[] = [
+  new winston.transports.Console({
+    format: isProduction ? jsonFormat : consoleFormat,
+  }),
+];
+
+// Arquivos de log apenas em desenvolvimento (Vercel não persiste filesystem)
+if (!isProduction) {
   transports.push(
-    new winston.transports.Console({ format: consoleFormat })
-  );
-} else {
-  transports.push(
-    new winston.transports.Console({ format: consoleFormat }),
     new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
     new winston.transports.File({ filename: 'logs/combined.log' })
   );
 }
 
 export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: logFormat,
+  level: process.env.LOG_LEVEL || (isProduction ? 'info' : 'debug'),
+  format: jsonFormat,
   transports,
 });
