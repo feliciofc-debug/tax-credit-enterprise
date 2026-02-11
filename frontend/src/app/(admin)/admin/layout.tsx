@@ -93,7 +93,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shrink-0 hover:bg-red-700 transition-colors shadow-sm"
+              className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0 hover:bg-emerald-700 transition-colors shadow-sm"
             >
               <span className="text-white font-bold text-lg">T</span>
             </button>
@@ -119,15 +119,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   active
-                    ? 'bg-red-50 text-red-700 font-semibold' 
+                    ? 'bg-emerald-50 text-emerald-700 font-semibold' 
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
                 title={item.label}
               >
                 <span className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${
-                  active ? 'bg-red-100' : 'bg-gray-100'
+                  active ? 'bg-emerald-100' : 'bg-gray-100'
                 }`}>
-                  <svg className={`w-4 h-4 ${active ? 'text-red-600' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className={`w-4 h-4 ${active ? 'text-emerald-600' : 'text-gray-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                   </svg>
                 </span>
