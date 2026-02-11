@@ -201,12 +201,67 @@ router.post('/:id/sign', authenticateToken, async (req: Request, res: Response) 
 });
 
 /**
+ * POST /api/contract/:id/claim-payment
+ * Cliente informa que realizou o pagamento PIX
+ * Atualiza status para 'payment_claimed' para o admin confirmar
+ */
+router.post('/:id/claim-payment', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+
+    const contract = await prisma.contract.findUnique({ where: { id } });
+    if (!contract) {
+      return res.status(404).json({ success: false, error: 'Contrato nao encontrado' });
+    }
+
+    // Verificar se e o cliente deste contrato ou admin
+    if (user.userId !== contract.clientId && user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Acesso restrito' });
+    }
+
+    if (contract.setupFeePaid) {
+      return res.status(400).json({ success: false, error: 'Taxa ja foi confirmada' });
+    }
+
+    await prisma.contract.update({
+      where: { id },
+      data: { status: 'payment_claimed' },
+    });
+
+    logger.info(`Client claimed payment for contract ${contract.contractNumber}`);
+
+    return res.json({
+      success: true,
+      message: 'Pagamento informado! O administrador vai confirmar em breve.',
+    });
+  } catch (error: any) {
+    logger.error('Error claiming payment:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao informar pagamento' });
+  }
+});
+
+/**
  * POST /api/contract/:id/confirm-payment
- * Confirma pagamento da taxa de R$ 2.000 e libera consulta + formalizacao
+ * Admin confirma pagamento da taxa com senha master
+ * Libera consulta + formalizacao
  */
 router.post('/:id/confirm-payment', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const user = (req as any).user;
+    const { adminPassword } = req.body;
+
+    // Somente admin pode confirmar pagamento
+    if (user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Somente administradores podem confirmar pagamentos' });
+    }
+
+    // Validar senha master
+    const adminSecret = process.env.ADMIN_AUTH_PASSWORD || 'taxcredit@admin2026';
+    if (!adminPassword || adminPassword !== adminSecret) {
+      return res.status(403).json({ success: false, error: 'Senha master invalida' });
+    }
 
     const contract = await prisma.contract.findUnique({ where: { id } });
     if (!contract) {
@@ -224,10 +279,11 @@ router.post('/:id/confirm-payment', authenticateToken, async (req: Request, res:
         setupFeePaidAt: new Date(),
         consultaLiberada: true,
         formalizacaoLiberada: true,
+        status: contract.partnerSignedAt && contract.clientSignedAt ? 'active' : 'pending_signatures',
       },
     });
 
-    logger.info(`Payment confirmed for contract ${contract.contractNumber}. Consultation and formalization unlocked.`);
+    logger.info(`Payment CONFIRMED by admin for contract ${contract.contractNumber}. Consultation and formalization unlocked.`);
     logger.info(`Fee split: R$ ${contract.setupFeePartner} partner / R$ ${contract.setupFeePlatform} platform`);
 
     // Enviar email de confirmacao ao cliente
@@ -250,6 +306,71 @@ router.post('/:id/confirm-payment', authenticateToken, async (req: Request, res:
   } catch (error: any) {
     logger.error('Error confirming payment:', error);
     return res.status(500).json({ success: false, error: 'Erro ao confirmar pagamento' });
+  }
+});
+
+/**
+ * GET /api/contract/payment-info
+ * Retorna dados PIX da plataforma para o cliente pagar
+ */
+router.get('/payment-info', authenticateToken, async (_req: Request, res: Response) => {
+  try {
+    return res.json({
+      success: true,
+      data: {
+        bankName: process.env.PLATFORM_PIX_BANK || 'C6 Bank',
+        pixKey: process.env.PLATFORM_PIX_KEY || '[Chave PIX a configurar]',
+        pixKeyType: process.env.PLATFORM_PIX_KEY_TYPE || 'CNPJ',
+        accountHolder: process.env.PLATFORM_ACCOUNT_HOLDER || 'ATOM BRASIL DIGITAL LTDA',
+        setupFee: 2000,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: 'Erro ao buscar dados de pagamento' });
+  }
+});
+
+/**
+ * GET /api/contract/my-pending
+ * Retorna contrato pendente de pagamento do cliente logado
+ */
+router.get('/my-pending', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user.userId) {
+      return res.json({ success: true, data: null });
+    }
+
+    const contract = await prisma.contract.findFirst({
+      where: {
+        clientId: user.userId,
+        setupFeePaid: false,
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        partner: { select: { name: true, company: true } },
+      },
+    });
+
+    if (!contract) {
+      return res.json({ success: true, data: null });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        id: contract.id,
+        contractNumber: contract.contractNumber,
+        setupFee: contract.setupFee,
+        status: contract.status,
+        partnerSigned: !!contract.partnerSignedAt,
+        clientSigned: !!contract.clientSignedAt,
+        partnerName: contract.partner?.company || contract.partner?.name || '',
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error fetching pending contract:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao buscar contrato' });
   }
 });
 
