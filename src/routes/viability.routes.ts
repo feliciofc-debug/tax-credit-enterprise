@@ -85,13 +85,13 @@ async function processUploadedFiles(files: Express.Multer.File[]) {
 }
 
 // ============================================================
-// ROTA 1: SCORE DE VIABILIDADE (parceiro pode fazer livremente)
+// ROTA 1: SCORE DE VIABILIDADE — ASSÍNCRONO
 // ============================================================
 /**
  * POST /api/viability/analyze
  * Parceiro envia docs e recebe SCORE de viabilidade (análise rápida)
- * NÃO requer pagamento nem contrato — é a pré-triagem
- * Retorna: score, resumo, oportunidades resumidas
+ * Processa documentos, salva texto, inicia Sonnet em background
+ * Frontend faz polling em GET /api/viability/:id/status
  */
 router.post('/analyze', authenticateToken, upload.array('documents', 10), async (req: Request, res: Response) => {
   try {
@@ -121,18 +121,18 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
         sector,
         annualRevenue: annualRevenue ? parseFloat(annualRevenue) : null,
         docsUploaded: files.length,
-        status: 'analyzing',
+        status: 'processing_docs',
       },
     });
 
-    // Processar documentos
+    // Processar documentos (ZIP/PDF/Excel → texto)
     const { combinedText, totalPages, anyOcrUsed, overallQuality } = await processUploadedFiles(files);
 
     // Verificar qualidade
     if (overallQuality === 'low' || combinedText.trim().length < 200) {
       await prisma.viabilityAnalysis.update({
         where: { id: viability.id },
-        data: { status: 'failed' },
+        data: { status: 'failed', aiSummary: 'Documento com qualidade insuficiente para análise' },
       });
 
       return res.status(422).json({
@@ -143,58 +143,34 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
       });
     }
 
-    // Construir info da empresa
-    const companyInfo = {
-      name: companyName,
-      cnpj,
-      regime: regime as 'lucro_real' | 'lucro_presumido' | 'simples' | undefined,
-      sector,
-    };
-
-    // SCORE DE VIABILIDADE — análise rápida (Sonnet, não Opus)
-    const quickResult = await claudeService.quickAnalysis(combinedText, companyInfo);
-
-    // Determinar label a partir do score
-    let scoreLabel = 'inviavel';
-    if (quickResult.score >= 85) scoreLabel = 'excelente';
-    else if (quickResult.score >= 70) scoreLabel = 'bom';
-    else if (quickResult.score >= 50) scoreLabel = 'medio';
-    else if (quickResult.score >= 30) scoreLabel = 'baixo';
-
-    // Atualizar registro com resultado do score + salvar texto para análise completa futura
-    const updatedViability = await prisma.viabilityAnalysis.update({
+    // Salvar texto extraído no banco ANTES de iniciar IA
+    await prisma.viabilityAnalysis.update({
       where: { id: viability.id },
       data: {
-        viabilityScore: quickResult.score,
-        scoreLabel,
-        aiSummary: quickResult.summary,
-        docsText: combinedText, // Salvar texto para reutilizar na análise completa
-        status: 'completed',
+        docsText: combinedText,
+        status: 'analyzing',
       },
     });
 
-    logger.info(`Viability SCORE completed: ${viability.id} - Score: ${quickResult.score} (quick analysis)`);
+    logger.info(`Quick score docs processed, starting AI in background`, {
+      viabilityId: viability.id,
+      company: companyName,
+      textLength: combinedText.length,
+    });
 
+    // FIRE-AND-FORGET: Sonnet análise em background
+    const companyInfo = { name: companyName, cnpj, regime: regime as any, sector };
+    runQuickScoreInBackground(viability.id, combinedText, companyInfo, documentType);
+
+    // Responder IMEDIATAMENTE
     return res.json({
       success: true,
+      status: 'analyzing',
+      message: 'Documentos processados. Análise de viabilidade em andamento...',
       data: {
-        id: updatedViability.id,
-        companyName: updatedViability.companyName,
-        score: quickResult.score,
-        scoreLabel,
-        viable: quickResult.viable,
-        summary: quickResult.summary,
-        aiPowered: true,
-        // Mensagem informando próximos passos
-        nextSteps: quickResult.viable
-          ? 'Score positivo! Para a consulta completa: 1) Convide o cliente, 2) Cliente paga a taxa de adesão (R$ 2.000), 3) Assine o contrato entre as 3 partes, 4) Cliente insere os documentos na plataforma.'
-          : 'Score baixo. Recomendamos revisar os documentos ou avaliar outro período fiscal.',
-        metadata: {
-          documentType: documentType || 'dre',
-          ocrUsed: anyOcrUsed,
-          quality: overallQuality,
-          pageCount: totalPages,
-        },
+        id: viability.id,
+        companyName,
+        status: 'analyzing',
       },
     });
   } catch (error: any) {
@@ -205,6 +181,50 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
     });
   }
 });
+
+/**
+ * Executa o quick score com Sonnet em background.
+ * Salva resultado no banco para polling.
+ */
+function runQuickScoreInBackground(
+  viabilityId: string,
+  combinedText: string,
+  companyInfo: { name: string; cnpj?: string; regime?: string; sector?: string },
+  documentType?: string
+): void {
+  (async () => {
+    try {
+      const quickResult = await claudeService.quickAnalysis(combinedText, companyInfo as any);
+
+      let scoreLabel = 'inviavel';
+      if (quickResult.score >= 85) scoreLabel = 'excelente';
+      else if (quickResult.score >= 70) scoreLabel = 'bom';
+      else if (quickResult.score >= 50) scoreLabel = 'medio';
+      else if (quickResult.score >= 30) scoreLabel = 'baixo';
+
+      await prisma.viabilityAnalysis.update({
+        where: { id: viabilityId },
+        data: {
+          viabilityScore: quickResult.score,
+          scoreLabel,
+          aiSummary: quickResult.summary,
+          status: 'completed',
+        },
+      });
+
+      logger.info(`[BACKGROUND] Quick score completed: ${viabilityId} - Score: ${quickResult.score}`);
+    } catch (err: any) {
+      logger.error(`[BACKGROUND] Quick score FAILED for ${viabilityId}:`, err.message);
+      await prisma.viabilityAnalysis.update({
+        where: { id: viabilityId },
+        data: {
+          status: 'failed',
+          aiSummary: `Erro no quick score: ${err.message}`,
+        },
+      }).catch(() => {});
+    }
+  })();
+}
 
 // ============================================================
 // ROTA 2: CONSULTA COMPLETA (requer pagamento + contrato + docs do cliente)

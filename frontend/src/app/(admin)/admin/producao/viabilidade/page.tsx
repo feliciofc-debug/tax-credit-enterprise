@@ -113,6 +113,7 @@ export default function AdminViabilidadePage() {
       if (form.annualRevenue) formData.append('annualRevenue', form.annualRevenue);
       files.forEach(f => formData.append('documents', f));
 
+      // 1. Enviar documentos e iniciar analise em background
       const res = await fetch('/api/viability/analyze', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -120,15 +121,74 @@ export default function AdminViabilidadePage() {
       });
 
       const data = await res.json();
-      if (data.success) {
+
+      if (!data.success) {
+        setError(data.error || 'Erro na analise');
+        setLoading(false);
+        return;
+      }
+
+      // Se retornou resultado direto (sem polling) — manter compatibilidade
+      if (data.data?.score !== undefined && data.data?.summary) {
         setResult(data.data);
         fetchHistory();
-      } else {
-        setError(data.error || 'Erro na analise');
+        setLoading(false);
+        return;
       }
+
+      // 2. Analise assincrona — fazer polling
+      const viabilityId = data.data?.id;
+      if (!viabilityId) {
+        setError('Erro: ID da analise nao retornado');
+        setLoading(false);
+        return;
+      }
+
+      const pollInterval = setInterval(async () => {
+        try {
+          const pollRes = await fetch(`/api/viability/${viabilityId}/status`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const pollData = await pollRes.json();
+
+          if (pollData.status === 'completed' && pollData.success) {
+            clearInterval(pollInterval);
+            // Montar resultado no formato esperado pelo QuickScore display
+            setResult({
+              id: pollData.data.id,
+              companyName: pollData.data.companyName,
+              score: pollData.data.score || 0,
+              scoreLabel: pollData.data.scoreLabel || 'inviavel',
+              summary: pollData.data.resumoExecutivo || 'Analise concluida',
+              viable: (pollData.data.score || 0) >= 50,
+              aiPowered: true,
+              nextSteps: (pollData.data.score || 0) >= 50
+                ? 'Score positivo! Para consulta completa: 1) Convide o cliente, 2) Cliente paga taxa de adesao (R$ 2.000), 3) Assine contrato, 4) Cliente insere documentos.'
+                : 'Score baixo. Revise os documentos ou avalie outro periodo fiscal.',
+            });
+            fetchHistory();
+            setLoading(false);
+          } else if (pollData.status === 'failed') {
+            clearInterval(pollInterval);
+            setError(pollData.error || 'Analise falhou. Tente novamente.');
+            setLoading(false);
+          }
+        } catch {
+          // Erro de rede — continuar tentando
+        }
+      }, 4000);
+
+      // Timeout de 3 minutos
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (loading) {
+          setError('Analise demorou mais que o esperado. Verifique o historico.');
+          setLoading(false);
+        }
+      }, 180000);
+
     } catch {
-      setError('Erro de conexao');
-    } finally {
+      setError('Erro de conexao ao enviar documentos');
       setLoading(false);
     }
   };
@@ -322,7 +382,7 @@ export default function AdminViabilidadePage() {
               disabled={loading || !!fullLoading}
               className="w-full py-3 bg-indigo-700 hover:bg-indigo-800 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
             >
-              {loading ? 'Analisando com IA...' : 'Quick Score (Sonnet)'}
+              {loading ? 'Processando e analisando...' : 'Quick Score (Sonnet)'}
             </button>
           </form>
         </div>

@@ -37,14 +37,65 @@ export default function ViabilidadePage() {
       });
 
       const data = await res.json();
-      if (data.success) {
-        setResult(data.data);
-      } else {
+      if (!data.success) {
         alert(data.error || 'Erro na analise');
+        setLoading(false);
+        return;
       }
-    } catch (error) {
+
+      // Se retornou resultado completo direto
+      if (data.data?.score !== undefined && data.data?.summary) {
+        setResult(data.data);
+        setLoading(false);
+        return;
+      }
+
+      // Analise assincrona — fazer polling
+      const viabilityId = data.data?.id;
+      if (!viabilityId) {
+        alert('Erro: ID da analise nao retornado');
+        setLoading(false);
+        return;
+      }
+
+      const pollInterval = setInterval(async () => {
+        try {
+          const pollRes = await fetch(`/api/viability/${viabilityId}/status`, {
+            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          });
+          const pollData = await pollRes.json();
+
+          if (pollData.status === 'completed' && pollData.success) {
+            clearInterval(pollInterval);
+            setResult({
+              id: pollData.data.id,
+              companyName: pollData.data.companyName,
+              score: pollData.data.score || 0,
+              scoreLabel: pollData.data.scoreLabel || 'inviavel',
+              summary: pollData.data.resumoExecutivo || 'Analise concluida',
+              viable: (pollData.data.score || 0) >= 50,
+              estimatedCredit: pollData.data.estimatedCredit,
+              aiPowered: true,
+            });
+            setLoading(false);
+          } else if (pollData.status === 'failed') {
+            clearInterval(pollInterval);
+            alert(pollData.error || 'Analise falhou. Tente novamente.');
+            setLoading(false);
+          }
+        } catch {
+          // Erro de rede — continuar polling
+        }
+      }, 4000);
+
+      // Timeout de 3 minutos
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setLoading(false);
+      }, 180000);
+
+    } catch {
       alert('Erro de conexao com o servidor');
-    } finally {
       setLoading(false);
     }
   };
