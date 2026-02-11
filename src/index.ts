@@ -19,6 +19,7 @@ import contractRoutes from './routes/contract.routes';
 import adminRoutes from './routes/admin.routes';
 import authRoutes from './routes/auth.routes';
 import profileRoutes from './routes/profile.routes';
+import formalizationRoutes from './routes/formalization.routes';
 
 dotenv.config();
 
@@ -126,6 +127,7 @@ app.use('/api/contract', contractRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/formalization', formalizationRoutes);
 
 // Error handling
 app.use(errorHandler);

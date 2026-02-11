@@ -50,19 +50,56 @@
 
 ---
 
-## 2. RIO DE JANEIRO (RJ)
+## 2. RIO DE JANEIRO (RJ) — COMPLETO
 
 ### 2.1 Legislacao Primaria
-- RICMS/RJ: Decreto 27.427/2000
-- Lei 2.657/1996: Lei estadual do ICMS/RJ
-- Resolucao SEFAZ: Normas complementares (pendente)
+- **Decreto 27.427/2000** — RICMS/RJ
+- **Livro III do RICMS/RJ** — Do Saldo Credor (redacao pelo Decreto 46.668/2019)
+- **Resolucao SEFAZ 720/2014**, Anexo XX — Procedimentos para compensacao, utilizacao e transferencia
+- **Resolucao SEFAZ 35/2019** — Normas complementares
+- **Resolucao SEF 2.790/1997** — Transferencia de saldos de exportacao
+- **Resolucao SEEF 2.450/1994** — Transferencia de saldo industrial
+- **Resolucao SEF 6.474/2002** — Utilizacao para ICMS importacao
+- **Resolucao SEFAZ 191/2017** — Restituicao de indebitos (alterada pela 644/2024)
+- **Resolucao SEFAZ 202/2018** — Aproveitamento extemporaneo de credito
+- **Resolucao SEFAZ 537/2012** — Ressarcimento de ICMS-ST
+- **Resolucao SEFAZ 644/2024** — Competencias das reparticoes fiscais
+- **Decreto 46.835/2019** — Alteracoes Arts. 10-12 Livro III
+- **Portaria SUFIS 1.323/2020** — Procedimentos de transferencia
 
-### 2.2 Estrutura Esperada
-- Hipoteses de geracao (exportacao, diferimento, isencao)
-- Procedimentos de transferencia
-- Sistema eletronico SEFAZ/RJ
-- Limites/vedacoes aplicaveis
-- Material completo em consolidacao
+### 2.2 Sistema Eletronico
+O RJ nao possui sistema unico dedicado como e-CredAc/SP ou SISCRED/PR:
+- **SEI-RJ** (Sistema Eletronico de Informacoes) — Peticionamento de processos
+- **EFD ICMS/IPI** — Escrituracao obrigatoria, base para calculo dos saldos (Art. 13, Livro III)
+- **GIA-ICMS** — Subficha "Saldo Credor de Exportacao"
+- **Portal SEFAZ/RJ** — Calculadora eletronica para saldos credores
+- **DUB-ICMS** — Documento de Utilizacao de Beneficios Fiscais
+
+### 2.3 Hipoteses de Geracao de Saldo Credor
+**Saldo Credor de Exportacao (Titulo II, Arts. 2-9):**
+Operacoes destinadas ao exterior, incluindo saidas com fim especifico para trading.
+Formula (Art. 3): Creditos vinculados = Creditos totais x Indice de exportacao.
+
+**Saldo Credor Industrial (Titulo IV, Arts. 13-16):**
+Saldos acumulados por: reducao de base de calculo (com manutencao de credito); prazo especial de pagamento; isencao/nao-incidencia (com manutencao de credito); aliquota diferenciada.
+
+### 2.4 Formas de Aproveitamento (Art. 1, §1, Livro III)
+**Compensacao:** entre estabelecimentos da mesma empresa no RJ (limite: credito <= saldo devedor)
+**Utilizacao:** ICMS importacao (40%), ICMS sucata (40%), credito tributario ICMS
+**Transferencia a Terceiros:** aquisicao de insumos, bens do ativo permanente
+
+### 2.5 Limites e Vedacoes
+- Transferencias limitadas a **40%** do valor da operacao (Art. 14, §1)
+- Recebimento limitado a **30%** do ICMS recolhido pelo destinatario
+- **Vedado**: ICMS-ST; venda de creditos; transferencia sem autorizacao previa
+- Irregularidade na EFD impede operacoes no periodo
+- Toda transferencia a terceiros requer **autorizacao previa do Secretario de Fazenda**
+
+### 2.6 Procedimentos
+- **Exportacao:** Requerimento a reparticao (Res. SEF 2.790/97)
+- **Industrial:** Pedido a reparticao (Res. SEEF 2.450/94)
+- **Restituicao:** Pedido via SEI-RJ (Res. SEFAZ 191/2017)
+- **Extemporaneo:** Processo via SEI-RJ (Res. SEFAZ 202/2018)
 
 ---
 
