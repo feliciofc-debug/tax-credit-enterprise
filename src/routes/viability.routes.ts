@@ -433,6 +433,137 @@ router.get('/list', authenticateToken, async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================
+// ROTA ADMIN: LISTAR TODAS AS ANÁLISES COMPLETAS
+// ============================================================
+/**
+ * GET /api/viability/admin-analyses
+ * Lista TODAS as análises com dados completos (admin only)
+ * Inclui opportunities/risks parseados + nome do parceiro
+ */
+router.get('/admin-analyses', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
+    }
+
+    const analyses = await prisma.viabilityAnalysis.findMany({
+      where: {
+        status: 'completed',
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        partner: {
+          select: { company: true, name: true },
+        },
+      },
+    });
+
+    const results = analyses.map(a => {
+      let oportunidades: any[] = [];
+      let alertas: string[] = [];
+      try { oportunidades = a.opportunities ? JSON.parse(a.opportunities) : []; } catch {}
+      try { alertas = a.risks ? JSON.parse(a.risks) : []; } catch {}
+
+      return {
+        id: a.id,
+        companyName: a.companyName,
+        cnpj: a.cnpj,
+        regime: a.regime,
+        sector: a.sector,
+        annualRevenue: a.annualRevenue,
+        viabilityScore: a.viabilityScore,
+        scoreLabel: a.scoreLabel,
+        estimatedCredit: a.estimatedCredit,
+        aiSummary: a.aiSummary,
+        oportunidades,
+        alertas,
+        status: a.status,
+        hasFullAnalysis: oportunidades.length > 0,
+        partnerName: a.partner?.company || a.partner?.name || 'Admin direto',
+        createdAt: a.createdAt,
+      };
+    });
+
+    return res.json({ success: true, data: results });
+  } catch (error: any) {
+    logger.error('Error listing admin analyses:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao listar análises' });
+  }
+});
+
+/**
+ * GET /api/viability/admin-analysis/:id
+ * Detalhe completo de uma análise (admin only) — para extrato/PDF
+ */
+router.get('/admin-analysis/:id', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
+    }
+
+    const { id } = req.params;
+    const viability = await prisma.viabilityAnalysis.findFirst({
+      where: { id },
+      include: {
+        partner: { select: { company: true, name: true } },
+      },
+    });
+
+    if (!viability) {
+      return res.status(404).json({ success: false, error: 'Análise não encontrada' });
+    }
+
+    let oportunidades: any[] = [];
+    let alertas: string[] = [];
+    let recomendacoes: string[] = [];
+    try { oportunidades = viability.opportunities ? JSON.parse(viability.opportunities) : []; } catch {}
+    try { alertas = viability.risks ? JSON.parse(viability.risks) : []; } catch {}
+
+    // Inferir recomendações se não explícitas
+    if (oportunidades.length >= 5) {
+      recomendacoes.push('Diversas oportunidades identificadas — recomenda-se priorizar as de maior valor');
+    }
+    if (oportunidades.some((o: any) => (o.probabilidadeRecuperacao || 0) >= 85)) {
+      recomendacoes.push('Existem teses com alta probabilidade de êxito — iniciar imediatamente');
+    }
+    if (oportunidades.some((o: any) => o.complexidade === 'alta')) {
+      recomendacoes.push('Algumas teses possuem alta complexidade — considerar assessoria jurídica especializada');
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        id: viability.id,
+        companyName: viability.companyName,
+        cnpj: viability.cnpj,
+        regime: viability.regime,
+        sector: viability.sector,
+        annualRevenue: viability.annualRevenue,
+        viabilityScore: viability.viabilityScore,
+        scoreLabel: viability.scoreLabel,
+        estimatedCredit: viability.estimatedCredit,
+        resumoExecutivo: viability.aiSummary || '',
+        oportunidades,
+        alertas,
+        recomendacoes,
+        fundamentacaoGeral: '',
+        periodoAnalisado: 'Últimos 5 anos',
+        regimeTributario: viability.regime || '',
+        riscoGeral: viability.viabilityScore && viability.viabilityScore >= 70 ? 'baixo' : viability.viabilityScore && viability.viabilityScore >= 50 ? 'medio' : 'alto',
+        hasFullAnalysis: oportunidades.length > 0,
+        partnerName: viability.partner?.company || viability.partner?.name || 'Admin direto',
+        createdAt: viability.createdAt,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error fetching admin analysis detail:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao buscar análise' });
+  }
+});
+
 /**
  * GET /api/viability/:id
  * Detalhe de uma análise de viabilidade
