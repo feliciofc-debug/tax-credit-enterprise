@@ -133,7 +133,7 @@ export default function AdminViabilidadePage() {
     }
   };
 
-  // ANÁLISE COMPLETA COM OPUS 4.6
+  // ANÁLISE COMPLETA COM OPUS 4.6 — ASSÍNCRONA COM POLLING
   const handleFullAnalysis = async (viabilityId: string) => {
     setFullLoading(viabilityId);
     setError('');
@@ -144,22 +144,55 @@ export default function AdminViabilidadePage() {
       const formData = new FormData();
       formData.append('documentType', form.documentType || 'dre');
 
-      const res = await fetch(`/api/viability/${viabilityId}/admin-full-analysis`, {
+      // 1. Iniciar análise em background (retorna imediatamente)
+      const startRes = await fetch(`/api/viability/${viabilityId}/admin-full-analysis`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
-      const data = await res.json();
-      if (data.success) {
-        setFullResult(data.data);
-        fetchHistory();
-      } else {
-        setError(data.error || 'Erro na analise completa');
+      const startData = await startRes.json();
+      if (!startData.success) {
+        setError(startData.error || 'Erro ao iniciar analise completa');
+        setFullLoading(null);
+        return;
       }
+
+      // 2. Polling: verificar status a cada 5 segundos
+      const pollInterval = setInterval(async () => {
+        try {
+          const pollRes = await fetch(`/api/viability/${viabilityId}/status`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const pollData = await pollRes.json();
+
+          if (pollData.status === 'completed' && pollData.success) {
+            clearInterval(pollInterval);
+            setFullResult(pollData.data);
+            setFullLoading(null);
+            fetchHistory();
+          } else if (pollData.status === 'failed') {
+            clearInterval(pollInterval);
+            setError(pollData.error || 'Analise falhou. Tente novamente.');
+            setFullLoading(null);
+          }
+          // Se 'analyzing', continua polling...
+        } catch {
+          // Erro de rede no polling — não parar, tentar de novo
+        }
+      }, 5000);
+
+      // Timeout máximo de 5 minutos para o polling
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (fullLoading) {
+          setError('Analise demorou mais que o esperado. Verifique no historico em breve.');
+          setFullLoading(null);
+        }
+      }, 300000);
+
     } catch {
-      setError('Erro de conexao. A analise com Opus 4.6 pode levar ate 2 minutos.');
-    } finally {
+      setError('Erro de conexao ao iniciar analise.');
       setFullLoading(null);
     }
   };
@@ -337,10 +370,13 @@ export default function AdminViabilidadePage() {
                 className="w-full py-3 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white font-bold rounded-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {fullLoading === result.id ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                    Analisando com Opus 4.6... (pode levar ate 2 min)
-                  </>
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                      Opus 4.6 analisando em background...
+                    </div>
+                    <span className="text-xs text-indigo-200">Aguarde 1-3 min. Resultado aparece automaticamente.</span>
+                  </div>
                 ) : (
                   <>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>

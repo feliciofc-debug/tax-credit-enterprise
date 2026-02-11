@@ -445,19 +445,22 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
 });
 
 // ============================================================
-// ROTA ADMIN: ANÁLISE COMPLETA (Opus 4.6 — sem checks de contrato)
+// ROTA ADMIN: ANÁLISE COMPLETA — ASSÍNCRONA (Opus 4.6)
 // ============================================================
+// Estratégia: Render free tier tem timeout de 30s.
+// Opus 4.6 leva 1-3min. Solução: iniciar em background,
+// responder imediatamente, frontend faz polling no GET /:id.
+// ============================================================
+
 /**
  * POST /api/viability/:id/admin-full-analysis
- * Admin executa análise profunda com Opus 4.6 em uma viabilidade existente
- * Usa os documentos já enviados no quick score
- * Retorna extrato detalhado de oportunidades com valores
+ * Inicia análise profunda em background e retorna imediatamente.
+ * Frontend deve fazer polling em GET /api/viability/:id para pegar o resultado.
  */
 router.post('/:id/admin-full-analysis', authenticateToken, upload.array('documents', 10), async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
 
-    // Apenas admin pode usar esta rota
     if (user.role !== 'admin') {
       return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
     }
@@ -466,22 +469,22 @@ router.post('/:id/admin-full-analysis', authenticateToken, upload.array('documen
     const { documentType } = req.body;
     const files = req.files as Express.Multer.File[];
 
-    // Buscar viabilidade existente
-    const viability = await prisma.viabilityAnalysis.findFirst({
-      where: { id },
-    });
-
+    const viability = await prisma.viabilityAnalysis.findFirst({ where: { id } });
     if (!viability) {
       return res.status(404).json({ success: false, error: 'Análise de viabilidade não encontrada' });
     }
 
-    // Se tem novos arquivos enviados, processar eles
-    // Se não, usar o texto já extraído do quick score
+    // Preparar texto: novos arquivos ou texto do quick score
     let combinedText = '';
 
     if (files && files.length > 0) {
       const { combinedText: newText } = await processUploadedFiles(files);
       combinedText = newText;
+      // Salvar texto extraído para não perder
+      await prisma.viabilityAnalysis.update({
+        where: { id },
+        data: { docsText: combinedText },
+      });
     } else if (viability.docsText) {
       combinedText = viability.docsText;
     } else {
@@ -498,7 +501,12 @@ router.post('/:id/admin-full-analysis', authenticateToken, upload.array('documen
       });
     }
 
-    // Construir info da empresa
+    // Marcar como "analyzing" no banco
+    await prisma.viabilityAnalysis.update({
+      where: { id },
+      data: { status: 'analyzing' },
+    });
+
     const companyInfo = {
       name: viability.companyName,
       cnpj: viability.cnpj || undefined,
@@ -506,82 +514,163 @@ router.post('/:id/admin-full-analysis', authenticateToken, upload.array('documen
       sector: viability.sector || undefined,
     };
 
-    logger.info(`Admin full analysis started for viability ${id}`, {
+    logger.info(`Admin full analysis ASYNC started for viability ${id}`, {
       company: companyInfo.name,
       textLength: combinedText.length,
     });
 
-    // Atualizar status
-    await prisma.viabilityAnalysis.update({
-      where: { id },
-      data: { status: 'analyzing' },
+    // ====================================================
+    // FIRE-AND-FORGET: iniciar análise em background
+    // O resultado será salvo no banco; frontend faz polling
+    // ====================================================
+    runFullAnalysisInBackground(id, combinedText, documentType || 'dre', companyInfo);
+
+    // Responder IMEDIATAMENTE — não esperar o Claude
+    return res.json({
+      success: true,
+      status: 'analyzing',
+      message: 'Análise completa iniciada. Aguarde o resultado (1-3 minutos).',
+      viabilityId: id,
     });
+  } catch (error: any) {
+    logger.error('Error starting admin full analysis:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Erro ao iniciar análise completa',
+    });
+  }
+});
 
-    // ANÁLISE PROFUNDA COM OPUS 4.6
-    const analysis = await claudeService.analyzeDocument(
-      combinedText,
-      (documentType || 'dre') as 'dre' | 'balanco' | 'balancete',
-      companyInfo
-    );
+/**
+ * Executa a análise com Opus 4.6 em background (fire-and-forget).
+ * Salva resultado no banco para o frontend pegar via polling.
+ */
+function runFullAnalysisInBackground(
+  viabilityId: string,
+  combinedText: string,
+  documentType: string,
+  companyInfo: { name: string; cnpj?: string; regime?: 'lucro_real' | 'lucro_presumido' | 'simples'; sector?: string }
+): void {
+  // Executar sem await — roda em background
+  (async () => {
+    try {
+      const analysis = await claudeService.analyzeDocument(
+        combinedText,
+        documentType as 'dre' | 'balanco' | 'balancete',
+        companyInfo
+      );
 
-    // Salvar resultado detalhado no banco
-    await prisma.viabilityAnalysis.update({
+      const scoreLabel = analysis.score >= 85 ? 'excelente' : analysis.score >= 70 ? 'bom' : analysis.score >= 50 ? 'medio' : analysis.score >= 30 ? 'baixo' : 'inviavel';
+
+      // Salvar resultado completo no banco
+      await prisma.viabilityAnalysis.update({
+        where: { id: viabilityId },
+        data: {
+          viabilityScore: analysis.score,
+          scoreLabel,
+          estimatedCredit: analysis.valorTotalEstimado,
+          opportunities: JSON.stringify(analysis.oportunidades),
+          aiSummary: analysis.resumoExecutivo,
+          risks: JSON.stringify(analysis.alertas),
+          status: 'completed',
+        },
+      });
+
+      logger.info(`[BACKGROUND] Full analysis COMPLETED for ${viabilityId}`, {
+        score: analysis.score,
+        opportunities: analysis.oportunidades.length,
+        totalEstimated: analysis.valorTotalEstimado,
+      });
+    } catch (err: any) {
+      logger.error(`[BACKGROUND] Full analysis FAILED for ${viabilityId}:`, err.message);
+      // Marcar como falha no banco para o frontend saber
+      await prisma.viabilityAnalysis.update({
+        where: { id: viabilityId },
+        data: {
+          status: 'failed',
+          aiSummary: `Erro na análise: ${err.message}`,
+        },
+      }).catch(() => {});
+    }
+  })();
+}
+
+// ============================================================
+// ROTA POLLING: Status da análise completa
+// ============================================================
+/**
+ * GET /api/viability/:id/status
+ * Frontend faz polling nesta rota para saber quando a análise ficou pronta
+ */
+router.get('/:id/status', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const viability = await prisma.viabilityAnalysis.findFirst({
       where: { id },
-      data: {
-        viabilityScore: analysis.score,
-        scoreLabel: analysis.score >= 85 ? 'excelente' : analysis.score >= 70 ? 'bom' : analysis.score >= 50 ? 'medio' : analysis.score >= 30 ? 'baixo' : 'inviavel',
-        estimatedCredit: analysis.valorTotalEstimado,
-        opportunities: JSON.stringify(analysis.oportunidades),
-        aiSummary: analysis.resumoExecutivo,
-        risks: JSON.stringify(analysis.alertas),
-        status: 'completed',
+      select: {
+        id: true,
+        status: true,
+        companyName: true,
+        cnpj: true,
+        viabilityScore: true,
+        scoreLabel: true,
+        estimatedCredit: true,
+        opportunities: true,
+        aiSummary: true,
+        risks: true,
       },
     });
 
-    logger.info(`Admin full analysis completed for viability ${id}`, {
-      score: analysis.score,
-      opportunities: analysis.oportunidades.length,
-      totalEstimated: analysis.valorTotalEstimado,
-    });
+    if (!viability) {
+      return res.status(404).json({ success: false, error: 'Análise não encontrada' });
+    }
+
+    // Se ainda analisando, retornar status simples
+    if (viability.status === 'analyzing') {
+      return res.json({
+        success: true,
+        status: 'analyzing',
+        message: 'Análise em andamento...',
+      });
+    }
+
+    // Se falhou
+    if (viability.status === 'failed') {
+      return res.json({
+        success: false,
+        status: 'failed',
+        error: viability.aiSummary || 'Análise falhou',
+      });
+    }
+
+    // Se completou, retornar resultado completo
+    let oportunidades: any[] = [];
+    let alertas: string[] = [];
+    try {
+      oportunidades = viability.opportunities ? JSON.parse(viability.opportunities as string) : [];
+    } catch {}
+    try {
+      alertas = viability.risks ? JSON.parse(viability.risks as string) : [];
+    } catch {}
 
     return res.json({
       success: true,
+      status: 'completed',
       data: {
         id: viability.id,
         companyName: viability.companyName,
         cnpj: viability.cnpj,
-        score: analysis.score,
-        scoreLabel: analysis.score >= 85 ? 'excelente' : analysis.score >= 70 ? 'bom' : analysis.score >= 50 ? 'medio' : analysis.score >= 30 ? 'baixo' : 'inviavel',
-        estimatedCredit: analysis.valorTotalEstimado,
-        resumoExecutivo: analysis.resumoExecutivo,
-        fundamentacaoGeral: analysis.fundamentacaoGeral,
-        periodoAnalisado: analysis.periodoAnalisado,
-        regimeTributario: analysis.regimeTributario,
-        riscoGeral: analysis.riscoGeral,
-        recomendacoes: analysis.recomendacoes,
-        alertas: analysis.alertas,
-        // EXTRATO DETALHADO — cada oportunidade com valores
-        oportunidades: analysis.oportunidades.map(op => ({
-          tipo: op.tipo,
-          tributo: op.tributo,
-          descricao: op.descricao,
-          valorEstimado: op.valorEstimado,
-          fundamentacaoLegal: op.fundamentacaoLegal,
-          prazoRecuperacao: op.prazoRecuperacao,
-          complexidade: op.complexidade,
-          probabilidadeRecuperacao: op.probabilidadeRecuperacao,
-          risco: op.risco,
-          documentacaoNecessaria: op.documentacaoNecessaria,
-          passosPraticos: op.passosPraticos,
-        })),
+        score: viability.viabilityScore,
+        scoreLabel: viability.scoreLabel,
+        estimatedCredit: viability.estimatedCredit,
+        resumoExecutivo: viability.aiSummary,
+        alertas,
+        oportunidades,
       },
     });
   } catch (error: any) {
-    logger.error('Error in admin full analysis:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Erro na análise completa',
-    });
+    logger.error('Error in status polling:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao verificar status' });
   }
 });
 
