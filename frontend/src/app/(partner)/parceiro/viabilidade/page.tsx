@@ -105,11 +105,11 @@ export default function ViabilidadePage() {
               <input
                 type="file"
                 multiple
-                accept=".pdf,.xlsx,.xls,.txt"
+                accept=".pdf,.xlsx,.xls,.txt,.zip"
                 onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
                 className="input text-sm"
               />
-              <p className="text-xs text-gray-500 mt-1">DRE, Balanco ou Balancete para analise mais precisa</p>
+              <p className="text-xs text-gray-500 mt-1">PDF, Excel, SPED (.txt) ou ZIP com toda documentacao</p>
             </div>
 
             <button

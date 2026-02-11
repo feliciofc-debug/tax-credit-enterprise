@@ -265,11 +265,11 @@ export default function AdminViabilidadePage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Documentos</label>
+              <label className="block text-sm text-gray-700 mb-1">Documentos (PDF, ZIP, SPED, Excel)</label>
               <input
                 type="file"
                 multiple
-                accept=".pdf,.xlsx,.xls,.csv,.txt"
+                accept=".pdf,.xlsx,.xls,.csv,.txt,.zip"
                 onChange={e => setFiles(Array.from(e.target.files || []))}
                 className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
               />

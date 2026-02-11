@@ -6,20 +6,22 @@ import multer from 'multer';
 import { getOperatorPartnerId } from '../utils/operator';
 import { claudeService } from '../services/claude.service';
 import { documentProcessor } from '../services/documentProcessor.service';
+import { zipProcessor } from '../services/zipProcessor.service';
 
 const router = Router();
 
 // Upload config — memoryStorage (buffer direto, sem salvar em disco)
+// Aceita ZIP (até 50MB) e arquivos individuais (até 10MB)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB para ZIPs
   fileFilter: (_req, file, cb) => {
-    if (documentProcessor.isSupported(file.originalname)) {
+    if (zipProcessor.isSupported(file.originalname)) {
       cb(null, true);
     } else {
       cb(new Error(
         `Tipo de arquivo não suportado: ${file.originalname}. ` +
-        `Extensões aceitas: ${documentProcessor.getSupportedExtensions().join(', ')}`
+        `Extensões aceitas: ${zipProcessor.getSupportedExtensions().join(', ')}`
       ));
     }
   },
@@ -27,33 +29,59 @@ const upload = multer({
 
 // ============================================================
 // HELPER: Processar documentos e extrair texto
+// Suporta: ZIP (com SPED parser), PDF, Excel, TXT, Imagens
 // ============================================================
 async function processUploadedFiles(files: Express.Multer.File[]) {
   let combinedText = '';
   let totalPages = 0;
   let anyOcrUsed = false;
   let overallQuality: 'high' | 'medium' | 'low' = 'high';
+  let zipInfo: any = null;
 
   for (const file of files) {
+    const ext = file.originalname.toLowerCase().split('.').pop();
+
     try {
-      const processed = await documentProcessor.processDocument(
-        file.buffer,
-        file.originalname,
-        file.mimetype
-      );
+      // Se for ZIP, usar o zipProcessor especial (com SPED parser)
+      if (ext === 'zip') {
+        logger.info(`Processando ZIP: ${file.originalname} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+        const zipResult = await zipProcessor.processUpload(file.buffer, file.originalname, file.mimetype);
+        combinedText += zipProcessor.buildCombinedText(zipResult);
+        totalPages += zipResult.resumo.processados;
+        overallQuality = zipResult.speds.length > 0 ? 'high' : 'medium';
+        zipInfo = zipResult.resumo;
 
-      combinedText += `\n--- ${file.originalname} ---\n${processed.text}\n`;
-      totalPages += processed.pageCount;
-      if (processed.ocrUsed) anyOcrUsed = true;
-
-      if (processed.quality === 'low') overallQuality = 'low';
-      else if (processed.quality === 'medium' && overallQuality === 'high') overallQuality = 'medium';
+        // Se ZIP contém dados da empresa, logar
+        if (zipResult.empresa) {
+          logger.info(`ZIP empresa identificada: ${zipResult.empresa.nome} | CNPJ: ${zipResult.empresa.cnpj}`);
+        }
+      }
+      // Se for TXT, verificar se é SPED antes de processar normalmente
+      else if (ext === 'txt') {
+        const zipResult = await zipProcessor.processUpload(file.buffer, file.originalname, file.mimetype);
+        combinedText += zipProcessor.buildCombinedText(zipResult);
+        totalPages += 1;
+        if (zipResult.speds.length > 0) overallQuality = 'high';
+      }
+      // Demais arquivos: usar o documentProcessor existente (com OCR)
+      else {
+        const processed = await documentProcessor.processDocument(
+          file.buffer,
+          file.originalname,
+          file.mimetype
+        );
+        combinedText += `\n--- ${file.originalname} ---\n${processed.text}\n`;
+        totalPages += processed.pageCount;
+        if (processed.ocrUsed) anyOcrUsed = true;
+        if (processed.quality === 'low') overallQuality = 'low';
+        else if (processed.quality === 'medium' && overallQuality === 'high') overallQuality = 'medium';
+      }
     } catch (docError: any) {
       logger.warn(`Falha ao processar ${file.originalname}: ${docError.message}`);
     }
   }
 
-  return { combinedText, totalPages, anyOcrUsed, overallQuality };
+  return { combinedText, totalPages, anyOcrUsed, overallQuality, zipInfo };
 }
 
 // ============================================================
