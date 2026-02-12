@@ -5,7 +5,7 @@ import Link from 'next/link';
 const features = [
   {
     title: 'Analise com IA',
-    description: 'Claude AI analisa DREs, Balancos e Balancetes identificando creditos tributarios ocultos automaticamente.',
+    description: 'Inteligencia Artificial analisa DREs, Balancos e Balancetes identificando creditos tributarios ocultos automaticamente.',
     icon: 'M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a2.25 2.25 0 01-1.591.659H9.061a2.25 2.25 0 01-1.591-.659L5 14.5m14 0V5.846a2 2 0 00-1.636-1.967l-2.114-.353m0 0V3.5a2 2 0 00-2-2h-1.5a2 2 0 00-2 2v.026',
   },
   {
@@ -75,7 +75,7 @@ export default function LandingPage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-semibold mb-6">
               <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse"></span>
-              Powered by Claude AI
+              Powered by AI
             </div>
             <h1 className="text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
               Recupere creditos tributarios com{' '}
@@ -163,7 +163,7 @@ export default function LandingPage() {
               {
                 step: '02',
                 title: 'Analise com IA',
-                description: 'Claude AI analisa cada documento identificando oportunidades de credito tributario com fundamentacao legal.',
+                description: 'IA avancada analisa cada documento identificando oportunidades de credito tributario com fundamentacao legal.',
                 color: 'from-blue-500 to-blue-700',
               },
               {

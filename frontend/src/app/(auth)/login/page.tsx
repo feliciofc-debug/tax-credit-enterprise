@@ -76,7 +76,7 @@ export default function LoginPage() {
           <p className="text-brand-200 text-lg leading-relaxed">
             Analise automatizada de DREs, Balancos e Balancetes. 
             Identificacao inteligente de oportunidades de credito 
-            com Claude AI.
+            com Inteligencia Artificial.
           </p>
         </div>
 

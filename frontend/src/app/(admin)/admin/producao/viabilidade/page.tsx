@@ -410,7 +410,7 @@ export default function AdminViabilidadePage() {
               disabled={loading || !!fullLoading}
               className="w-full py-3 bg-indigo-700 hover:bg-indigo-800 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
             >
-              {loading ? 'Processando e analisando...' : 'Quick Score (Sonnet)'}
+              {loading ? 'Processando e analisando...' : 'Quick Score (IA)'}
             </button>
           </form>
         </div>
@@ -423,7 +423,7 @@ export default function AdminViabilidadePage() {
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-gray-900 font-semibold text-lg">Quick Score: {result.companyName || ''}</h3>
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Sonnet 4.5</span>
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">IA Rapida</span>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
@@ -463,12 +463,12 @@ export default function AdminViabilidadePage() {
                   <div className="flex flex-col items-center gap-1">
                     <div className="flex items-center gap-2">
                       <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                      Opus 4.6 analisando em background...
+                      IA analisando em background...
                     </div>
                     <span className="text-xs text-indigo-200">Aguarde 1-3 min. Resultado aparece automaticamente.</span>
                   </div>
                 ) : (
-                  <>Analise Completa (Opus 4.6) — Extrato Detalhado</>
+                  <>Analise Completa (IA Avancada) — Extrato Detalhado</>
                 )}
               </button>
             </div>
@@ -679,7 +679,7 @@ export default function AdminViabilidadePage() {
 
               {/* Rodape */}
               <div className="px-6 py-3 bg-gray-100 text-xs text-gray-400 flex justify-between">
-                <span>Analise: Claude Opus 4.6 | TaxCredit Enterprise</span>
+                <span>Analise: IA Avancada | TaxCredit Enterprise</span>
                 <span>{new Date().toLocaleDateString('pt-BR')}</span>
               </div>
             </div>
@@ -718,7 +718,7 @@ export default function AdminViabilidadePage() {
                           disabled={!!fullLoading}
                           className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors disabled:opacity-50"
                         >
-                          {fullLoading === h.id ? 'Analisando...' : 'Opus 4.6'}
+                          {fullLoading === h.id ? 'Analisando...' : 'IA Avancada'}
                         </button>
                       )}
                     </div>

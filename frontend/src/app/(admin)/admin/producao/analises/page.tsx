@@ -598,13 +598,13 @@ export default function AdminAnalisesPage() {
             {!detail.hasFullAnalysis && (
               <div className="px-6 py-8 text-center">
                 <p className="text-gray-500 text-sm">Esta analise possui apenas o Quick Score.</p>
-                <p className="text-gray-400 text-xs mt-1">Execute a Analise Completa (Opus 4.6) na pagina de Viabilidade para ver o extrato detalhado.</p>
+                <p className="text-gray-400 text-xs mt-1">Execute a Analise Completa na pagina de Viabilidade para ver o extrato detalhado.</p>
               </div>
             )}
 
             {/* Rodape */}
             <div className="px-6 py-3 bg-gray-100 text-xs text-gray-400 flex justify-between">
-              <span>Analise: Claude Opus 4.6 | TaxCredit Enterprise</span>
+              <span>Analise: IA Avancada | TaxCredit Enterprise</span>
               <span>{detail.createdAt ? new Date(detail.createdAt).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</span>
             </div>
           </div>
@@ -740,7 +740,7 @@ export default function AdminAnalisesPage() {
             )}
 
             <div className="footer">
-              <span>Analise: Claude Opus 4.6 | TaxCredit Enterprise | taxcreditenterprise.com</span>
+              <span>Analise: IA Avancada | TaxCredit Enterprise | taxcreditenterprise.com</span>
               <span>{detail.createdAt ? new Date(detail.createdAt).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</span>
             </div>
           </div>
