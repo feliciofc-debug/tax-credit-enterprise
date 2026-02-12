@@ -66,7 +66,7 @@ export default function UploadPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Upload de Documentos</h1>
-        <p className="text-gray-500 text-sm mt-1">Envie DREs, Balancos e Balancetes para analise automatica</p>
+        <p className="text-gray-500 text-sm mt-1">Envie DREs, Balanços e Balancetes para análise automática</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -97,7 +97,7 @@ export default function UploadPage() {
               Arraste arquivos aqui ou clique para selecionar
             </p>
             <p className="text-sm text-gray-500">
-              PDF, Excel, TXT, Imagens - Ate 200 arquivos por lote
+              PDF, Excel, TXT, Imagens - Até 200 arquivos por lote
             </p>
           </div>
 
@@ -154,7 +154,7 @@ export default function UploadPage() {
         {/* Config */}
         <div className="space-y-6">
           <div className="card p-5 space-y-4">
-            <h3 className="font-semibold text-gray-900">Configuracao</h3>
+            <h3 className="font-semibold text-gray-900">Configuração</h3>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Documento</label>
@@ -164,7 +164,7 @@ export default function UploadPage() {
                 className="input"
               >
                 <option value="dre">DRE</option>
-                <option value="balanço">Balanco Patrimonial</option>
+                <option value="balanço">Balanço Patrimonial</option>
                 <option value="balancete">Balancete</option>
               </select>
             </div>

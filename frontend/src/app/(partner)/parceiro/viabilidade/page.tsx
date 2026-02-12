@@ -38,7 +38,7 @@ export default function ViabilidadePage() {
 
       const data = await res.json();
       if (!data.success) {
-        alert(data.error || 'Erro na analise');
+        alert(data.error || 'Erro na análise');
         setLoading(false);
         return;
       }
@@ -50,10 +50,10 @@ export default function ViabilidadePage() {
         return;
       }
 
-      // Analise assincrona — fazer polling
+      // Análise assíncrona — fazer polling
       const viabilityId = data.data?.id;
       if (!viabilityId) {
-        alert('Erro: ID da analise nao retornado');
+        alert('Erro: ID da análise não retornado');
         setLoading(false);
         return;
       }
@@ -72,7 +72,7 @@ export default function ViabilidadePage() {
               companyName: pollData.data.companyName,
               score: pollData.data.score || 0,
               scoreLabel: pollData.data.scoreLabel || 'inviavel',
-              summary: pollData.data.resumoExecutivo || 'Analise concluida',
+              summary: pollData.data.resumoExecutivo || 'Análise concluída',
               viable: (pollData.data.score || 0) >= 50,
               estimatedCredit: pollData.data.estimatedCredit,
               aiPowered: true,
@@ -80,7 +80,7 @@ export default function ViabilidadePage() {
             setLoading(false);
           } else if (pollData.status === 'failed') {
             clearInterval(pollInterval);
-            alert(pollData.error || 'Analise falhou. Tente novamente.');
+            alert(pollData.error || 'Análise falhou. Tente novamente.');
             setLoading(false);
           }
         } catch {
@@ -95,7 +95,7 @@ export default function ViabilidadePage() {
       }, 180000);
 
     } catch {
-      alert('Erro de conexao com o servidor');
+      alert('Erro de conexão com o servidor');
       setLoading(false);
     }
   };
@@ -103,15 +103,15 @@ export default function ViabilidadePage() {
   const getScoreConfig = (score: number) => {
     if (score >= 85) return { label: 'EXCELENTE', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', ring: 'ring-green-500', bar: 'bg-green-500' };
     if (score >= 70) return { label: 'BOM', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', ring: 'ring-blue-500', bar: 'bg-blue-500' };
-    if (score >= 50) return { label: 'MEDIO', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', ring: 'ring-yellow-500', bar: 'bg-yellow-500' };
+    if (score >= 50) return { label: 'MÉDIO', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', ring: 'ring-yellow-500', bar: 'bg-yellow-500' };
     return { label: 'BAIXO', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', ring: 'ring-red-500', bar: 'bg-red-500' };
   };
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Analise de Viabilidade</h1>
-        <p className="text-gray-500 text-sm mt-1">Avalie o potencial de recuperacao antes de abordar o cliente</p>
+        <h1 className="text-2xl font-bold text-gray-900">Análise de Viabilidade</h1>
+        <p className="text-gray-500 text-sm mt-1">Avalie o potencial de recuperação antes de abordar o cliente</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -130,7 +130,7 @@ export default function ViabilidadePage() {
                 <input name="cnpj" value={form.cnpj} onChange={handleChange} className="input" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Regime Tributario</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Regime Tributário</label>
                 <select name="regime" value={form.regime} onChange={handleChange} className="input">
                   <option value="">Selecione</option>
                   <option value="lucro_real">Lucro Real</option>
@@ -142,7 +142,7 @@ export default function ViabilidadePage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Setor</label>
-                <input name="sector" value={form.sector} onChange={handleChange} className="input" placeholder="Ex: Industria, Comercio" />
+                <input name="sector" value={form.sector} onChange={handleChange} className="input" placeholder="Ex: Indústria, Comércio" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Faturamento Anual (R$)</label>
@@ -160,7 +160,7 @@ export default function ViabilidadePage() {
                 onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
                 className="input text-sm"
               />
-              <p className="text-xs text-gray-500 mt-1">PDF, Excel, SPED (.txt) ou ZIP com toda documentacao</p>
+              <p className="text-xs text-gray-500 mt-1">PDF, Excel, SPED (.txt) ou ZIP com toda documentação</p>
             </div>
 
             <button
@@ -191,7 +191,7 @@ export default function ViabilidadePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
               </svg>
               <p className="text-gray-500 font-medium">Preencha os dados e clique em analisar</p>
-              <p className="text-gray-400 text-sm mt-1">O score aparecera aqui</p>
+              <p className="text-gray-400 text-sm mt-1">O score aparecerá aqui</p>
             </div>
           )}
 
@@ -220,7 +220,7 @@ export default function ViabilidadePage() {
                         <p className={`text-sm font-bold ${config.color} mt-1`}>{config.label}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-500">Credito Estimado</p>
+                        <p className="text-sm text-gray-500">Crédito Estimado</p>
                         <p className="text-2xl font-bold text-gray-900">
                           {result.estimatedCredit ? `R$ ${result.estimatedCredit.toLocaleString('pt-BR')}` : 'Após consulta completa'}
                         </p>
@@ -282,12 +282,12 @@ export default function ViabilidadePage() {
               <div className="card p-6">
                 <h4 className="font-semibold text-gray-900 mb-3">Modelo de Receita</h4>
                 
-                {/* Taxa de adesao */}
+                {/* Taxa de adesão */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3">
-                  <p className="text-sm text-gray-800 font-semibold mb-2">Taxa de Adesao: R$ 2.000,00 (paga pelo cliente)</p>
+                  <p className="text-sm text-gray-800 font-semibold mb-2">Taxa de Adesão: R$ 2.000,00 (paga pelo cliente)</p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="bg-white rounded p-2 text-center">
-                      <p className="text-xs text-gray-500">Voce recebe</p>
+                      <p className="text-xs text-gray-500">Você recebe</p>
                       <p className="font-bold text-green-600">R$ 800,00</p>
                     </div>
                     <div className="bg-white rounded p-2 text-center">
@@ -295,33 +295,33 @@ export default function ViabilidadePage() {
                       <p className="font-bold text-indigo-600">R$ 1.200,00</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-600 mt-2">O cliente paga a taxa e recebe: consulta completa com IA + formalizacao de todo o processo.</p>
+                  <p className="text-xs text-gray-600 mt-2">O cliente paga a taxa e recebe: consulta completa com IA + formalização de todo o processo.</p>
                 </div>
 
-                {/* Split de creditos */}
+                {/* Split de créditos */}
                 <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 mb-3">
                   <p className="text-sm text-indigo-800">
-                    <strong>Creditos recuperados: 40% parceiro / 60% plataforma</strong> (padrao)
+                    <strong>Créditos recuperados: 40% parceiro / 60% plataforma</strong> (padrão)
                   </p>
                   <p className="text-sm text-indigo-700 mt-1">
-                    Quanto maior o credito recuperado, maior seu retorno.
+                    Quanto maior o crédito recuperado, maior seu retorno.
                   </p>
                 </div>
 
-                {/* Regra de negociacao */}
+                {/* Regra de negociação */}
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
                   <p className="text-sm text-green-800">
-                    <strong>40% padrao:</strong> Aprovado automaticamente, sem necessidade de autorizacao.
+                    <strong>40% padrão:</strong> Aprovado automaticamente, sem necessidade de autorização.
                   </p>
                 </div>
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <p className="text-sm text-yellow-800">
-                    <strong>Negociacao diferente:</strong> Qualquer alteracao no percentual requer senha do administrador TaxCredit.
+                    <strong>Negociação diferente:</strong> Qualquer alteração no percentual requer senha do administrador TaxCredit.
                   </p>
                 </div>
               </div>
 
-              {/* Acoes */}
+              {/* Ações */}
               {result.score >= 70 && (
                 <div className="card p-6 bg-green-50 border border-green-200 text-center">
                   <p className="text-green-800 font-semibold mb-3">Score aprovado! Gere um convite para o cliente.</p>

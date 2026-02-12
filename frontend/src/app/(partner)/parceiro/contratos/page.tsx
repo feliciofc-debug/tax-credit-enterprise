@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-// Modal para criar contrato com regra de negociacao
+// Modal para criar contrato com regra de negociação
 function NewContractModal({ onClose }: { onClose: () => void }) {
   const [partnerPercent, setPartnerPercent] = useState(40);
   const [adminPassword, setAdminPassword] = useState('');
@@ -19,7 +19,7 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
 
   const handleCreate = async () => {
     if (partnerPercent !== 40 && !adminPassword) {
-      setError('Alterar o percentual padrao (40%) requer senha de autorizacao do administrador');
+      setError('Alterar o percentual padrão (40%) requer senha de autorização do administrador');
       return;
     }
     // Aqui conectaria com a API /api/contract/create
@@ -41,11 +41,11 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
         <div className="p-6 space-y-5">
           {/* Info da taxa */}
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-            <h3 className="font-semibold text-indigo-900 mb-2">Taxa de Adesao: R$ 2.000,00</h3>
-            <p className="text-xs text-indigo-700 mb-3">Paga pelo cliente demandante da operacao.</p>
+            <h3 className="font-semibold text-indigo-900 mb-2">Taxa de Adesão: R$ 2.000,00</h3>
+            <p className="text-xs text-indigo-700 mb-3">Paga pelo cliente demandante da operação.</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-500">Voce recebe</p>
+                <p className="text-xs text-gray-500">Você recebe</p>
                 <p className="text-lg font-bold text-green-600">R$ 800,00</p>
               </div>
               <div className="bg-white rounded-lg p-3 text-center">
@@ -54,14 +54,14 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
               </div>
             </div>
             <p className="text-xs text-indigo-700 mt-2">
-              Ao pagar, o cliente libera: consulta completa com IA + formalizacao de todo o processo tributario.
+              Ao pagar, o cliente libera: consulta completa com IA + formalização de todo o processo tributário.
             </p>
           </div>
 
-          {/* Split de creditos recuperados */}
+          {/* Split de créditos recuperados */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Split sobre Creditos Recuperados</label>
-            <p className="text-xs text-gray-500 mb-3">Padrao: 40% parceiro / 60% plataforma. Para alterar, requer senha do administrador.</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Split sobre Créditos Recuperados</label>
+            <p className="text-xs text-gray-500 mb-3">Padrão: 40% parceiro / 60% plataforma. Para alterar, requer senha do administrador.</p>
             <div className="flex items-center gap-4 mb-2">
               <span className="text-sm text-gray-500 w-28">Parceiro:</span>
               <input
@@ -83,12 +83,12 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* Simulacao de ganho */}
+          {/* Simulação de ganho */}
           <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs text-gray-500 mb-2">Simulacao de ganho (exemplo: credito de R$ 500.000)</p>
+            <p className="text-xs text-gray-500 mb-2">Simulação de ganho (exemplo: crédito de R$ 500.000)</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-xs text-gray-500">Voce recebe</p>
+                <p className="text-xs text-gray-500">Você recebe</p>
                 <p className="text-lg font-bold text-green-600">R$ {(500000 * partnerPercent / 100).toLocaleString('pt-BR')}</p>
               </div>
               <div>
@@ -107,12 +107,12 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
             {partnerPercent === 40 ? (
               <p className="text-sm text-green-800 flex items-center gap-2">
                 <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                <strong>Percentual padrao (40%).</strong> Aprovado automaticamente.
+                <strong>Percentual padrão (40%).</strong> Aprovado automaticamente.
               </p>
             ) : (
               <p className="text-sm text-yellow-800 flex items-center gap-2">
                 <svg className="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                <strong>Requer autorizacao.</strong> Percentual diferente de 40% precisa de senha do administrador.
+                <strong>Requer autorização.</strong> Percentual diferente de 40% precisa de senha do administrador.
               </p>
             )}
           </div>
@@ -121,7 +121,7 @@ function NewContractModal({ onClose }: { onClose: () => void }) {
           {showAdminField && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Senha de Autorizacao (Administrador)
+                Senha de Autorização (Administrador)
               </label>
               <input
                 type="password"
@@ -171,7 +171,7 @@ export default function ContratosPage() {
     pending_payment: { label: 'Aguardando Pagamento', cls: 'bg-yellow-100 text-yellow-700' },
     pending_signatures: { label: 'Aguardando Assinaturas', cls: 'bg-orange-100 text-orange-700' },
     active: { label: 'Ativo', cls: 'bg-green-100 text-green-700' },
-    completed: { label: 'Concluido', cls: 'bg-blue-100 text-blue-700' },
+    completed: { label: 'Concluído', cls: 'bg-blue-100 text-blue-700' },
     cancelled: { label: 'Cancelado', cls: 'bg-red-100 text-red-700' },
   };
 
@@ -238,7 +238,7 @@ export default function ContratosPage() {
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Taxa Inicial</p>
                   <p className="font-semibold text-gray-900">R$ {contract.setupFee.toLocaleString('pt-BR')}</p>
-                  <p className="text-xs text-gray-500">Voce: R$ 800 | Plataforma: R$ 1.200</p>
+                  <p className="text-xs text-gray-500">Você: R$ 800 | Plataforma: R$ 1.200</p>
                   <p className={`text-xs font-medium ${contract.setupFeePaid ? 'text-green-600' : 'text-yellow-600'}`}>
                     {contract.setupFeePaid ? 'Pago - Consulta liberada' : 'Pendente - Aguardando pagamento'}
                   </p>
@@ -246,7 +246,7 @@ export default function ContratosPage() {
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Split</p>
                   <p className="font-semibold text-gray-900">{contract.partnerSplitPercent}% / {contract.platformSplitPercent}%</p>
-                  <p className="text-xs text-gray-500">Voce / Plataforma</p>
+                  <p className="text-xs text-gray-500">Você / Plataforma</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-500 text-xs">Total Recuperado</p>

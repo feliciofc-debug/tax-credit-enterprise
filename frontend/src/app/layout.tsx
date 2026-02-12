@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Tax Credit Enterprise',
-  description: 'Sistema de Recuperacao de Creditos Tributarios',
+  description: 'Sistema de Recuperação de Créditos Tributários',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

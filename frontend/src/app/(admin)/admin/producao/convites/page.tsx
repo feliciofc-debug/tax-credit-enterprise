@@ -44,7 +44,7 @@ export default function AdminConvitesPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.companyName) {
-      setError('Nome da empresa e obrigatorio');
+      setError('Nome da empresa é obrigatório');
       return;
     }
 
@@ -65,14 +65,14 @@ export default function AdminConvitesPage() {
 
       const data = await res.json();
       if (data.success) {
-        setSuccess(`Convite criado! Codigo: ${data.data.inviteCode}\nLink: ${data.data.inviteLink}`);
+        setSuccess(`Convite criado! Código: ${data.data.inviteCode}\nLink: ${data.data.inviteLink}`);
         setForm({ clientEmail: '', clientName: '', companyName: '', cnpj: '' });
         fetchInvites();
       } else {
         setError(data.error || 'Erro ao criar convite');
       }
     } catch {
-      setError('Erro de conexao');
+      setError('Erro de conexão');
     } finally {
       setLoading(false);
     }

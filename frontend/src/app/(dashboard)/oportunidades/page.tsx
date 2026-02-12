@@ -9,8 +9,8 @@ const demoOpportunities = [
     tipo: 'PIS/COFINS sobre Insumos',
     valorEstimado: 450000,
     probabilidadeRecuperacao: 85,
-    fundamentacaoLegal: 'Lei 10.833/2003, art. 3o - Creditos sobre insumos',
-    descricao: 'Credito de PIS/COFINS sobre aquisicao de insumos utilizados na producao de bens e servicos',
+    fundamentacaoLegal: 'Lei 10.833/2003, art. 3o - Créditos sobre insumos',
+    descricao: 'Crédito de PIS/COFINS sobre aquisição de insumos utilizados na produção de bens e serviços',
     prazoRecuperacao: '3-6 meses',
     empresa: 'Empresa ABC Ltda',
     periodo: '2024-Q1',
@@ -21,8 +21,8 @@ const demoOpportunities = [
     tipo: 'ICMS-ST Retido Indevidamente',
     valorEstimado: 280000,
     probabilidadeRecuperacao: 72,
-    fundamentacaoLegal: 'Art. 150, §7o CF - Restituicao de ICMS-ST',
-    descricao: 'ICMS-ST retido a maior em operacoes interestaduais com base de calculo presumida superior ao valor real',
+    fundamentacaoLegal: 'Art. 150, §7o CF - Restituição de ICMS-ST',
+    descricao: 'ICMS-ST retido a maior em operações interestaduais com base de cálculo presumida superior ao valor real',
     prazoRecuperacao: '6-12 meses',
     empresa: 'Empresa ABC Ltda',
     periodo: '2024-Q1',
@@ -30,11 +30,11 @@ const demoOpportunities = [
   {
     id: '3',
     analysisId: 'a3',
-    tipo: 'IRPJ - Exclusao ICMS da Base PIS/COFINS',
+    tipo: 'IRPJ - Exclusão ICMS da Base PIS/COFINS',
     valorEstimado: 620000,
     probabilidadeRecuperacao: 95,
-    fundamentacaoLegal: 'RE 574.706/PR (STF) - Tese do Seculo',
-    descricao: 'Exclusao do ICMS da base de calculo do PIS e da COFINS conforme decisao do STF',
+    fundamentacaoLegal: 'RE 574.706/PR (STF) - Tese do Século',
+    descricao: 'Exclusão do ICMS da base de cálculo do PIS e da COFINS conforme decisão do STF',
     prazoRecuperacao: '2-4 meses',
     empresa: 'Empresa XYZ S.A.',
     periodo: '2023',
@@ -42,11 +42,11 @@ const demoOpportunities = [
   {
     id: '4',
     analysisId: 'a4',
-    tipo: 'COFINS - Credito Energia Eletrica',
+    tipo: 'COFINS - Crédito Energia Elétrica',
     valorEstimado: 95000,
     probabilidadeRecuperacao: 68,
     fundamentacaoLegal: 'Lei 10.833/2003, art. 3o, III',
-    descricao: 'Credito de COFINS sobre despesas com energia eletrica consumida nos estabelecimentos',
+    descricao: 'Crédito de COFINS sobre despesas com energia elétrica consumida nos estabelecimentos',
     prazoRecuperacao: '3-6 meses',
     empresa: 'Empresa ABC Ltda',
     periodo: '2024-01',
@@ -82,7 +82,7 @@ export default function OportunidadesPage() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert('Erro ao gerar documentacao. Verifique se o backend esta rodando.');
+      alert('Erro ao gerar documentação. Verifique se o backend está rodando.');
     } finally {
       setDownloading(null);
     }
@@ -100,7 +100,7 @@ export default function OportunidadesPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Oportunidades de Credito</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Oportunidades de Crédito</h1>
           <p className="text-gray-500 text-sm mt-1">
             {demoOpportunities.length} oportunidades identificadas - Total: R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>
@@ -131,7 +131,7 @@ export default function OportunidadesPage() {
           </div>
           <div className="h-10 w-px bg-gray-200"></div>
           <div>
-            <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Media Probabilidade</p>
+            <p className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Média Probabilidade</p>
             <p className="text-2xl font-bold text-green-600">
               {Math.round(demoOpportunities.reduce((a, o) => a + o.probabilidadeRecuperacao, 0) / demoOpportunities.length)}%
             </p>
@@ -167,7 +167,7 @@ export default function OportunidadesPage() {
 
               {/* Legal basis */}
               <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Fundamentacao Legal</p>
+                <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Fundamentação Legal</p>
                 <p className="text-sm text-gray-700">{opp.fundamentacaoLegal}</p>
               </div>
 

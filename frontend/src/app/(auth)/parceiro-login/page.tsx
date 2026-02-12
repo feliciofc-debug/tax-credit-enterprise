@@ -35,7 +35,7 @@ export default function PartnerLoginPage() {
       localStorage.setItem('partnerName', data.data.name);
       router.push('/parceiro');
     } catch (err: any) {
-      setError('Erro de conexao com o servidor');
+      setError('Erro de conexão com o servidor');
     } finally {
       setLoading(false);
     }
@@ -57,25 +57,25 @@ export default function PartnerLoginPage() {
           </div>
 
           <h2 className="text-white text-4xl font-bold leading-tight mb-6">
-            Area exclusiva para parceiros
+            Área exclusiva para parceiros
           </h2>
           <p className="text-indigo-200 text-lg leading-relaxed">
-            Analise viabilidade, gere convites para clientes e acompanhe seus contratos e comissoes.
+            Analise viabilidade, gere convites para clientes e acompanhe seus contratos e comissões.
           </p>
         </div>
 
         <div className="space-y-4 text-indigo-200">
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-            <span>Analise de viabilidade com IA</span>
+            <span>Análise de viabilidade com IA</span>
           </div>
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-            <span>Comissao de 40% sobre creditos recuperados</span>
+            <span>Comissão de 40% sobre créditos recuperados</span>
           </div>
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-            <span>Contratos digitais automaticos</span>
+            <span>Contratos digitais automáticos</span>
           </div>
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
@@ -112,10 +112,10 @@ export default function PartnerLoginPage() {
 
           <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-gray-500">
-              Nao tem conta? <Link href="/parceiro-cadastro" className="text-indigo-600 font-medium hover:underline">Cadastre-se como parceiro</Link>
+              Não tem conta? <Link href="/parceiro-cadastro" className="text-indigo-600 font-medium hover:underline">Cadastre-se como parceiro</Link>
             </p>
             <p className="text-sm text-gray-500">
-              E cliente? <Link href="/login" className="text-brand-600 font-medium hover:underline">Acesse aqui</Link>
+              É cliente? <Link href="/login" className="text-brand-600 font-medium hover:underline">Acesse aqui</Link>
             </p>
           </div>
         </div>

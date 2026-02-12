@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 
 /* ============================================================
-   INTERFACES — Todos os campos opcionais para seguranca
+   INTERFACES — Todos os campos opcionais para segurança
    ============================================================ */
 
 interface Oportunidade {
@@ -114,7 +114,7 @@ export default function AdminViabilidadePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.companyName) {
-      setError('Nome da empresa e obrigatorio');
+      setError('Nome da empresa é obrigatório');
       return;
     }
 
@@ -159,14 +159,14 @@ export default function AdminViabilidadePage() {
       // Resultado assincrono — polling
       const viabilityId = data.data?.id;
       if (!viabilityId) {
-        setError('Erro: ID da analise nao retornado');
+        setError('Erro: ID da análise não retornado');
         setLoading(false);
         return;
       }
 
       startPolling(viabilityId, 'quick');
     } catch {
-      setError('Erro de conexao ao enviar documentos');
+      setError('Erro de conexão ao enviar documentos');
       setLoading(false);
     }
   };
@@ -192,14 +192,14 @@ export default function AdminViabilidadePage() {
 
       const startData = await startRes.json();
       if (!startData.success) {
-        setError(startData.error || 'Erro ao iniciar analise completa');
+        setError(startData.error || 'Erro ao iniciar análise completa');
         setFullLoading(null);
         return;
       }
 
       startPolling(viabilityId, 'full');
     } catch {
-      setError('Erro de conexao ao iniciar analise.');
+      setError('Erro de conexão ao iniciar análise.');
       setFullLoading(null);
     }
   };
@@ -235,7 +235,7 @@ export default function AdminViabilidadePage() {
               companyName: pollData.data.companyName || '',
               score: pollData.data.score || 0,
               scoreLabel: pollData.data.scoreLabel || 'inviavel',
-              summary: pollData.data.resumoExecutivo || 'Analise concluida',
+              summary: pollData.data.resumoExecutivo || 'Análise concluída',
               viable: (pollData.data.score || 0) >= 50,
               aiPowered: true,
               nextSteps: (pollData.data.score || 0) >= 50
@@ -253,7 +253,7 @@ export default function AdminViabilidadePage() {
           if (timeoutRef.current) clearTimeout(timeoutRef.current);
           pollRef.current = null;
           timeoutRef.current = null;
-          setError(pollData.error || 'Analise falhou. Tente novamente.');
+          setError(pollData.error || 'Análise falhou. Tente novamente.');
           if (mode === 'quick') setLoading(false);
           else setFullLoading(null);
         }
@@ -267,7 +267,7 @@ export default function AdminViabilidadePage() {
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = null;
       timeoutRef.current = null;
-      setError('Analise demorou mais que o esperado. Verifique o historico.');
+      setError('Análise demorou mais que o esperado. Verifique o histórico.');
       if (mode === 'quick') setLoading(false);
       else setFullLoading(null);
     }, maxTime);
@@ -307,8 +307,8 @@ export default function AdminViabilidadePage() {
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Analise de Viabilidade</h1>
-        <p className="text-gray-500 mt-1">Analise o potencial de recuperacao de creditos com IA</p>
+        <h1 className="text-2xl font-bold text-gray-900">Análise de Viabilidade</h1>
+        <p className="text-gray-500 mt-1">Analise o potencial de recuperação de créditos com IA</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -338,7 +338,7 @@ export default function AdminViabilidadePage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-700 mb-1">Regime Tributario</label>
+              <label className="block text-sm text-gray-700 mb-1">Regime Tributário</label>
               <select
                 value={form.regime}
                 onChange={e => setForm(p => ({ ...p, regime: e.target.value }))}
@@ -358,9 +358,9 @@ export default function AdminViabilidadePage() {
                 onChange={e => setForm(p => ({ ...p, documentType: e.target.value }))}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               >
-                <option value="dre">DRE - Demonstracao do Resultado</option>
+                <option value="dre">DRE - Demonstração do Resultado</option>
                 <option value="balanco">Balanco Patrimonial</option>
-                <option value="balancete">Balancete de Verificacao</option>
+                <option value="balancete">Balancete de Verificação</option>
               </select>
             </div>
 
@@ -435,7 +435,7 @@ export default function AdminViabilidadePage() {
                 </div>
                 <div className="text-center flex items-center justify-center">
                   <span className={`px-3 py-1 rounded-full text-sm font-bold ${result.viable ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {result.viable ? 'Viavel' : 'Baixa viabilidade'}
+                    {result.viable ? 'Viável' : 'Baixa viabilidade'}
                   </span>
                 </div>
               </div>
@@ -448,7 +448,7 @@ export default function AdminViabilidadePage() {
 
               {result.nextSteps && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <p className="text-blue-800 text-sm font-semibold mb-1">Proximos Passos:</p>
+                  <p className="text-blue-800 text-sm font-semibold mb-1">Próximos Passos:</p>
                   <p className="text-blue-700 text-sm">{result.nextSteps}</p>
                 </div>
               )}
@@ -468,14 +468,14 @@ export default function AdminViabilidadePage() {
                     <span className="text-xs text-indigo-200">Aguarde 1-3 min. Resultado aparece automaticamente.</span>
                   </div>
                 ) : (
-                  <>Analise Completa (IA Avancada) — Extrato Detalhado</>
+                  <>Análise Completa (IA Avançada) — Extrato Detalhado</>
                 )}
               </button>
             </div>
           )}
 
           {/* ============================================================ */}
-          {/* EXTRATO DETALHADO — Resultado da Analise Completa             */}
+          {/* EXTRATO DETALHADO — Resultado da Análise Completa             */}
           {/* ============================================================ */}
           {fullResult && (
             <div className="bg-white border-2 border-indigo-200 rounded-xl shadow-lg overflow-hidden">
@@ -488,7 +488,7 @@ export default function AdminViabilidadePage() {
                   </div>
                   <div className="text-right">
                     <p className="text-3xl font-extrabold">{fmt(fullResult.estimatedCredit)}</p>
-                    <p className="text-indigo-200 text-xs">Total Estimado de Recuperacao</p>
+                    <p className="text-indigo-200 text-xs">Total Estimado de Recuperação</p>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-4 mt-3 text-xs text-indigo-200">
@@ -595,13 +595,13 @@ export default function AdminViabilidadePage() {
                           <div className="grid grid-cols-2 gap-4">
                             {op.fundamentacaoLegal && (
                               <div>
-                                <p className="font-semibold text-gray-700">Fundamentacao Legal</p>
+                                <p className="font-semibold text-gray-700">Fundamentação Legal</p>
                                 <p className="text-gray-600">{op.fundamentacaoLegal}</p>
                               </div>
                             )}
                             {op.prazoRecuperacao && (
                               <div>
-                                <p className="font-semibold text-gray-700">Prazo de Recuperacao</p>
+                                <p className="font-semibold text-gray-700">Prazo de Recuperação</p>
                                 <p className="text-gray-600">{op.prazoRecuperacao}</p>
                               </div>
                             )}
@@ -614,7 +614,7 @@ export default function AdminViabilidadePage() {
                           )}
                           {(op.documentacaoNecessaria || []).length > 0 && (
                             <div>
-                              <p className="font-semibold text-gray-700">Documentacao Necessaria</p>
+                              <p className="font-semibold text-gray-700">Documentação Necessária</p>
                               <ul className="list-disc list-inside text-gray-600">
                                 {(op.documentacaoNecessaria || []).map((d, j) => (
                                   <li key={j}>{d}</li>
@@ -669,10 +669,10 @@ export default function AdminViabilidadePage() {
                 </div>
               )}
 
-              {/* Fundamentacao Geral */}
+              {/* Fundamentação Geral */}
               {fullResult.fundamentacaoGeral && (
                 <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                  <p className="font-semibold text-gray-700 text-sm mb-1">Fundamentacao Geral</p>
+                  <p className="font-semibold text-gray-700 text-sm mb-1">Fundamentação Geral</p>
                   <p className="text-gray-600 text-xs leading-relaxed">{fullResult.fundamentacaoGeral}</p>
                 </div>
               )}
@@ -689,7 +689,7 @@ export default function AdminViabilidadePage() {
           <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <h3 className="text-gray-900 font-semibold mb-4">Historico de Analises</h3>
             {(!history || history.length === 0) ? (
-              <p className="text-gray-500 text-sm">Nenhuma analise realizada ainda.</p>
+              <p className="text-gray-500 text-sm">Nenhuma análise realizada ainda.</p>
             ) : (
               <div className="space-y-2">
                 {history.map(h => (

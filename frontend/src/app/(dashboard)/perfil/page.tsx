@@ -14,7 +14,7 @@ export default function ClientProfilePage() {
     // Representante Legal
     legalRepName: '', legalRepCpf: '', legalRepRg: '',
     legalRepCargo: '', legalRepEmail: '', legalRepPhone: '',
-    // Dados Bancarios
+    // Dados Bancários
     bankName: '', bankAgency: '', bankAccount: '',
     bankAccountType: 'corrente', bankPixKey: '',
     bankAccountHolder: '', bankCpfCnpj: '',
@@ -70,7 +70,7 @@ export default function ClientProfilePage() {
         setError(data.error || 'Erro ao salvar');
       }
     } catch {
-      setError('Erro de conexao');
+      setError('Erro de conexão');
     } finally {
       setSaving(false);
     }
@@ -121,7 +121,7 @@ export default function ClientProfilePage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Dados da Empresa</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Razao Social *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social *</label>
                 <input value={form.company} onChange={e => updateField('company', e.target.value)} className="input" required />
               </div>
               <div>
@@ -129,7 +129,7 @@ export default function ClientProfilePage() {
                 <input value={form.cnpj} onChange={e => updateField('cnpj', e.target.value)} className="input" placeholder="00.000.000/0000-00" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Regime Tributario</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Regime Tributário</label>
                 <select value={form.regime} onChange={e => updateField('regime', e.target.value)} className="input">
                   <option value="">Selecione...</option>
                   <option value="lucro_real">Lucro Real</option>
@@ -142,7 +142,7 @@ export default function ClientProfilePage() {
                 <input value={form.cep} onChange={e => updateField('cep', e.target.value)} className="input" />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Endereco</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
                 <input value={form.endereco} onChange={e => updateField('endereco', e.target.value)} className="input" />
               </div>
               <div>
@@ -159,7 +159,7 @@ export default function ClientProfilePage() {
           {/* Representante Legal */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-1">Representante Legal</h2>
-            <p className="text-sm text-gray-500 mb-4">Dados do responsavel pela assinatura do contrato</p>
+            <p className="text-sm text-gray-500 mb-4">Dados do responsável pela assinatura do contrato</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
@@ -175,7 +175,7 @@ export default function ClientProfilePage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-                <input value={form.legalRepCargo} onChange={e => updateField('legalRepCargo', e.target.value)} className="input" placeholder="Ex: Socio-Administrador" />
+                <input value={form.legalRepCargo} onChange={e => updateField('legalRepCargo', e.target.value)} className="input" placeholder="Ex: Sócio-Administrador" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -188,17 +188,17 @@ export default function ClientProfilePage() {
             </div>
           </div>
 
-          {/* Dados Bancarios */}
+          {/* Dados Bancários */}
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-1">Dados Bancarios</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Dados Bancários</h2>
             <p className="text-sm text-gray-500 mb-4">Conta para recebimento de valores recuperados</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Banco *</label>
-                <input value={form.bankName} onChange={e => updateField('bankName', e.target.value)} className="input" placeholder="Ex: Banco do Brasil, Itau" required />
+                <input value={form.bankName} onChange={e => updateField('bankName', e.target.value)} className="input" placeholder="Ex: Banco do Brasil, Itaú" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Agencia</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Agência</label>
                 <input value={form.bankAgency} onChange={e => updateField('bankAgency', e.target.value)} className="input" placeholder="0000" />
               </div>
               <div>
@@ -209,12 +209,12 @@ export default function ClientProfilePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
                 <select value={form.bankAccountType} onChange={e => updateField('bankAccountType', e.target.value)} className="input">
                   <option value="corrente">Conta Corrente</option>
-                  <option value="poupanca">Poupanca</option>
+                  <option value="poupanca">Poupança</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Chave PIX</label>
-                <input value={form.bankPixKey} onChange={e => updateField('bankPixKey', e.target.value)} className="input" placeholder="CPF, email, telefone ou chave aleatoria" />
+                <input value={form.bankPixKey} onChange={e => updateField('bankPixKey', e.target.value)} className="input" placeholder="CPF, email, telefone ou chave aleatória" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Titular da Conta</label>
@@ -231,9 +231,9 @@ export default function ClientProfilePage() {
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
             <p className="text-sm text-yellow-800 font-medium mb-1">Importante</p>
             <p className="text-xs text-yellow-700">
-              E de inteira responsabilidade do cliente verificar os dados bancarios e informacoes inseridas. 
-              Em caso de erro em transferencias ou depositos para contas informadas neste cadastro, 
-              a responsabilidade e 100% do contratante (cliente). Certifique-se de que todos os dados estao corretos antes de salvar.
+              É de inteira responsabilidade do cliente verificar os dados bancários e informações inseridas. 
+              Em caso de erro em transferências ou depósitos para contas informadas neste cadastro, 
+              a responsabilidade é 100% do contratante (cliente). Certifique-se de que todos os dados estão corretos antes de salvar.
             </p>
           </div>
 

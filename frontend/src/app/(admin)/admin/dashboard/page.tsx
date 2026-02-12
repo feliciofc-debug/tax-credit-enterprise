@@ -50,7 +50,7 @@ export default function AdminDashboardPage() {
         setError(result.error || 'Erro ao carregar dados');
       }
     } catch {
-      setError('Erro de conexao com o servidor');
+      setError('Erro de conexão com o servidor');
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export default function AdminDashboardPage() {
   const scoreColor = (score: number) => {
     if (score >= 80) return { text: 'text-green-700', bg: 'bg-green-100', label: 'Excelente' };
     if (score >= 60) return { text: 'text-blue-700', bg: 'bg-blue-100', label: 'Bom' };
-    if (score >= 40) return { text: 'text-yellow-700', bg: 'bg-yellow-100', label: 'Medio' };
+    if (score >= 40) return { text: 'text-yellow-700', bg: 'bg-yellow-100', label: 'Médio' };
     return { text: 'text-red-700', bg: 'bg-red-100', label: 'Baixo' };
   };
 
@@ -82,7 +82,7 @@ export default function AdminDashboardPage() {
   const statusLabel = (s: string) => {
     const map: Record<string, string> = {
       active: 'Ativo', pending: 'Pendente', draft: 'Rascunho',
-      pending_signature: 'Aguardando Assinatura', completed: 'Concluido',
+      pending_signature: 'Aguardando Assinatura', completed: 'Concluído',
       cancelled: 'Cancelado', used: 'Utilizado', rejected: 'Rejeitado',
     };
     return map[s] || s;
@@ -105,7 +105,7 @@ export default function AdminDashboardPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Ola, {user?.name || 'Administrador'}
+            Olá, {user?.name || 'Administrador'}
           </h1>
           <p className="text-gray-500 mt-1">Painel completo da plataforma TaxCredit Enterprise</p>
         </div>
@@ -150,9 +150,9 @@ export default function AdminDashboardPage() {
                 </div>
                 <div>
                   <p className="text-amber-800 font-semibold text-sm">
-                    {data.partners.pending} parceiro(s) aguardando aprovacao
+                    {data.partners.pending} parceiro(s) aguardando aprovação
                   </p>
-                  <p className="text-amber-600 text-xs">Acesse a pagina de parceiros para aprovar ou rejeitar</p>
+                  <p className="text-amber-600 text-xs">Acesse a página de parceiros para aprovar ou rejeitar</p>
                 </div>
               </div>
               <Link href="/admin/parceiros" className="text-amber-700 hover:text-amber-800 text-sm font-medium px-4 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 transition-colors">
@@ -292,7 +292,7 @@ export default function AdminDashboardPage() {
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                   <h3 className="text-gray-900 font-semibold">Viabilidades Recentes</h3>
                   <Link href="/admin/producao/viabilidade" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-                    Ver todas / Nova analise
+                    Ver todas / Nova análise
                   </Link>
                 </div>
                 {data.recentViabilities.length === 0 ? (
@@ -300,10 +300,10 @@ export default function AdminDashboardPage() {
                     <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
-                    <p className="text-gray-500 font-medium">Nenhuma analise realizada ainda</p>
-                    <p className="text-gray-400 text-sm mt-1">Faca sua primeira analise de viabilidade</p>
+                    <p className="text-gray-500 font-medium">Nenhuma análise realizada ainda</p>
+                    <p className="text-gray-400 text-sm mt-1">Faça sua primeira análise de viabilidade</p>
                     <Link href="/admin/producao/viabilidade" className="inline-block mt-4 px-5 py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white text-sm font-semibold rounded-lg transition-colors">
-                      Iniciar Analise
+                      Iniciar Análise
                     </Link>
                   </div>
                 ) : (
@@ -313,10 +313,10 @@ export default function AdminDashboardPage() {
                         <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-100">
                           <th className="px-6 py-3">Empresa</th>
                           <th className="px-6 py-3">Score</th>
-                          <th className="px-6 py-3">Credito Estimado</th>
+                          <th className="px-6 py-3">Crédito Estimado</th>
                           <th className="px-6 py-3">Parceiro</th>
                           <th className="px-6 py-3">Data</th>
-                          <th className="px-6 py-3">Acao</th>
+                          <th className="px-6 py-3">Ação</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -440,7 +440,7 @@ export default function AdminDashboardPage() {
                         <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-100">
                           <th className="px-6 py-3">Parceiro</th>
                           <th className="px-6 py-3">Status</th>
-                          <th className="px-6 py-3">Comissao</th>
+                          <th className="px-6 py-3">Comissão</th>
                           <th className="px-6 py-3">Viabilidades</th>
                           <th className="px-6 py-3">Contratos</th>
                           <th className="px-6 py-3">Convites</th>
@@ -476,7 +476,7 @@ export default function AdminDashboardPage() {
 
           {/* Quick Actions */}
           <div className="mt-8">
-            <h3 className="text-gray-900 font-semibold mb-4">Acoes Rapidas</h3>
+            <h3 className="text-gray-900 font-semibold mb-4">Ações Rápidas</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {[
                 { label: 'Nova Viabilidade', href: '/admin/producao/viabilidade', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', color: 'indigo' },

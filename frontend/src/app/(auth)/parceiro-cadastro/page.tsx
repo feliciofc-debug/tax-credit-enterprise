@@ -24,7 +24,7 @@ export default function PartnerRegisterPage() {
     setError('');
 
     if (form.password !== form.confirmPassword) {
-      setError('Senhas nao conferem');
+      setError('Senhas não conferem');
       return;
     }
 
@@ -47,7 +47,7 @@ export default function PartnerRegisterPage() {
       localStorage.setItem('partnerName', data.data.name);
       router.push('/parceiro');
     } catch (err: any) {
-      setError('Erro de conexao');
+      setError('Erro de conexão');
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export default function PartnerRegisterPage() {
             <span className="font-bold text-gray-900">Tax Credit <span className="text-indigo-600">Parceiros</span></span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Cadastro de Parceiro</h1>
-          <p className="text-gray-500 mt-1">Advogados tributaristas e escritorios</p>
+          <p className="text-gray-500 mt-1">Advogados tributaristas e escritórios</p>
         </div>
 
         {error && (
@@ -98,7 +98,7 @@ export default function PartnerRegisterPage() {
             <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Registro OAB</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Numero OAB</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Número OAB</label>
                 <input name="oabNumber" value={form.oabNumber} onChange={handleChange} className="input" placeholder="123456" />
               </div>
               <div>
@@ -113,14 +113,14 @@ export default function PartnerRegisterPage() {
 
           {/* Escritorio */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Escritorio</h3>
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Escritório</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do escritorio</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do escritório</label>
                 <input name="company" value={form.company} onChange={handleChange} className="input" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ do escritorio</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ do escritório</label>
                 <input name="cnpj" value={form.cnpj} onChange={handleChange} className="input" placeholder="00.000.000/0000-00" />
               </div>
             </div>
@@ -128,7 +128,7 @@ export default function PartnerRegisterPage() {
 
           {/* Senha */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Seguranca</h3>
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Segurança</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Senha *</label>
@@ -146,7 +146,7 @@ export default function PartnerRegisterPage() {
           </button>
 
           <p className="text-center text-sm text-gray-500">
-            Ja tem conta? <Link href="/parceiro-login" className="text-indigo-600 font-medium hover:underline">Fazer login</Link>
+            Já tem conta? <Link href="/parceiro-login" className="text-indigo-600 font-medium hover:underline">Fazer login</Link>
           </p>
         </form>
       </div>

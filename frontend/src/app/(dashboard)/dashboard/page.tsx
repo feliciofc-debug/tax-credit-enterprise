@@ -127,13 +127,13 @@ export default function ClientDashboardPage() {
 
       const data = await res.json();
       if (data.success) {
-        setSuccess(`${files.length} documento(s) enviado(s) com sucesso! Voce sera notificado quando a analise estiver pronta.`);
+        setSuccess(`${files.length} documento(s) enviado(s) com sucesso! Você será notificado quando a análise estiver pronta.`);
         setFiles([]);
       } else {
         setError(data.error || 'Erro no envio');
       }
     } catch {
-      setError('Erro de conexao com o servidor');
+      setError('Erro de conexão com o servidor');
     } finally {
       setUploading(false);
     }
@@ -158,7 +158,7 @@ export default function ClientDashboardPage() {
             </div>
             <div>
               <h1 className="font-bold text-gray-900">TaxCredit Enterprise</h1>
-              <p className="text-gray-500 text-xs">Area do Cliente</p>
+              <p className="text-gray-500 text-xs">Área do Cliente</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -176,9 +176,9 @@ export default function ClientDashboardPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Ola, {user?.name || 'Cliente'}
+          Olá, {user?.name || 'Cliente'}
         </h2>
-        <p className="text-gray-500 mb-6">Envie seus documentos fiscais para analise</p>
+        <p className="text-gray-500 mb-6">Envie seus documentos fiscais para análise</p>
 
         {/* ============================================================ */}
         {/* BANNER DE PAGAMENTO PIX — Aparece quando tem contrato pendente */}
@@ -189,7 +189,7 @@ export default function ClientDashboardPage() {
             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-lg">Taxa de Adesao</h3>
+                  <h3 className="font-bold text-lg">Taxa de Adesão</h3>
                   <p className="text-indigo-200 text-sm">Contrato {pendingContract.contractNumber}</p>
                 </div>
                 <div className="text-right">
@@ -201,7 +201,7 @@ export default function ClientDashboardPage() {
 
             <div className="p-6">
               {claimSent ? (
-                /* Pagamento ja informado — aguardando confirmacao */
+                /* Pagamento já informado — aguardando confirmação */
                 <div className="text-center py-4">
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -211,11 +211,11 @@ export default function ClientDashboardPage() {
                   <h4 className="text-gray-900 font-bold text-lg mb-1">Pagamento Informado!</h4>
                   <p className="text-gray-500 text-sm">
                     Estamos verificando o recebimento do PIX.
-                    Voce sera notificado assim que for confirmado.
+                    Você será notificado assim que for confirmado.
                   </p>
                   <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-blue-700 text-sm">
-                      Apos a confirmacao, voce podera enviar seus documentos e a analise completa sera liberada.
+                      Após a confirmação, você poderá enviar seus documentos e a análise completa será liberada.
                     </p>
                   </div>
                 </div>
@@ -223,7 +223,7 @@ export default function ClientDashboardPage() {
                 /* Dados do PIX para pagamento */
                 <>
                   <p className="text-gray-600 text-sm mb-4">
-                    Para liberar a analise completa dos seus creditos tributarios, realize o pagamento via PIX:
+                    Para liberar a análise completa dos seus créditos tributários, realize o pagamento via PIX:
                   </p>
 
                   {paymentInfo && (
@@ -242,7 +242,7 @@ export default function ClientDashboardPage() {
                           <span className="text-gray-900 font-medium">{paymentInfo.pixKeyType}</span>
                         </div>
 
-                        {/* Chave PIX com botao copiar */}
+                        {/* Chave PIX com botão copiar */}
                         <div className="border-t border-gray-200 pt-3 mt-3">
                           <p className="text-gray-500 text-xs mb-1">Chave PIX</p>
                           <div className="flex items-center gap-2">
@@ -270,18 +270,18 @@ export default function ClientDashboardPage() {
                     </div>
                   )}
 
-                  {/* Instrucoes */}
+                  {/* Instruções */}
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <p className="text-yellow-800 text-sm font-semibold mb-1">Instrucoes:</p>
+                    <p className="text-yellow-800 text-sm font-semibold mb-1">Instruções:</p>
                     <ol className="text-yellow-700 text-sm space-y-1 list-decimal list-inside">
                       <li>Copie a chave PIX acima</li>
-                      <li>Abra o app do seu banco e faca o PIX no valor de {formatCurrency(pendingContract.setupFee)}</li>
-                      <li>Apos realizar o pagamento, clique no botao abaixo</li>
-                      <li>O administrador vai confirmar o recebimento em ate 24h</li>
+                      <li>Abra o app do seu banco e faça o PIX no valor de {formatCurrency(pendingContract.setupFee)}</li>
+                      <li>Após realizar o pagamento, clique no botão abaixo</li>
+                      <li>O administrador vai confirmar o recebimento em até 24h</li>
                     </ol>
                   </div>
 
-                  {/* Botao Ja Paguei */}
+                  {/* Botão Já Paguei */}
                   <button
                     onClick={handleClaimPayment}
                     disabled={claimLoading}
@@ -297,7 +297,7 @@ export default function ClientDashboardPage() {
                         <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        Ja Realizei o Pagamento
+                        Já Realizei o Pagamento
                       </>
                     )}
                   </button>
@@ -311,8 +311,8 @@ export default function ClientDashboardPage() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Enviar Documentos</h3>
           <p className="text-gray-500 text-sm mb-6">
-            Envie DREs, Balancos, Balancetes ou outros documentos fiscais em PDF.
-            Nossa IA vai analisar e identificar oportunidades de recuperacao de creditos tributarios.
+            Envie DREs, Balanços, Balancetes ou outros documentos fiscais em PDF.
+            Nossa IA vai analisar e identificar oportunidades de recuperação de créditos tributários.
           </p>
 
           <form onSubmit={handleUpload}>
@@ -327,7 +327,7 @@ export default function ClientDashboardPage() {
                 onChange={e => setFiles(Array.from(e.target.files || []))}
                 className="w-full max-w-xs mx-auto text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
               />
-              <p className="text-xs text-gray-400 mt-2">PDF, Excel, SPED (.txt) ou ZIP - ate 50MB</p>
+              <p className="text-xs text-gray-400 mt-2">PDF, Excel, SPED (.txt) ou ZIP - até 50MB</p>
             </div>
 
             {files.length > 0 && (
@@ -371,25 +371,25 @@ export default function ClientDashboardPage() {
               <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                 <span className="text-indigo-700 text-xs font-bold">1</span>
               </div>
-              <p className="text-sm text-gray-600">Realize o pagamento da taxa de adesao via PIX</p>
+              <p className="text-sm text-gray-600">Realize o pagamento da taxa de adesão via PIX</p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                 <span className="text-indigo-700 text-xs font-bold">2</span>
               </div>
-              <p className="text-sm text-gray-600">Envie seus documentos fiscais (DRE, Balancete, Balanco, SPED)</p>
+              <p className="text-sm text-gray-600">Envie seus documentos fiscais (DRE, Balancete, Balanço, SPED)</p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                 <span className="text-indigo-700 text-xs font-bold">3</span>
               </div>
-              <p className="text-sm text-gray-600">Nossa IA analisa e identifica creditos tributarios recuperaveis</p>
+              <p className="text-sm text-gray-600">Nossa IA analisa e identifica créditos tributários recuperáveis</p>
             </div>
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
                 <span className="text-indigo-700 text-xs font-bold">4</span>
               </div>
-              <p className="text-sm text-gray-600">Voce recebe o extrato completo com valores e documentacao para protocolo</p>
+              <p className="text-sm text-gray-600">Você recebe o extrato completo com valores e documentação para protocolo</p>
             </div>
           </div>
         </div>

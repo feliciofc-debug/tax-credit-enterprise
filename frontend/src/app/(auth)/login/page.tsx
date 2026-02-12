@@ -27,16 +27,16 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!data.success) {
-        setError(data.error || 'Credenciais invalidas');
+        setError(data.error || 'Credenciais inválidas');
         return;
       }
 
-      // Salvar token e dados do usuario
+      // Salvar token e dados do usuário
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
       localStorage.setItem('role', data.data.user.role);
 
-      // Redirecionar conforme o tipo de usuario
+      // Redirecionar conforme o tipo de usuário
       switch (data.data.user.role) {
         case 'admin':
           router.push('/admin/dashboard');
@@ -49,7 +49,7 @@ export default function LoginPage() {
           break;
       }
     } catch (err: any) {
-      setError('Erro de conexao com o servidor. Tente novamente.');
+      setError('Erro de conexão com o servidor. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -71,12 +71,12 @@ export default function LoginPage() {
           </div>
           
           <h2 className="text-white text-4xl font-bold leading-tight mb-6">
-            Recuperacao de Creditos Tributarios com IA
+            Recuperação de Créditos Tributários com IA
           </h2>
           <p className="text-brand-200 text-lg leading-relaxed">
-            Analise automatizada de DREs, Balancos e Balancetes. 
-            Identificacao inteligente de oportunidades de credito 
-            com Inteligencia Artificial.
+            Análise automatizada de DREs, Balanços e Balancetes. 
+            Identificação inteligente de oportunidades de crédito 
+            com Inteligência Artificial.
           </p>
         </div>
 
@@ -85,19 +85,19 @@ export default function LoginPage() {
             <svg className="w-5 h-5 text-brand-400" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
             </svg>
-            <span>Analise inteligente com IA</span>
+            <span>Análise inteligente com IA</span>
           </div>
           <div className="flex items-center gap-3 text-brand-200">
             <svg className="w-5 h-5 text-brand-400" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
             </svg>
-            <span>Geracao automatica de documentos</span>
+            <span>Geração automática de documentos</span>
           </div>
           <div className="flex items-center gap-3 text-brand-200">
             <svg className="w-5 h-5 text-brand-400" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
             </svg>
-            <span>Preparacao para e-CAC e PER/DCOMP</span>
+            <span>Preparação para e-CAC e PER/DCOMP</span>
           </div>
         </div>
       </div>

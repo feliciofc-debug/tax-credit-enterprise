@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const steps = [
-  { id: 1, title: 'Dados da Empresa', description: 'Informacoes basicas' },
-  { id: 2, title: 'Responsavel Legal', description: 'Identificacao do representante' },
-  { id: 3, title: 'Documentos', description: 'Upload de documentos obrigatorios' },
-  { id: 4, title: 'Confirmacao', description: 'Revisar e confirmar' },
+  { id: 1, title: 'Dados da Empresa', description: 'Informações básicas' },
+  { id: 2, title: 'Responsável Legal', description: 'Identificação do representante' },
+  { id: 3, title: 'Documentos', description: 'Upload de documentos obrigatórios' },
+  { id: 4, title: 'Confirmação', description: 'Revisar e confirmar' },
 ];
 
 export default function OnboardingPage() {
@@ -31,7 +31,7 @@ export default function OnboardingPage() {
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Onboarding - Complete seu Cadastro</h1>
-        <p className="text-gray-500 text-sm mt-1">Preencha os dados para iniciar a operacao</p>
+        <p className="text-gray-500 text-sm mt-1">Preencha os dados para iniciar a operação</p>
       </div>
 
       {/* Steps indicator */}
@@ -60,7 +60,7 @@ export default function OnboardingPage() {
             <h3 className="text-lg font-semibold text-gray-900">Dados da Empresa</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Razao Social *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social *</label>
                 <input value={company.name} onChange={e => setCompany(p => ({ ...p, name: e.target.value }))} className="input" required />
               </div>
               <div>
@@ -68,7 +68,7 @@ export default function OnboardingPage() {
                 <input value={company.cnpj} onChange={e => setCompany(p => ({ ...p, cnpj: e.target.value }))} className="input" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Regime Tributario *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Regime Tributário *</label>
                 <select value={company.regime} onChange={e => setCompany(p => ({ ...p, regime: e.target.value }))} className="input">
                   <option value="">Selecione</option>
                   <option value="lucro_real">Lucro Real</option>
@@ -77,21 +77,21 @@ export default function OnboardingPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Setor de Atuacao</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Setor de Atuação</label>
                 <input value={company.sector} onChange={e => setCompany(p => ({ ...p, sector: e.target.value }))} className="input" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Endereco</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
                 <input value={company.address} onChange={e => setCompany(p => ({ ...p, address: e.target.value }))} className="input" />
               </div>
             </div>
           </div>
         )}
 
-        {/* Step 2: Responsavel legal */}
+        {/* Step 2: Responsável legal */}
         {currentStep === 2 && (
           <div className="space-y-5">
-            <h3 className="text-lg font-semibold text-gray-900">Responsavel Legal</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Responsável Legal</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
@@ -120,13 +120,13 @@ export default function OnboardingPage() {
         {/* Step 3: Documentos */}
         {currentStep === 3 && (
           <div className="space-y-5">
-            <h3 className="text-lg font-semibold text-gray-900">Documentos Obrigatorios</h3>
-            <p className="text-sm text-gray-500">Envie os documentos para validacao juridica</p>
+            <h3 className="text-lg font-semibold text-gray-900">Documentos Obrigatórios</h3>
+            <p className="text-sm text-gray-500">Envie os documentos para validação jurídica</p>
 
             {[
-              { key: 'contratoSocial', label: 'Contrato Social / Estatuto', desc: 'Ultima alteracao consolidada' },
-              { key: 'identidade', label: 'Documento de Identidade', desc: 'RG ou CNH do responsavel legal' },
-              { key: 'comprovante', label: 'Comprovante de Endereco', desc: 'Conta de luz, agua ou telefone recente' },
+              { key: 'contratoSocial', label: 'Contrato Social / Estatuto', desc: 'Última alteração consolidada' },
+              { key: 'identidade', label: 'Documento de Identidade', desc: 'RG ou CNH do responsável legal' },
+              { key: 'comprovante', label: 'Comprovante de Endereço', desc: 'Conta de luz, água ou telefone recente' },
             ].map(doc => (
               <div key={doc.key} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between">
@@ -158,7 +158,7 @@ export default function OnboardingPage() {
         {/* Step 4: Confirmacao */}
         {currentStep === 4 && (
           <div className="space-y-5">
-            <h3 className="text-lg font-semibold text-gray-900">Revisao e Confirmacao</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Revisão e Confirmação</h3>
 
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
               <h4 className="text-sm font-semibold text-gray-700 uppercase">Empresa</h4>
@@ -166,7 +166,7 @@ export default function OnboardingPage() {
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-              <h4 className="text-sm font-semibold text-gray-700 uppercase">Responsavel Legal</h4>
+              <h4 className="text-sm font-semibold text-gray-700 uppercase">Responsável Legal</h4>
               <p className="text-sm text-gray-600">{legal.name || '-'} | CPF: {legal.cpf || '-'} | {legal.email || '-'}</p>
             </div>
 
@@ -181,7 +181,7 @@ export default function OnboardingPage() {
 
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-sm text-yellow-800">
-                <strong>Ao confirmar</strong>, voce autoriza a TaxCredit e o escritorio parceiro a analisarem os documentos da sua empresa para identificar oportunidades de recuperacao de creditos tributarios.
+                <strong>Ao confirmar</strong>, você autoriza a TaxCredit e o escritório parceiro a analisarem os documentos da sua empresa para identificar oportunidades de recuperação de créditos tributários.
               </p>
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function OnboardingPage() {
 
           {currentStep < 4 ? (
             <button onClick={() => setCurrentStep(p => p + 1)} className="btn-primary">
-              Proximo
+              Próximo
             </button>
           ) : (
             <button onClick={handleFinish} disabled={loading} className="btn-primary flex items-center gap-2">

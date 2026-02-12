@@ -188,7 +188,7 @@ export default function AdminParceirosPage() {
                           {partner.phone}
                         </span>
                       )}
-                      <span>Comissao: <strong className="text-gray-900">{partner.commissionPercent}%</strong></span>
+                      <span>Comissão: <strong className="text-gray-900">{partner.commissionPercent}%</strong></span>
                       <span>{partner._count.viabilityAnalyses} viabilidades</span>
                       <span>{partner._count.contracts} contratos</span>
                       <span>{partner._count.invites} convites</span>

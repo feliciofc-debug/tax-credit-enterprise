@@ -355,7 +355,7 @@ export default function AdminAnalisesPage() {
         </div>
       </div>
 
-      {/* Detail View (quando uma analise esta selecionada) */}
+      {/* Detail View (quando uma análise está selecionada) */}
       {detail && (
         <div className="mb-6">
           {/* Toolbar */}
@@ -404,7 +404,7 @@ export default function AdminAnalisesPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-3xl font-extrabold">{fmt(detail.estimatedCredit)}</p>
-                  <p className="text-indigo-200 text-xs">Total Estimado de Recuperacao</p>
+                  <p className="text-indigo-200 text-xs">Total Estimado de Recuperação</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-4 mt-3 text-xs text-indigo-200">
@@ -512,13 +512,13 @@ export default function AdminAnalisesPage() {
                         <div className="grid grid-cols-2 gap-4">
                           {op.fundamentacaoLegal && (
                             <div>
-                              <p className="font-semibold text-gray-700">Fundamentacao Legal</p>
+                              <p className="font-semibold text-gray-700">Fundamentação Legal</p>
                               <p className="text-gray-600">{op.fundamentacaoLegal}</p>
                             </div>
                           )}
                           {op.prazoRecuperacao && (
                             <div>
-                              <p className="font-semibold text-gray-700">Prazo de Recuperacao</p>
+                              <p className="font-semibold text-gray-700">Prazo de Recuperação</p>
                               <p className="text-gray-600">{op.prazoRecuperacao}</p>
                             </div>
                           )}
@@ -531,7 +531,7 @@ export default function AdminAnalisesPage() {
                         )}
                         {(op.documentacaoNecessaria || []).length > 0 && (
                           <div>
-                            <p className="font-semibold text-gray-700">Documentacao Necessaria</p>
+                            <p className="font-semibold text-gray-700">Documentação Necessária</p>
                             <ul className="list-disc list-inside text-gray-600">
                               {(op.documentacaoNecessaria || []).map((d, j) => (
                                 <li key={j}>{d}</li>
@@ -589,16 +589,16 @@ export default function AdminAnalisesPage() {
             {/* Fundamentacao */}
             {detail.fundamentacaoGeral && (
               <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                <p className="font-semibold text-gray-700 text-sm mb-1">Fundamentacao Geral</p>
+                <p className="font-semibold text-gray-700 text-sm mb-1">Fundamentação Geral</p>
                 <p className="text-gray-600 text-xs leading-relaxed">{detail.fundamentacaoGeral}</p>
               </div>
             )}
 
-            {/* Sem analise completa */}
+            {/* Sem análise completa */}
             {!detail.hasFullAnalysis && (
               <div className="px-6 py-8 text-center">
-                <p className="text-gray-500 text-sm">Esta analise possui apenas o Quick Score.</p>
-                <p className="text-gray-400 text-xs mt-1">Execute a Analise Completa na pagina de Viabilidade para ver o extrato detalhado.</p>
+                <p className="text-gray-500 text-sm">Esta análise possui apenas o Quick Score.</p>
+                <p className="text-gray-400 text-xs mt-1">Execute a Análise Completa na página de Viabilidade para ver o extrato detalhado.</p>
               </div>
             )}
 
@@ -619,7 +619,7 @@ export default function AdminAnalisesPage() {
                 </div>
                 <div>
                   <div className="total">{fmt(detail.estimatedCredit)}</div>
-                  <div className="total-label">Total Estimado de Recuperacao</div>
+                  <div className="total-label">Total Estimado de Recuperação</div>
                 </div>
               </div>
               <div className="header-meta">
@@ -695,13 +695,13 @@ export default function AdminAnalisesPage() {
                     <h4>{String(i + 1).padStart(2, '0')}. {op.tipo || ''} — <span className="text-indigo">{op.tributo || ''}</span> — {fmt(op.valorEstimado)}</h4>
                     {op.descricao && <p>{op.descricao}</p>}
                     <div className="detail-grid" style={{ marginTop: '6px' }}>
-                      {op.fundamentacaoLegal && <p><span className="label">Fundamentacao:</span> {op.fundamentacaoLegal}</p>}
+                      {op.fundamentacaoLegal && <p><span className="label">Fundamentação:</span> {op.fundamentacaoLegal}</p>}
                       {op.prazoRecuperacao && <p><span className="label">Prazo:</span> {op.prazoRecuperacao}</p>}
                       {op.complexidade && <p><span className="label">Complexidade:</span> {op.complexidade}</p>}
                       {op.risco && <p><span className="label">Risco:</span> {op.risco}</p>}
                     </div>
                     {(op.documentacaoNecessaria || []).length > 0 && (
-                      <p style={{ marginTop: '4px' }}><span className="label">Docs necessarios:</span> {(op.documentacaoNecessaria || []).join(', ')}</p>
+                      <p style={{ marginTop: '4px' }}><span className="label">Docs necessários:</span> {(op.documentacaoNecessaria || []).join(', ')}</p>
                     )}
                     {(op.passosPraticos || []).length > 0 && (
                       <p style={{ marginTop: '4px' }}><span className="label">Passos:</span> {(op.passosPraticos || []).join(' -> ')}</p>
@@ -734,7 +734,7 @@ export default function AdminAnalisesPage() {
 
             {detail.fundamentacaoGeral && (
               <div className="section">
-                <div className="section-title">Fundamentacao Geral</div>
+                <div className="section-title">Fundamentação Geral</div>
                 <div className="summary-box">{detail.fundamentacaoGeral}</div>
               </div>
             )}
@@ -760,7 +760,7 @@ export default function AdminAnalisesPage() {
               <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
               </svg>
-              <p className="text-gray-500">Nenhuma analise encontrada.</p>
+              <p className="text-gray-500">Nenhuma análise encontrada.</p>
               <p className="text-gray-400 text-sm mt-1">As analises de viabilidade aparecerao aqui quando concluidas.</p>
             </div>
           ) : (
@@ -779,7 +779,7 @@ export default function AdminAnalisesPage() {
                         </h3>
                         {a.hasFullAnalysis ? (
                           <span className="shrink-0 text-xs font-bold bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full">
-                            Analise Completa
+                            Análise Completa
                           </span>
                         ) : (
                           <span className="shrink-0 text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full">

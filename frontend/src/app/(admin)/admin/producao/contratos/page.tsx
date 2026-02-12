@@ -72,7 +72,7 @@ export default function AdminContratosPage() {
 
       const data = await res.json();
       if (data.success) {
-        setConfirmSuccess('Pagamento confirmado! Consulta e formalizacao liberadas.');
+        setConfirmSuccess('Pagamento confirmado! Consulta e formalização liberadas.');
         setConfirmModal(null);
         setAdminPassword('');
         fetchContracts();
@@ -81,7 +81,7 @@ export default function AdminContratosPage() {
         setConfirmError(data.error || 'Erro ao confirmar');
       }
     } catch {
-      setConfirmError('Erro de conexao');
+      setConfirmError('Erro de conexão');
     } finally {
       setConfirmLoading(false);
     }
@@ -127,7 +127,7 @@ export default function AdminContratosPage() {
       case 'pending_payment': return 'Aguardando Pagamento';
       case 'payment_claimed': return 'PAGAMENTO INFORMADO';
       case 'pending_signatures': return 'Aguardando Assinatura';
-      case 'completed': return 'Concluido';
+      case 'completed': return 'Concluído';
       case 'cancelled': return 'Cancelado';
       default: return s;
     }
@@ -217,7 +217,7 @@ export default function AdminContratosPage() {
         {contracts.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-gray-500">Nenhum contrato criado ainda.</p>
-            <p className="text-gray-400 text-sm mt-1">Crie convites e os clientes poderao assinar contratos.</p>
+            <p className="text-gray-400 text-sm mt-1">Crie convites e os clientes poderão assinar contratos.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -245,8 +245,8 @@ export default function AdminContratosPage() {
                     </p>
                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500 flex-wrap">
                       <span>Split: {c.partnerSplitPercent}% / {c.platformSplitPercent}%</span>
-                      <span>Assinatura Parceiro: {c.partnerSigned ? 'Sim' : 'Nao'}</span>
-                      <span>Assinatura Cliente: {c.clientSigned ? 'Sim' : 'Nao'}</span>
+                      <span>Assinatura Parceiro: {c.partnerSigned ? 'Sim' : 'Não'}</span>
+                      <span>Assinatura Cliente: {c.clientSigned ? 'Sim' : 'Não'}</span>
                       <span>{new Date(c.createdAt).toLocaleDateString('pt-BR')}</span>
                     </div>
                   </div>
@@ -256,7 +256,7 @@ export default function AdminContratosPage() {
                       <p className="text-gray-400 text-xs">recuperado</p>
                     </div>
 
-                    {/* Botoes de acao */}
+                    {/* Botões de ação */}
                     <div className="flex gap-2">
                       {!c.partnerSigned && (
                         <button
@@ -283,7 +283,7 @@ export default function AdminContratosPage() {
         )}
       </div>
 
-      {/* Modal de confirmacao de pagamento */}
+      {/* Modal de confirmação de pagamento */}
       {confirmModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">

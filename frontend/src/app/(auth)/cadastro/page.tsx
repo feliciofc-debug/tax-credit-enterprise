@@ -18,7 +18,7 @@ function ClientRegisterContent() {
     name: '', email: '', password: '', confirmPassword: '', phone: '',
   });
 
-  // Validar codigo ao carregar se veio pela URL
+  // Validar código ao carregar se veio pela URL
   useEffect(() => {
     if (inviteCode) {
       validateCode(inviteCode);
@@ -39,7 +39,7 @@ function ClientRegisterContent() {
         setInviteInfo(null);
       }
     } catch {
-      setError('Erro ao validar codigo');
+      setError('Erro ao validar código');
     } finally {
       setValidatingCode(false);
     }
@@ -48,11 +48,11 @@ function ClientRegisterContent() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.password !== form.confirmPassword) {
-      setError('Senhas nao conferem');
+      setError('Senhas não conferem');
       return;
     }
     if (!inviteInfo) {
-      setError('Codigo de convite invalido');
+      setError('Código de convite inválido');
       return;
     }
 
@@ -60,7 +60,7 @@ function ClientRegisterContent() {
     setError('');
 
     try {
-      // Simulacao de cadastro - conectar com backend real
+      // Simulação de cadastro - conectar com backend real
       const token = btoa(JSON.stringify({
         email: form.email,
         userId: crypto.randomUUID(),
@@ -88,7 +88,7 @@ function ClientRegisterContent() {
             <span className="font-bold text-gray-900">Tax Credit Enterprise</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Cadastro do Cliente</h1>
-          <p className="text-gray-500 mt-1">Use o codigo recebido do seu parceiro</p>
+          <p className="text-gray-500 mt-1">Use o código recebido do seu parceiro</p>
         </div>
 
         {error && (
@@ -98,9 +98,9 @@ function ClientRegisterContent() {
         )}
 
         <div className="card p-8 space-y-6">
-          {/* Codigo de convite */}
+          {/* Código de convite */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Codigo de Acesso *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Código de Acesso *</label>
             <div className="flex gap-3">
               <input
                 value={codeInput}
@@ -123,7 +123,7 @@ function ClientRegisterContent() {
           {/* Info do convite */}
           {inviteInfo && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm font-semibold text-green-700 mb-2">Convite valido!</p>
+              <p className="text-sm font-semibold text-green-700 mb-2">Convite válido!</p>
               <div className="space-y-1 text-sm text-green-800">
                 <p><strong>Empresa:</strong> {inviteInfo.companyName}</p>
                 {inviteInfo.cnpj && <p><strong>CNPJ:</strong> {inviteInfo.cnpj}</p>}
@@ -161,17 +161,17 @@ function ClientRegisterContent() {
 
               {/* Info da taxa */}
               <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-                <p className="text-sm text-indigo-800 font-semibold">Taxa de Adesao: R$ 2.000,00</p>
+                <p className="text-sm text-indigo-800 font-semibold">Taxa de Adesão: R$ 2.000,00</p>
                 <p className="text-xs text-indigo-700 mt-1">
-                  Ao efetuar o pagamento da taxa, voce libera:
+                  Ao efetuar o pagamento da taxa, você libera:
                 </p>
                 <ul className="text-xs text-indigo-700 mt-1 space-y-0.5 list-disc list-inside">
-                  <li>Consulta completa com Inteligencia Artificial</li>
-                  <li>Formalizacao de todo o processo tributario</li>
-                  <li>Acompanhamento juridico pelo escritorio parceiro</li>
+                  <li>Consulta completa com Inteligência Artificial</li>
+                  <li>Formalização de todo o processo tributário</li>
+                  <li>Acompanhamento jurídico pelo escritório parceiro</li>
                 </ul>
                 <p className="text-xs text-indigo-600 mt-2 font-medium">
-                  Recupere creditos tributarios com apoio de IA e assessoria juridica completa.
+                  Recupere créditos tributários com apoio de IA e assessoria jurídica completa.
                 </p>
               </div>
 
@@ -182,7 +182,7 @@ function ClientRegisterContent() {
           )}
 
           <p className="text-center text-sm text-gray-500">
-            Ja tem conta? <Link href="/login" className="text-brand-600 font-medium hover:underline">Fazer login</Link>
+            Já tem conta? <Link href="/login" className="text-brand-600 font-medium hover:underline">Fazer login</Link>
           </p>
         </div>
       </div>

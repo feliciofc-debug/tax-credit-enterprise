@@ -17,7 +17,7 @@ const demoProcesses = [
     id: '2',
     analysisId: 'a3',
     opportunityIndex: 0,
-    opportunityType: 'Exclusao ICMS da Base PIS/COFINS',
+    opportunityType: 'Exclusão ICMS da Base PIS/COFINS',
     estimatedValue: 620000,
     status: 'filed',
     protocolNumber: 'RFB-2026-00428751',
@@ -28,10 +28,10 @@ const demoProcesses = [
 const checklistItems = [
   'Notas fiscais separadas',
   'SPED transmitido',
-  'Certificado digital valido',
-  'Procuracao eletronica configurada',
-  'Memoria de calculo revisada',
-  'Parecer tecnico conferido',
+  'Certificado digital válido',
+  'Procuração eletrônica configurada',
+  'Memória de cálculo revisada',
+  'Parecer técnico conferido',
 ];
 
 interface EcacData {
@@ -86,7 +86,7 @@ export default function FormalizacaoPage() {
         setShowModal(true);
       }
     } catch (error) {
-      alert('Erro ao buscar dados. Verifique se o backend esta rodando.');
+      alert('Erro ao buscar dados. Verifique se o backend está rodando.');
     } finally {
       setLoadingEcac(false);
     }
@@ -121,8 +121,8 @@ export default function FormalizacaoPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Formalizacao</h1>
-        <p className="text-gray-500 text-sm mt-1">Gerencie os processos de recuperacao de credito tributario</p>
+        <h1 className="text-2xl font-bold text-gray-900">Formalização</h1>
+        <p className="text-gray-500 text-sm mt-1">Gerencie os processos de recuperação de crédito tributário</p>
       </div>
 
       {processes.length === 0 ? (
@@ -130,8 +130,8 @@ export default function FormalizacaoPage() {
           <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
-          <p className="text-gray-500 font-medium">Nenhum processo de formalizacao</p>
-          <p className="text-gray-400 text-sm mt-1">Gere documentacao a partir de uma oportunidade identificada</p>
+          <p className="text-gray-500 font-medium">Nenhum processo de formalização</p>
+          <p className="text-gray-400 text-sm mt-1">Gere documentação a partir de uma oportunidade identificada</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -159,7 +159,7 @@ export default function FormalizacaoPage() {
                 {/* Checklist */}
                 <div className="p-6 border-b border-gray-100">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Checklist de Validacao</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Checklist de Validação</h4>
                     <span className={`text-sm font-bold ${progress === 100 ? 'text-green-600' : 'text-gray-500'}`}>
                       {progress}%
                     </span>
@@ -217,7 +217,7 @@ export default function FormalizacaoPage() {
                     <div className="flex gap-3">
                       <input
                         type="text"
-                        placeholder="Numero do protocolo (ex: RFB-2026-...)"
+                        placeholder="Número do protocolo (ex: RFB-2026-...)"
                         value={protocolInputs[process.id] || ''}
                         onChange={(e) => setProtocolInputs(prev => ({ ...prev, [process.id]: e.target.value }))}
                         className="input flex-1"
@@ -269,8 +269,8 @@ export default function FormalizacaoPage() {
               <div className="bg-gray-50 rounded-xl p-4 space-y-3">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase">Dados PER/DCOMP</h3>
                 {[
-                  { label: 'Codigo Receita', value: ecacData.perdcompData.codigoReceita },
-                  { label: 'Periodo', value: ecacData.perdcompData.periodoApuracao },
+                  { label: 'Código Receita', value: ecacData.perdcompData.codigoReceita },
+                  { label: 'Período', value: ecacData.perdcompData.periodoApuracao },
                   { label: 'Valor', value: `R$ ${ecacData.perdcompData.valorCredito.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
                   { label: 'Natureza', value: ecacData.perdcompData.naturezaCredito },
                   { label: 'Fund. Legal', value: ecacData.perdcompData.fundamentacaoLegal },

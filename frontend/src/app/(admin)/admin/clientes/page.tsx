@@ -61,7 +61,7 @@ export default function AdminClientesPage() {
     <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-        <p className="text-gray-500 mt-1">Visao geral de todos os clientes da plataforma</p>
+        <p className="text-gray-500 mt-1">Visão geral de todos os clientes da plataforma</p>
       </div>
 
       {/* Stats */}

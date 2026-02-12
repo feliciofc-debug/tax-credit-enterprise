@@ -53,7 +53,7 @@ export default function AdminPage() {
       localStorage.setItem('role', 'admin');
       router.push('/admin/dashboard');
     } catch (err) {
-      setError('Erro de conexao com o servidor');
+      setError('Erro de conexão com o servidor');
     } finally {
       setLoading(false);
     }
@@ -135,7 +135,7 @@ export default function AdminPage() {
                   />
                   <EyeIcon show={showAdminPassword} toggle={() => setShowAdminPassword(!showAdminPassword)} />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">A mesma senha usada para autorizar negociacoes</p>
+                <p className="text-xs text-gray-500 mt-1">A mesma senha usada para autorizar negociações</p>
               </div>
             )}
 
