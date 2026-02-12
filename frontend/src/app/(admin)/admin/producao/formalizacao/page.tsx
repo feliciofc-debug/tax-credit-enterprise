@@ -3,8 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { CHECKLISTS, UF_OPTIONS, TIPO_LABELS, TIPO_COLORS, type ChecklistEstado, type ChecklistEtapa } from '@/data/checklists';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
-
 interface AnalysisForFormalization {
   id: string;
   companyName: string;
@@ -63,7 +61,7 @@ export default function FormalizacaoPage() {
   const fetchAnalyses = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API}/api/viability/admin-analyses`, {
+      const res = await fetch('/api/viability/admin-analyses', {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -108,7 +106,7 @@ export default function FormalizacaoPage() {
     setGenerating(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API}/api/formalization/generate-sefaz`, {
+      const res = await fetch('/api/formalization/generate-sefaz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -135,7 +133,7 @@ export default function FormalizacaoPage() {
     setGenerating(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API}/api/formalization/generate-perdcomp`, {
+      const res = await fetch('/api/formalization/generate-perdcomp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -677,7 +675,6 @@ function BipartiteContractTab({
   formatCurrency: (v: number) => string;
   formatDate: (d: string) => string;
 }) {
-  const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
   const [selectedAnalysisId, setSelectedAnalysisId] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatedContract, setGeneratedContract] = useState<string | null>(null);
@@ -690,7 +687,7 @@ function BipartiteContractTab({
   const [clients, setClients] = useState<any[]>([]);
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch(`${API}/api/admin/clients`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/admin/clients', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => { if (d.success) setClients(d.data || []); })
       .catch(() => {});
@@ -701,7 +698,7 @@ function BipartiteContractTab({
     setGenerating(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API}/api/formalization/generate-bipartite-contract`, {
+      const res = await fetch('/api/formalization/generate-bipartite-contract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
