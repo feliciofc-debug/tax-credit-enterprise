@@ -665,7 +665,7 @@ export default function FormalizacaoPage() {
 }
 
 // ==================================================================
-// SUB-COMPONENT: Contrato Bipartite
+// SUB-COMPONENT: Contrato Bipartite — Entrada manual de dados
 // ==================================================================
 function BipartiteContractTab({
   analyses, loading, formatCurrency, formatDate
@@ -675,26 +675,35 @@ function BipartiteContractTab({
   formatCurrency: (v: number) => string;
   formatDate: (d: string) => string;
 }) {
-  const [selectedAnalysisId, setSelectedAnalysisId] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generatedContract, setGeneratedContract] = useState<string | null>(null);
-  const [contractFields, setContractFields] = useState({
+  const [fields, setFields] = useState({
+    empresaNome: '',
+    cnpj: '',
+    endereco: '',
+    cidade: '',
+    uf: '',
+    cep: '',
+    representanteNome: '',
+    representanteCargo: '',
+    representanteCpf: '',
     percentualPlataforma: 60,
-    clientId: '',
   });
 
-  // Clients list
-  const [clients, setClients] = useState<any[]>([]);
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    fetch('/api/admin/clients', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (d.success) setClients(d.data || []); })
-      .catch(() => {});
-  }, []);
+  // Preencher dados a partir de uma analise selecionada
+  const handleSelectAnalysis = (id: string) => {
+    const a = analyses.find(x => x.id === id);
+    if (a) {
+      setFields(prev => ({
+        ...prev,
+        empresaNome: a.companyName || prev.empresaNome,
+        cnpj: a.cnpj || prev.cnpj,
+      }));
+    }
+  };
 
   const handleGenerate = async () => {
-    if (!contractFields.clientId) { alert('Selecione um cliente'); return; }
+    if (!fields.empresaNome) { alert('Preencha pelo menos o nome da empresa'); return; }
     setGenerating(true);
     try {
       const token = localStorage.getItem('token');
@@ -702,9 +711,17 @@ function BipartiteContractTab({
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          clientId: contractFields.clientId,
-          percentualPlataforma: contractFields.percentualPlataforma,
-          analysisId: selectedAnalysisId || undefined,
+          manual: true,
+          empresaNome: fields.empresaNome,
+          cnpj: fields.cnpj,
+          endereco: fields.endereco,
+          cidade: fields.cidade,
+          uf: fields.uf,
+          cep: fields.cep,
+          representanteNome: fields.representanteNome,
+          representanteCargo: fields.representanteCargo,
+          representanteCpf: fields.representanteCpf,
+          percentualPlataforma: fields.percentualPlataforma,
         }),
       });
       const data = await res.json();
@@ -736,6 +753,8 @@ function BipartiteContractTab({
     setTimeout(() => w.print(), 500);
   };
 
+  const f = (key: keyof typeof fields, val: string | number) => setFields(p => ({ ...p, [key]: val }));
+
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-5">
@@ -751,56 +770,76 @@ function BipartiteContractTab({
         </p>
       </div>
 
+      {/* Preencher a partir de analise */}
+      {analyses.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="font-semibold text-gray-900 mb-3">Preencher a partir de uma Analise (opcional)</h3>
+          <select
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            onChange={e => handleSelectAnalysis(e.target.value)}
+            defaultValue=""
+          >
+            <option value="">-- Selecionar analise para preencher dados --</option>
+            {analyses.map(a => (
+              <option key={a.id} value={a.id}>
+                {a.companyName} — {a.cnpj || 'S/CNPJ'} — {formatCurrency(a.estimatedCredit || 0)}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-400 mt-2">Ao selecionar, os campos empresa e CNPJ serao preenchidos automaticamente</p>
+        </div>
+      )}
+
+      {/* Dados do Cliente */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="font-semibold text-gray-900 mb-4">Configurar Contrato</h3>
+        <h3 className="font-semibold text-gray-900 mb-4">Dados do Cliente (Contratante)</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="text-xs text-gray-500 mb-1 block">Cliente</label>
-            <select
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              value={contractFields.clientId}
-              onChange={e => setContractFields(p => ({ ...p, clientId: e.target.value }))}
-            >
-              <option value="">-- Selecione o cliente --</option>
-              {clients.map((c: any) => (
-                <option key={c.id} value={c.id}>
-                  {c.company || c.name || c.email} {c.cnpj ? `(${c.cnpj})` : ''}
-                </option>
-              ))}
-            </select>
+            <label className="text-xs text-gray-500 mb-1 block">Nome / Razao Social *</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.empresaNome} onChange={e => f('empresaNome', e.target.value)} placeholder="Ex: SERTECPET DO BRASIL LTDA" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">CNPJ</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.cnpj} onChange={e => f('cnpj', e.target.value)} placeholder="00.000.000/0001-00" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Endereco</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.endereco} onChange={e => f('endereco', e.target.value)} placeholder="Rua X, 123" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Cidade</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.cidade} onChange={e => f('cidade', e.target.value)} placeholder="Rio de Janeiro" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">UF</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.uf} onChange={e => f('uf', e.target.value)} placeholder="RJ" maxLength={2} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">CEP</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.cep} onChange={e => f('cep', e.target.value)} placeholder="00000-000" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Representante Legal</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.representanteNome} onChange={e => f('representanteNome', e.target.value)} placeholder="Nome completo" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Cargo</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.representanteCargo} onChange={e => f('representanteCargo', e.target.value)} placeholder="Socio-Administrador" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">CPF Representante</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.representanteCpf} onChange={e => f('representanteCpf', e.target.value)} placeholder="000.000.000-00" />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">% Plataforma sobre Creditos Recuperados</label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              value={contractFields.percentualPlataforma}
-              onChange={e => setContractFields(p => ({ ...p, percentualPlataforma: Number(e.target.value) }))}
-            />
-            <p className="text-xs text-gray-400 mt-1">Padrao: 60% (sem parceiro, 100% plataforma)</p>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block">Analise Vinculada (Opcional)</label>
-            <select
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-              value={selectedAnalysisId}
-              onChange={e => setSelectedAnalysisId(e.target.value)}
-            >
-              <option value="">-- Nenhuma --</option>
-              {analyses.map(a => (
-                <option key={a.id} value={a.id}>
-                  {a.companyName} — {formatCurrency(a.estimatedCredit || 0)}
-                </option>
-              ))}
-            </select>
+            <input type="number" min={1} max={100} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.percentualPlataforma} onChange={e => f('percentualPlataforma', Number(e.target.value))} />
+            <p className="text-xs text-gray-400 mt-1">Padrao: 60% (venda direta)</p>
           </div>
         </div>
         <button
           onClick={handleGenerate}
-          disabled={generating || !contractFields.clientId}
-          className="mt-5 w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+          disabled={generating || !fields.empresaNome}
+          className="mt-5 w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
         >
           {generating ? (
             <>

@@ -211,6 +211,7 @@ router.post('/generate-perdcomp', authenticateToken, async (req: Request, res: R
 /**
  * POST /api/formalization/generate-bipartite-contract
  * Gera contrato bipartite (venda direta, sem parceiro)
+ * Aceita dados manuais OU clientId de usuario cadastrado
  */
 router.post('/generate-bipartite-contract', authenticateToken, async (req: Request, res: Response) => {
   try {
@@ -219,15 +220,51 @@ router.post('/generate-bipartite-contract', authenticateToken, async (req: Reque
       return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
     }
 
-    const { clientId, percentualPlataforma, analysisId } = req.body;
+    const { manual, clientId, percentualPlataforma } = req.body;
 
-    if (!clientId) {
-      return res.status(400).json({ success: false, error: 'clientId e obrigatorio' });
-    }
+    let clientData: {
+      empresaNome: string; cnpj: string; endereco: string;
+      cidade: string; uf: string; cep: string;
+      representanteNome: string; representanteCargo: string; representanteCpf: string;
+    };
 
-    const client = await prisma.user.findUnique({ where: { id: clientId } });
-    if (!client) {
-      return res.status(404).json({ success: false, error: 'Cliente nao encontrado' });
+    if (manual) {
+      // Dados manuais do formulario
+      const { empresaNome, cnpj, endereco, cidade, uf, cep, representanteNome, representanteCargo, representanteCpf } = req.body;
+      if (!empresaNome) {
+        return res.status(400).json({ success: false, error: 'Nome da empresa e obrigatorio' });
+      }
+      clientData = {
+        empresaNome: empresaNome || '[Empresa]',
+        cnpj: cnpj || '[CNPJ]',
+        endereco: endereco || '[Endereco]',
+        cidade: cidade || '[Cidade]',
+        uf: uf || '[UF]',
+        cep: cep || '[CEP]',
+        representanteNome: representanteNome || '[Representante Legal]',
+        representanteCargo: representanteCargo || '[Cargo]',
+        representanteCpf: representanteCpf || '[CPF]',
+      };
+    } else {
+      // Dados de usuario cadastrado
+      if (!clientId) {
+        return res.status(400).json({ success: false, error: 'clientId ou dados manuais sao obrigatorios' });
+      }
+      const client = await prisma.user.findUnique({ where: { id: clientId } });
+      if (!client) {
+        return res.status(404).json({ success: false, error: 'Cliente nao encontrado' });
+      }
+      clientData = {
+        empresaNome: client.company || client.name || '[Cliente]',
+        cnpj: client.cnpj || '[CNPJ]',
+        endereco: client.endereco || '[Endereco]',
+        cidade: client.cidade || '[Cidade]',
+        uf: client.estado || '[UF]',
+        cep: client.cep || '[CEP]',
+        representanteNome: client.legalRepName || client.name || '[Representante]',
+        representanteCargo: client.legalRepCargo || '[Cargo]',
+        representanteCpf: client.legalRepCpf || '[CPF]',
+      };
     }
 
     const contractText = generateBipartiteContract({
@@ -239,30 +276,30 @@ router.post('/generate-bipartite-contract', authenticateToken, async (req: Reque
       representantePlataforma: process.env.PLATFORM_REPRESENTATIVE || '[Representante]',
       cargoRepresentantePlataforma: 'Socio-Administrador',
       cpfRepresentantePlataforma: process.env.PLATFORM_REP_CPF || '[CPF]',
-      empresaClienteNome: client.company || client.name || '[Cliente]',
-      cnpjCliente: client.cnpj || '[CNPJ]',
+      empresaClienteNome: clientData.empresaNome,
+      cnpjCliente: clientData.cnpj,
       ieCliente: '[IE]',
-      enderecoCliente: client.endereco || '[Endereco]',
-      cidadeCliente: client.cidade || '[Cidade]',
-      ufCliente: client.estado || '[UF]',
-      cepCliente: client.cep || '[CEP]',
-      representanteCliente: client.legalRepName || client.name || '[Representante]',
-      cargoRepresentanteCliente: client.legalRepCargo || '[Cargo]',
-      cpfRepresentanteCliente: client.legalRepCpf || '[CPF]',
+      enderecoCliente: clientData.endereco,
+      cidadeCliente: clientData.cidade,
+      ufCliente: clientData.uf,
+      cepCliente: clientData.cep,
+      representanteCliente: clientData.representanteNome,
+      cargoRepresentanteCliente: clientData.representanteCargo,
+      cpfRepresentanteCliente: clientData.representanteCpf,
       percentualPlataforma: percentualPlataforma || 60,
       chavePix: process.env.PLATFORM_PIX_KEY || 'felicio@atacadistadigital.com',
       dataContrato: new Date().toLocaleDateString('pt-BR'),
       cidadeContrato: 'Sao Paulo',
     });
 
-    logger.info(`Bipartite contract generated for client ${clientId}`);
+    logger.info(`Bipartite contract generated (manual: ${!!manual})`);
 
     return res.json({
       success: true,
       data: {
         contractText,
-        clientName: client.company || client.name,
-        cnpj: client.cnpj,
+        clientName: clientData.empresaNome,
+        cnpj: clientData.cnpj,
       },
     });
   } catch (error: any) {
