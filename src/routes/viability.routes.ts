@@ -202,17 +202,40 @@ function runQuickScoreInBackground(
       else if (quickResult.score >= 50) scoreLabel = 'medio';
       else if (quickResult.score >= 30) scoreLabel = 'baixo';
 
+      // Preparar dados para atualização
+      const updateData: any = {
+        viabilityScore: quickResult.score,
+        scoreLabel,
+        aiSummary: quickResult.summary,
+        status: 'completed',
+      };
+
+      // Se a IA identificou o regime nos documentos, salvar/sobrescrever
+      if (quickResult.regimeIdentificado && quickResult.regimeIdentificado !== 'nao_identificado') {
+        const regimeMap: Record<string, string> = {
+          lucro_real: 'lucro_real',
+          lucro_presumido: 'lucro_presumido',
+          simples: 'simples',
+        };
+        const regimeNormalizado = regimeMap[quickResult.regimeIdentificado];
+        if (regimeNormalizado) {
+          // Se operador informou um regime diferente do identificado, logar alerta
+          if (companyInfo.regime && companyInfo.regime !== regimeNormalizado) {
+            logger.warn(`[REGIME DIVERGENTE] Viabilidade ${viabilityId}: operador informou "${companyInfo.regime}" mas IA identificou "${regimeNormalizado}" nos documentos`);
+            // Adicionar alerta ao summary
+            updateData.aiSummary = `⚠️ ATENÇÃO: Regime informado (${companyInfo.regime}) DIVERGE do identificado nos documentos (${regimeNormalizado}). Verifique antes de prosseguir. | ${quickResult.summary}`;
+          }
+          updateData.regime = regimeNormalizado;
+          logger.info(`[REGIME] IA identificou regime "${regimeNormalizado}" nos documentos para ${viabilityId}`);
+        }
+      }
+
       await prisma.viabilityAnalysis.update({
         where: { id: viabilityId },
-        data: {
-          viabilityScore: quickResult.score,
-          scoreLabel,
-          aiSummary: quickResult.summary,
-          status: 'completed',
-        },
+        data: updateData,
       });
 
-      logger.info(`[BACKGROUND] Quick score completed: ${viabilityId} - Score: ${quickResult.score}`);
+      logger.info(`[BACKGROUND] Quick score completed: ${viabilityId} - Score: ${quickResult.score} - Regime: ${quickResult.regimeIdentificado || 'não identificado'}`);
     } catch (err: any) {
       logger.error(`[BACKGROUND] Quick score FAILED for ${viabilityId}:`, err.message);
       await prisma.viabilityAnalysis.update({

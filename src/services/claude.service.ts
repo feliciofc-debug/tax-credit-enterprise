@@ -90,19 +90,55 @@ function buildFullAnalysisPrompt(companyInfo: CompanyInfo, documentType: string)
 ## CONTEXTO DA EMPRESA
 - Razão Social: ${companyInfo.name}
 ${companyInfo.cnpj ? `- CNPJ: ${companyInfo.cnpj}` : ''}
-${companyInfo.regime ? `- Regime Tributário: ${companyInfo.regime}` : '- Regime: Verificar no documento'}
+${companyInfo.regime ? `- Regime Tributário INFORMADO pelo operador: ${companyInfo.regime}` : '- Regime Tributário: NÃO INFORMADO — VOCÊ DEVE IDENTIFICAR no documento'}
 ${companyInfo.sector ? `- Setor: ${companyInfo.sector}` : ''}
 ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Tipo de documento analisado: ${docTypeName}
 
+## REGRA CRÍTICA: IDENTIFICAÇÃO AUTOMÁTICA DO REGIME TRIBUTÁRIO
+
+ANTES de iniciar qualquer análise de teses, você DEVE identificar o regime tributário da empresa nos documentos. Procure por estas evidências:
+
+**Sinais de LUCRO REAL:**
+- PIS/COFINS não-cumulativo (alíquotas 1,65% PIS e 7,6% COFINS)
+- Registro 0000 do SPED com indicador "R" (Real)
+- Apuração de LALUR (Livro de Apuração do Lucro Real)
+- Presença de "PIS s/ faturamento 1,65%" ou "COFINS 7,60%" nos lançamentos
+- Créditos de PIS/COFINS sobre insumos escriturados
+- Demonstração de resultado com IRPJ/CSLL calculados sobre lucro líquido ajustado
+
+**Sinais de LUCRO PRESUMIDO:**
+- PIS/COFINS cumulativo (alíquotas 0,65% PIS e 3% COFINS)
+- IRPJ calculado sobre presunção (8% comércio/indústria, 32% serviços)
+- CSLL sobre presunção (12% ou 32%)
+- Ausência de créditos de PIS/COFINS
+- DARFs com código 2089 (IRPJ presumido) ou 2372 (CSLL presumido)
+
+**Sinais de SIMPLES NACIONAL:**
+- DAS (Documento de Arrecadação do Simples)
+- Faturamento até R$ 4,8M/ano
+- Apuração unificada de tributos
+- Registro 0000 do SPED com indicador "S" (Simples)
+
+**REGRA DE VALIDAÇÃO CRUZADA:**
+- Se o operador informou um regime MAS os documentos indicam outro, GERE UM ALERTA PRIORITÁRIO dizendo: "ATENÇÃO: Regime informado (X) diverge do identificado nos documentos (Y). Recomenda-se verificação imediata."
+- SEMPRE use o regime IDENTIFICADO NOS DOCUMENTOS como base para a análise (não o informado pelo operador), pois o documento é mais confiável
+- Se não conseguir identificar, use o informado pelo operador. Se nenhum estiver disponível, assuma Lucro Real (mais teses aplicáveis) e informe nos alertas
+
+**IMPACTO DO REGIME NAS TESES:**
+- LUCRO REAL: TODAS as teses são potencialmente aplicáveis
+- LUCRO PRESUMIDO: Teses de PIS/COFINS não-cumulativo (1.1 a 1.4, 1.6, 1.7, 1.8, 1.9) NÃO se aplicam. Focar em: INSS (3.1-3.4), ICMS (2.1-2.9), IRPJ/CSLL equiparação hospitalar (4.4), ISS (6.1-6.2)
+- SIMPLES NACIONAL: Maioria das teses NÃO se aplica (tributos unificados). Focar APENAS em: INSS sobre verbas indenizatórias (3.1), ICMS-ST pago a maior (2.2), ISS alíquota (6.1). INFORMAR que potencial é muito limitado no Simples
+
 ## REGRAS FUNDAMENTAIS
 
-1. SEMPRE analise TODAS as teses listadas abaixo, mesmo que os documentos não contenham dados diretos — use estimativas baseadas no setor e faturamento
+1. SEMPRE analise TODAS as teses listadas abaixo que sejam COMPATÍVEIS com o regime tributário identificado — não perca tempo com teses incompatíveis
 2. Para cada tese, forneça: valor estimado, fundamentação legal completa, probabilidade de êxito (%) e complexidade
 3. Seja CONSERVADOR nos valores — é melhor prometer menos e entregar mais
 4. Separe PIS e COFINS em linhas distintas (alíquotas diferentes: PIS 1,65%, COFINS 7,6%)
 5. Considere sempre os últimos 5 anos (60 meses) como período de recuperação
 6. Cite SEMPRE o dispositivo legal, número do tema STF/STJ e leading case
+7. No campo "regimeTributario" da resposta, SEMPRE informe o regime IDENTIFICADO nos documentos (não o informado)
 
 ## REGRA CRÍTICA SOBRE UNIDADES MONETÁRIAS
 - ANTES DE TUDO: Verifique se o documento indica "Em milhares de Reais", "R$ mil" ou "Em Reais - R$".
@@ -746,7 +782,7 @@ class ClaudeService {
   async quickAnalysis(
     documentText: string,
     companyInfo: CompanyInfo
-  ): Promise<{ viable: boolean; score: number; summary: string }> {
+  ): Promise<{ viable: boolean; score: number; summary: string; regimeIdentificado?: string }> {
     if (!documentText || documentText.trim().length < 100) {
       throw new Error('Texto insuficiente para análise de viabilidade.');
     }
@@ -768,8 +804,11 @@ REGRAS CRÍTICAS:
 5. NÃO invente valores — se não tem certeza do valor, NÃO estime. Foque na viabilidade qualitativa.
 6. Oportunidades COMUNS em indústrias: PIS/COFINS sobre ICMS (Tema 69 STF), créditos de PIS/COFINS sobre insumos, ICMS-ST pago a maior.
 7. O resumo deve ser REALISTA e profissional, sem exageros.
+8. IDENTIFIQUE O REGIME TRIBUTÁRIO nos documentos: procure por alíquotas de PIS (1,65% = Lucro Real, 0,65% = Presumido), COFINS (7,6% = Real, 3% = Presumido), DAS (Simples), LALUR (Real), presunção de lucro (Presumido). Informe no campo "regimeIdentificado".
+9. Se identificar SIMPLES NACIONAL, o score deve ser BAIXO (maioria das teses não se aplica).
+10. Se identificar LUCRO PRESUMIDO, teses de PIS/COFINS não-cumulativo NÃO se aplicam — ajustar score.
 
-Responda em JSON: {"viable": true/false, "score": 0-100, "summary": "resumo em 2-3 frases CONSERVADOR e realista", "mainOpportunities": ["oportunidade1", "oportunidade2"], "nextSteps": ["passo1", "passo2"]}`,
+Responda em JSON: {"viable": true/false, "score": 0-100, "summary": "resumo em 2-3 frases CONSERVADOR e realista", "regimeIdentificado": "lucro_real|lucro_presumido|simples|nao_identificado", "mainOpportunities": ["oportunidade1", "oportunidade2"], "nextSteps": ["passo1", "passo2"]}`,
         messages: [
           {
             role: 'user',
@@ -788,6 +827,7 @@ Responda em JSON: {"viable": true/false, "score": 0-100, "summary": "resumo em 2
         viable: result.viable ?? false,
         score: result.score ?? 0,
         summary: result.summary ?? 'Análise não conclusiva',
+        regimeIdentificado: result.regimeIdentificado || undefined,
       };
     } catch (error: any) {
       logger.error(`Erro na análise rápida: ${error.message}`);
