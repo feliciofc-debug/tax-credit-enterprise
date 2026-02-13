@@ -347,6 +347,61 @@ export const CHECKLISTS: Record<string, ChecklistEstado> = {
       },
     ],
   },
+  ES: {
+    uf: 'ES',
+    nome: 'Espirito Santo',
+    sistema: 'DT-e (Domicilio Tributario Eletronico) / Protocolo presencial na Agencia da Receita Estadual',
+    legislacao: 'RICMS/ES (Decreto 1.090-R/2002), Arts. 103 e seguintes + Portaria SEFAZ 015-R/2018',
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa',
+        prazo: 'Antes do protocolo',
+        itens: [
+          { id: 'ES-01', descricao: 'Contrato Social consolidado ou ultima alteracao', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'ES-02', descricao: 'Comprovante de inscricao CNPJ (atualizado)', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'ES-03', descricao: 'Inscricao Estadual ativa no Cadastro de Contribuintes ICMS/ES', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'ES-04', descricao: 'Procuracao especifica para advogado (protocolo SEFAZ/ES)', obrigatorio: true, tipo: 'procuracao' },
+          { id: 'ES-05', descricao: 'CND Tributaria Estadual (ou Positiva com Efeitos de Negativa) emitida pela SEFAZ/ES', obrigatorio: true, tipo: 'certidao' },
+          { id: 'ES-06', descricao: 'Certificado digital e-CNPJ (ICP-Brasil, A1 ou A3) para acesso ao DT-e', obrigatorio: true, tipo: 'certificado' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal Comprobatoria',
+        prazo: 'Preparar antes do protocolo',
+        itens: [
+          { id: 'ES-07', descricao: 'EFD ICMS/IPI dos periodos de acumulo do credito (ultimos 5 anos)', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'ES-08', descricao: 'Notas Fiscais Eletronicas (NF-e) de exportacao dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'ES-09', descricao: 'Notas Fiscais de entrada (insumos, energia, frete) que geraram credito', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'ES-10', descricao: 'Demonstrativo de Exportacao (DDE / Registro de Exportacao)', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'ES-11', descricao: 'GIA-ST ou DIEF/ES dos periodos (se aplicavel)', obrigatorio: false, tipo: 'fiscal', condicao: 'ICMS-ST' },
+          { id: 'ES-12', descricao: 'Memoria de calculo dos creditos acumulados (gerada pela plataforma TaxCredit Enterprise)', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: 'ES-13', descricao: 'Demonstrativo de saldo credor acumulado por periodo', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: 'ES-14', descricao: 'Comprovantes de contas de energia eletrica (se credito sobre energia)', obrigatorio: false, tipo: 'fiscal', condicao: 'Credito de energia' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo na SEFAZ/ES',
+        prazo: 'Apos reunir toda documentacao',
+        itens: [
+          { id: 'ES-15', descricao: 'Acessar DT-e com certificado digital ou ir presencialmente na Agencia da Receita Estadual', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'ES-16', descricao: 'Preencher Requerimento de Transferencia/Utilizacao/Restituicao de Credito Acumulado (gerado pela plataforma)', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'ES-17', descricao: 'Anexar toda documentacao comprobatoria digitalizada', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'ES-18', descricao: 'Protocolar e guardar numero do processo/recibo', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'ES-19', descricao: 'Se transferencia a terceiros: informar CNPJ/IE do destinatario', obrigatorio: false, tipo: 'procedimento', condicao: 'Transferencia a terceiros' },
+        ],
+      },
+      {
+        ordem: 4, titulo: 'Acompanhamento',
+        prazo: 'Ate 180 dias (media)',
+        itens: [
+          { id: 'ES-20', descricao: 'Acompanhar andamento pelo DT-e ou Agencia da Receita', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'ES-21', descricao: 'Responder intimacoes e diligencias nos prazos legais', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'ES-22', descricao: 'Se indeferido: recurso administrativo ao Conselho de Recursos Fiscais (CRF/ES) em 30 dias', obrigatorio: false, tipo: 'procedimento', condicao: 'Indeferimento' },
+          { id: 'ES-23', descricao: 'Apos deferimento: confirmar efetivacao da transferencia/compensacao/restituicao', obrigatorio: true, tipo: 'procedimento' },
+        ],
+      },
+    ],
+  },
   FEDERAL: {
     uf: 'FEDERAL',
     nome: 'Federal (PER/DCOMP)',

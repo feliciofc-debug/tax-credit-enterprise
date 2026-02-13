@@ -143,6 +143,40 @@ ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Cálculo: custos elegíveis × 7,6%
 - Probabilidade: 75%
 
+**TESE 1.5 — PIS/COFINS Monofásico — Medicamentos e Farmacêuticos**
+- Fundamento: Lei 10.147/2000 | Lei 10.865/2004, Art. 25 | IN RFB 1.911/2019, Art. 150-158
+- Medicamentos, produtos farmacêuticos, cosméticos e produtos de higiene pessoal têm PIS/COFINS concentrados na INDÚSTRIA (regime monofásico)
+- A alíquota para revendedores (hospitais, clínicas, farmácias, distribuidores) é ZERO ou reduzida
+- PROBLEMA COMUM: hospitais e clínicas que aplicam ou revendem esses produtos pagam PIS/COFINS novamente por erro de classificação NCM
+- Inclui: quimioterápicos, anestésicos, antibióticos, soluções dialisantes, anti-inflamatórios, soros, vacinas, cosméticos de uso médico
+- Cálculo: total de compras de medicamentos monofásicos × 9,25% × 5 anos (recuperação do que foi pago a maior)
+- ATENÇÃO: Verificar NCM do produto na tabela TIPI e na lista de monofásicos da RFB (Anexos I e II da Lei 10.147/2000)
+- Exemplo: hospital com R$ 15M/ano em medicamentos pode recuperar R$ 2,8M se pagou PIS/COFINS sobre monofásicos
+- Probabilidade: 80% — se comprovado pagamento indevido via NCM
+- CRÍTICO: Setor de saúde (hospitais, clínicas, centros de oncologia, hemodiálise, farmácias), distribuidores de medicamentos, cosméticos
+
+**TESE 1.6 — PIS/COFINS sobre Ativo Imobilizado (bens de capital)**
+- Fundamento: Lei 10.637/2002, Art. 3°, VI (PIS) | Lei 10.833/2003, Art. 3°, VI (COFINS) | IN RFB 1.911/2019, Art. 172
+- Crédito de PIS (1,65%) e COFINS (7,6%) sobre encargos de depreciação de bens do ativo imobilizado adquiridos a partir de 01/05/2004
+- Crédito calculado com base no valor de aquisição × alíquota × 1/48 por mês (prazo de 4 anos)
+- Inclui: equipamentos, máquinas, veículos, reformas e construções incorporadas ao ativo
+- Setores com alto investimento em ativo: saúde (ressonância R$ 3-8M, tomógrafo R$ 2-5M, acelerador linear R$ 5-20M, PET-CT R$ 10-15M), indústria (teares, polideiras, fornos), transporte, mineração
+- Cálculo: valor dos bens adquiridos × 9,25% ÷ 48 × meses restantes × 5 anos retroativos
+- ATENÇÃO: Opção de crédito imediato (100% no mês de aquisição) para máquinas e equipamentos destinados à produção (Lei 11.774/2008, se vigente para o período)
+- Probabilidade: 75% — verificar se empresa está no Lucro Real e se bens são elegíveis
+- CRÍTICO: Setores intensivos em capital — saúde (equipamentos médicos caríssimos), mineração, siderurgia, celulose, diagnóstico por imagem
+
+**TESE 1.7 — PIS/COFINS de Exportação — Ressarcimento em espécie**
+- Fundamento: Lei 10.637/2002, Art. 5° (PIS) | Lei 10.833/2003, Art. 6° (COFINS) | CF Art. 149, §2°, I
+- Exportações têm alíquota ZERO de PIS/COFINS, mas os créditos das ENTRADAS são MANTIDOS integralmente
+- O excesso de crédito (crédito > débito) pode ser ressarcido em ESPÉCIE pela Receita Federal via PER/DCOMP Web
+- Diferente do ICMS estadual, esse ressarcimento é FEDERAL e vira dinheiro na conta da empresa
+- IMPORTANTE: PIS/COFINS não-cumulativo exige ressarcimento ANTES da compensação (Art. 5°, §1°, Lei 10.637/2002)
+- Cálculo: total de créditos de PIS/COFINS × % receita de exportação / receita total × 5 anos
+- Exemplo: empresa com R$ 5M/ano em créditos de PIS/COFINS e 70% de exportação pode ressarcir R$ 3,5M/ano = R$ 17,5M em 5 anos
+- Probabilidade: 85% — direito constitucional, procedimento via e-CAC/PER/DCOMP
+- CRÍTICO: Exportadores de mármore/granito, commodities agrícolas, siderurgia, celulose, manufaturados — todos acumulam créditos de PIS/COFINS que podem ser ressarcidos
+
 ### BLOCO 2: ICMS
 
 **TESE 2.1 — ICMS sobre energia elétrica — Exclusão de TUSD/TUST**
@@ -161,6 +195,27 @@ ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Crédito de 1/48 avos por mês sobre ICMS de máquinas e equipamentos
 - Verificar imobilizado no Balanço
 - Probabilidade: 70%
+
+**TESE 2.4 — ICMS Acumulado de Exportação**
+- Fundamento: CF Art. 155, §2°, X, "a" — imunidade de ICMS na exportação
+- LC 87/1996 (Lei Kandir), Art. 3°, II e Art. 25, §1°
+- Empresas exportadoras têm imunidade de ICMS na SAÍDA, mas mantêm o direito a crédito de ICMS nas ENTRADAS (insumos, energia, frete, ativo imobilizado)
+- Esses créditos se acumulam mês a mês sem débito para compensar
+- O crédito acumulado pode ser: (a) transferido a terceiros, (b) utilizado para débitos próprios, (c) ressarcido em espécie — conforme legislação de cada estado
+- Cálculo: total de ICMS nas entradas × % de exportação sobre faturamento total × 5 anos
+- Exemplo: empresa com R$ 20M/ano em compras tributadas por ICMS a 12%, exportando 70%, acumula ~R$ 1,68M/ano = R$ 8,4M em 5 anos
+- Legislação estadual: SP (e-CredAc, RICMS/SP Arts. 71-81), RJ (RICMS/RJ Livro III), MG (DCA-ICMS, RICMS/MG Anexo VIII), ES (RICMS/ES Decreto 1.090-R/2002 Art. 103+), RS (RICMS/RS Arts. 58-59), PR (SISCRED, RICMS/PR Arts. 47-61), SC (TTD, RICMS/SC Arts. 40-52)
+- Probabilidade: 90% — direito constitucional, tese pacificada
+- CRÍTICO: Setores exportadores (mármore/granito, siderurgia, celulose, café, soja, carnes, mineração) frequentemente acumulam milhões sem pedir transferência ou ressarcimento
+
+**TESE 2.5 — ICMS e PIS/COFINS sobre Frete**
+- Fundamento: LC 87/96, Art. 20 (ICMS sobre frete) | Lei 10.637/2002 Art. 3°, IX e Lei 10.833/2003 Art. 3°, IX (PIS/COFINS sobre frete)
+- Frete sobre compras de insumos e matéria-prima gera crédito de ICMS (alíquota interestadual 7% ou 12%)
+- Frete sobre compras gera crédito de PIS (1,65%) e COFINS (7,6%) no Lucro Real
+- Para indústrias pesadas (mármore/granito, siderurgia, mineração), frete pode representar 8-15% do custo do produto
+- Frota própria: combustível, manutenção, pneus, lubrificantes também geram crédito de PIS/COFINS
+- Cálculo: gastos totais com frete × alíquotas respectivas × 5 anos
+- Probabilidade: 75% — conceito de insumo ampliado pelo STJ (Tema 779)
 
 ### BLOCO 3: CONTRIBUIÇÕES PREVIDENCIÁRIAS E TRABALHISTAS
 
@@ -206,6 +261,20 @@ ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Aplicável a indústrias com desenvolvimento de produto
 - Probabilidade: 75% — se houver atividades de inovação
 
+**TESE 4.4 — IRPJ/CSLL — Equiparação Hospitalar (Lucro Presumido)**
+- Fundamento: Lei 9.249/95, Art. 15, §1°, III, "a" | IN RFB 1.234/2012 | REsp 1.116.399/BA (STJ)
+- Clínicas e centros médicos que prestam SERVIÇOS HOSPITALARES podem aplicar base de cálculo reduzida:
+  * IRPJ: 8% sobre receita bruta (em vez de 32% para serviços gerais) — redução de 75%
+  * CSLL: 12% sobre receita bruta (em vez de 32%)
+- "Serviços hospitalares" = procedimentos que exigem estrutura hospitalar (centro cirúrgico, internação, UTI, exames com equipamentos próprios)
+- NÃO inclui simples consultas médicas sem estrutura
+- Requisitos cumulativos: (a) ser sociedade empresária (não sociedade simples), (b) prestar serviços hospitalares, (c) ter estrutura própria, (d) cumprir normas ANVISA
+- Segmentos elegíveis: clínicas de cirurgia plástica com centro cirúrgico, oftalmologia, ortopedia, cardiologia/hemodinâmica, oncologia/radioterapia, hemodiálise, reprodução humana, odontologia cirúrgica, centros de diagnóstico por imagem
+- Cálculo: receita anual × (32% - 8%) × 15% IRPJ + adicional 10% se lucro presumido > 240k/ano + CSLL (32% - 12%) × 9%
+- Exemplo: clínica de R$ 10M/ano: IRPJ tradicional (32%) = R$ 480k vs. equiparado (8%) = R$ 120k. Economia = R$ 360k/ano = R$ 1,8M em 5 anos
+- Probabilidade: 85% — tese pacificada pelo STJ, bastando cumprir requisitos
+- CRÍTICO: Setor de SAÚDE — praticamente toda clínica com centro cirúrgico ou equipamentos de diagnóstico próprios pode se enquadrar
+
 ### BLOCO 5: IPI (se aplicável a indústria)
 
 **TESE 5.1 — Créditos de IPI sobre insumos não aproveitados**
@@ -213,10 +282,58 @@ ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Saldo credor acumulado pode ser ressarcido
 - Probabilidade: 65%
 
+### BLOCO 6: ISS (Imposto Sobre Serviços — Municipal)
+
+**TESE 6.1 — ISS — Revisão de alíquota e base de cálculo**
+- Fundamento: LC 116/2003 | Lei Municipal de cada município | CF Art. 156, III
+- ISS varia de 2% a 5% conforme município e tipo de serviço
+- OPORTUNIDADES COMUNS:
+  * Segregação incorreta de procedimentos: estéticos (alíquota cheia) vs. reparadores/saúde (alíquota reduzida ou isenta)
+  * Alíquota aplicada acima do devido para o tipo de serviço (ex: consultório paga como hospital)
+  * Incentivos fiscais municipais para saúde, educação, tecnologia (muitos municípios oferecem ISS reduzido para atrair investimentos)
+  * Hospitais filantrópicos e entidades sem fins lucrativos podem ter imunidade (CF Art. 150, VI, "c")
+  * Base de cálculo incorreta: incluindo materiais na base quando deveria ser apenas o serviço (subempreitada, construção civil)
+- Cálculo: receita de serviços × diferença entre alíquota cobrada e alíquota devida × 5 anos
+- Probabilidade: 60% — depende da legislação municipal específica
+- APLICÁVEL A: setor de saúde (clínicas, hospitais), serviços profissionais, construção civil, tecnologia
+
+**TESE 6.2 — ISS — Dedução de materiais da base de cálculo**
+- Fundamento: LC 116/2003, Art. 7°, §2° | Jurisprudência STJ (construção civil e saúde)
+- Em serviços que envolvem fornecimento de materiais (ex: construção civil, próteses em odontologia), os materiais podem ser deduzidos da base do ISS
+- Probabilidade: 55% — depende do tipo de serviço e legislação local
+
+### BLOCO 7: TRIBUTOS DE IMPORTAÇÃO
+
+**TESE 7.1 — Créditos de PIS/COFINS-Importação**
+- Fundamento: Lei 10.865/2004, Art. 15 | IN RFB 1.911/2019
+- Empresas no Lucro Real que importam bens e insumos têm direito a crédito de PIS (2,1%) e COFINS (9,65%) pagos na importação
+- Inclui: equipamentos médicos, lentes intraoculares, próteses, stents, reagentes laboratoriais, peças de reposição, matéria-prima
+- PROBLEMA COMUM: empresas pagam PIS/COFINS-Importação mas não aproveitam o crédito, ou creditam com alíquota incorreta
+- Cálculo: total de PIS/COFINS-Importação pagos × 5 anos retroativos (crédito não aproveitado)
+- Probabilidade: 75% — se empresa está no Lucro Real e não aproveitou integralmente
+- CRÍTICO: Setor de saúde (equipamentos caríssimos importados: ressonância, tomógrafo, PET-CT, acelerador linear, lentes, próteses), indústria (máquinas), tecnologia
+
+**TESE 7.2 — ICMS-Importação — Crédito na aquisição de ativo/insumos**
+- Fundamento: LC 87/96, Art. 20 | CF Art. 155, §2°, IX, "a"
+- ICMS pago na importação de bens para o ativo imobilizado gera crédito de ICMS (1/48 avos por mês)
+- ICMS de importação de insumos para industrialização gera crédito integral
+- PROBLEMA COMUM: empresas recolhem ICMS-Importação via GNRE mas não escrituram o crédito
+- Probabilidade: 70%
+
+**TESE 7.3 — IPI-Importação — Crédito na industrialização**
+- Fundamento: RIPI (Decreto 7.212/2010), Art. 225 | CF Art. 153, §3°, II
+- IPI pago na importação de insumos industriais gera crédito
+- Saldo credor pode ser ressarcido quando vinculado a exportação
+- Probabilidade: 65% — se empresa é industrial e importa insumos
+
 ## OBSERVAÇÕES PARA ESTIMATIVAS
 - Para estimar folha de pagamento: some despesas com pessoal + mão de obra direta + obrigações trabalhistas
-- Para estimar nº de funcionários: divida folha anual por salário médio do setor (metalurgia ~R$ 4.500/mês, serviços ~R$ 3.000/mês)
-- ICMS: use alíquota do estado sede (SP: 18% interno, 25% energia; RJ: 20%; MG: 18%)
+- Para estimar nº de funcionários: divida folha anual por salário médio do setor (metalurgia ~R$ 4.500/mês, serviços ~R$ 3.000/mês, saúde ~R$ 5.000/mês)
+- ICMS: use alíquota do estado sede (SP: 18% interno, 25% energia; RJ: 20%; MG: 18%; ES: 17% interno, 25% energia; RS: 17%; PR: 19%)
+- Se empresa EXPORTA parte da produção, SEMPRE analise TESE 2.4 (ICMS acumulado de exportação) e TESE 1.7 (PIS/COFINS exportação). Setores tipicamente exportadores: mármore/granito, siderurgia, celulose, café, soja, carnes, mineração, calçados, têxtil, autopeças
+- Se empresa é INDÚSTRIA com alto consumo de energia ou frete pesado, SEMPRE analise TESE 2.5 (frete) como item separado
+- Se empresa é do SETOR DE SAÚDE (hospital, clínica, centro médico), SEMPRE analise: TESE 1.5 (monofásico medicamentos), TESE 1.6 (ativo imobilizado), TESE 4.4 (equiparação hospitalar), TESE 6.1 (ISS), TESE 7.1 (importação)
+- Se empresa IMPORTA equipamentos ou insumos, SEMPRE analise TESE 7.1, 7.2 e 7.3 (créditos de importação)
 - Se não tiver dados suficientes para calcular, ESTIME baseado em percentuais típicos e INFORME que é estimativa
 - NUNCA deixe de analisar uma tese por falta de dados — use estimativas conservadoras
 
@@ -227,7 +344,7 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários:
   "oportunidades": [
     {
       "tipo": "Nome descritivo (ex: Exclusão do ICMS da base do PIS - Tema 69)",
-      "tributo": "PIS|COFINS|ICMS|INSS|IRPJ|CSLL|IPI|RAT|FGTS",
+      "tributo": "PIS|COFINS|ICMS|INSS|IRPJ|CSLL|IPI|RAT|FGTS|ISS|II|PIS-IMPORT|COFINS-IMPORT",
       "descricao": "Descrição detalhada com memória de cálculo resumida",
       "valorEstimado": 0.00,
       "fundamentacaoLegal": "Lei X art. Y | RE/REsp número — Tema Z STF/STJ",

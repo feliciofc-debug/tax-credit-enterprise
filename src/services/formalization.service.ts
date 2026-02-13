@@ -47,6 +47,11 @@ const AUTORIDADES_UF: Record<string, { autoridade: string; orgao: string; cadast
     orgao: 'SECRETARIA DE ESTADO DE FAZENDA DE MATO GROSSO',
     cadastro: 'CCE/MT',
   },
+  ES: {
+    autoridade: 'ILMO. SR. SUBSECRETARIO DE ESTADO DA RECEITA',
+    orgao: 'SECRETARIA DE ESTADO DA FAZENDA DO ESPIRITO SANTO',
+    cadastro: 'Cadastro de Contribuintes ICMS/ES',
+  },
 };
 
 export interface SefazDocumentParams {
@@ -547,6 +552,15 @@ de ICMS.`,
     MT: `No ambito do Estado de Mato Grosso, o RICMS/MT (Decreto 2.212/2014),
 Arts. 99 a 125, disciplina o credito acumulado de ICMS, administrado pelo
 sistema PAC-e/RUC-e.`,
+    ES: `No ambito do Estado do Espirito Santo, o RICMS/ES (Decreto 1.090-R/2002),
+Arts. 103 e seguintes, disciplina a transferencia e utilizacao de credito
+acumulado de ICMS. O credito acumulado de exportacao pode ser transferido
+a outros contribuintes do ES, utilizado para pagamento de debitos proprios
+ou pedido de ressarcimento. A legislacao permite transferencia para
+fornecedores locais de materia-prima, embalagem e outros insumos.
+Regulamentacao complementar: Portaria SEFAZ n. 015-R/2018 e instrucoes
+normativas vigentes. O protocolo pode ser feito via DT-e (Domicilio
+Tributario Eletronico) ou presencialmente na Agencia da Receita Estadual.`,
   };
   return fundamentacoes[uf] || fundamentacoes['SP'];
 }
