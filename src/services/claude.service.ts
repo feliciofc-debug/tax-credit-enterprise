@@ -177,6 +177,24 @@ ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Probabilidade: 85% — direito constitucional, procedimento via e-CAC/PER/DCOMP
 - CRÍTICO: Exportadores de mármore/granito, commodities agrícolas, siderurgia, celulose, manufaturados — todos acumulam créditos de PIS/COFINS que podem ser ressarcidos
 
+**TESE 1.8 — Exclusão do ISS da base de cálculo do PIS/COFINS**
+- Fundamento: RE 592.616 — Tema 1.093 STF (em julgamento, tendência favorável)
+- Mesma lógica do Tema 69 (Tese do Século): ISS é tributo, não receita/faturamento
+- Aplicável a prestadores de serviços no Lucro Real (PIS/COFINS não-cumulativo)
+- Cálculo: ISS destacado nas NFS-e × alíquota PIS (1,65%) + ISS destacado × alíquota COFINS (7,6%)
+- ATENÇÃO: Tese ainda não pacificada definitivamente pelo STF — tendência favorável com base na ratio decidendi do Tema 69
+- Probabilidade: 65% — tese em evolução, forte fundamentação, mas aguarda definição final
+- APLICÁVEL A: empresas de serviços (saúde, tecnologia, engenharia, consultorias, escritórios)
+
+**TESE 1.9 — PIS/COFINS sobre receitas financeiras — Alíquota reduzida**
+- Fundamento: Decreto 8.426/2015 | Lei 10.865/2004, Art. 27, §2° | ADI 5277 STF
+- Lucro Real: receitas financeiras (aplicações, juros, descontos obtidos, variação cambial) são tributadas por PIS a 0,65% e COFINS a 4%
+- PROBLEMA COMUM: empresas aplicam alíquotas cheias (1,65% PIS e 7,6% COFINS) sobre receitas financeiras por erro de apuração
+- Cálculo: receitas financeiras × diferença entre alíquota cheia e reduzida × 5 anos
+- Exemplo: empresa com R$ 5M/ano em receitas financeiras pagando alíquota cheia perde R$ 230k/ano = R$ 1,15M em 5 anos
+- Probabilidade: 80% — decreto vigente, basta verificar se alíquota correta está sendo aplicada
+- APLICÁVEL A: todas empresas no Lucro Real com receitas financeiras significativas
+
 ### BLOCO 2: ICMS
 
 **TESE 2.1 — ICMS sobre energia elétrica — Exclusão de TUSD/TUST**
@@ -217,6 +235,40 @@ ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Cálculo: gastos totais com frete × alíquotas respectivas × 5 anos
 - Probabilidade: 75% — conceito de insumo ampliado pelo STJ (Tema 779)
 
+**TESE 2.6 — Exclusão do ICMS-ST da base de PIS/COFINS**
+- Fundamento: REsp 1.896.678/RS — Tema 1.048 STJ (julgado em 2023, favorável ao contribuinte)
+- Empresas substituídas tributárias (que compram com ICMS-ST embutido) podem excluir o ICMS-ST da base de PIS/COFINS
+- Mesma lógica do Tema 69 STF (Tese do Século), aplicada ao ICMS por substituição tributária
+- Cálculo: ICMS-ST embutido no preço de compra × alíquota PIS (1,65%) + × alíquota COFINS (7,6%) × 5 anos
+- IMPACTO ALTO em: supermercados, distribuidoras, farmácias, postos de gasolina, concessionárias — todos que compram com ICMS-ST
+- Probabilidade: 80% — tese julgada pelo STJ em repetitivo, favorável ao contribuinte
+
+**TESE 2.7 — ICMS não incide na transferência entre filiais (ADC 49 STF)**
+- Fundamento: ADC 49 STF (julgado em 2021, modulação em 2024) | LC 204/2023
+- O STF decidiu que NÃO incide ICMS na transferência de mercadorias entre estabelecimentos do MESMO titular (filiais)
+- IMPACTO: empresas que recolheram ICMS em transferências entre matriz e filiais, entre CDs e lojas, ou entre fábricas e depósitos podem recuperar o valor pago indevidamente
+- Modulação: efeitos a partir de 2024 para quem não ajuizou ação antes. Para períodos anteriores, depende de ação judicial prévia
+- LC 204/2023 regulamentou: contribuinte pode optar por manter a transferência de crédito ou não destacar ICMS
+- Cálculo: ICMS recolhido em transferências entre filiais × 5 anos (observar modulação)
+- Probabilidade: 85% — para períodos pós-2024; 50% para períodos anteriores (depende de ação judicial)
+- CRÍTICO: Redes de supermercados, distribuidoras com CDs, indústrias com depósitos, qualquer empresa com múltiplos estabelecimentos
+
+**TESE 2.8 — DIFAL (Diferencial de Alíquota) — Operações interestaduais**
+- Fundamento: EC 87/2015 | LC 190/2022 | ADI 5469 e RE 1.287.019 STF
+- DIFAL cobrado em operações interestaduais para consumidor final pode ter sido calculado incorretamente
+- OPORTUNIDADES: (a) DIFAL cobrado antes da LC 190/2022 (inconstitucional); (b) base de cálculo incorreta; (c) DIFAL sobre operações isentas ou com benefício fiscal
+- Cálculo: DIFAL pago × período de irregularidade × 5 anos
+- Probabilidade: 70% — depende do período e do estado
+- APLICÁVEL A: e-commerce, varejo com vendas interestaduais, concessionárias, distribuidoras
+
+**TESE 2.9 — Crédito extemporâneo de ICMS**
+- Fundamento: LC 87/96, Art. 23 | RICMS de cada estado
+- Crédito de ICMS não escriturado no período correto pode ser aproveitado extemporaneamente (dentro do prazo de 5 anos)
+- PROBLEMA COMUM: empresas deixam de escriturar créditos de ICMS por erro operacional, troca de sistema, NF-e não escriturada
+- Cálculo: ICMS de notas de entrada não escrituradas × 5 anos retroativos
+- Probabilidade: 75% — direito garantido por lei, basta comprovar a aquisição e o imposto destacado
+- APLICÁVEL A: qualquer contribuinte de ICMS, especialmente após migração de ERP ou troca de contabilidade
+
 ### BLOCO 3: CONTRIBUIÇÕES PREVIDENCIÁRIAS E TRABALHISTAS
 
 **TESE 3.1 — INSS Patronal sobre verbas indenizatórias**
@@ -242,6 +294,15 @@ ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Fundamento: Art. 22, II da Lei 8.212/91 | Decreto 3.048/99
 - FAP pode reduzir RAT em até 50%
 - Probabilidade: 65%
+
+**TESE 3.4 — FGTS sobre verbas indenizatórias**
+- Fundamento: Lei 8.036/90, Art. 15 | Mesma lógica das teses de INSS (Temas 985 e 478)
+- Verbas de natureza indenizatória NÃO integram a base do FGTS (8%)
+- Verbas excluídas: aviso prévio indenizado, terço de férias (quando indenizadas), auxílio-doença primeiros 15 dias, diárias de viagem acima de 50% do salário
+- Cálculo: valor das verbas indenizatórias × 8% FGTS × 5 anos
+- IMPACTO maior em: empresas com alta rotatividade (varejo, restaurantes, construção civil), setores com muitas rescisões
+- Probabilidade: 75% — jurisprudência consolidada na mesma linha do INSS
+- NOTA: O FGTS sobre aviso prévio indenizado é o de maior impacto; terço de férias gozadas é mais controverso
 
 ### BLOCO 4: IRPJ/CSLL
 
@@ -274,6 +335,25 @@ ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Exemplo: clínica de R$ 10M/ano: IRPJ tradicional (32%) = R$ 480k vs. equiparado (8%) = R$ 120k. Economia = R$ 360k/ano = R$ 1,8M em 5 anos
 - Probabilidade: 85% — tese pacificada pelo STJ, bastando cumprir requisitos
 - CRÍTICO: Setor de SAÚDE — praticamente toda clínica com centro cirúrgico ou equipamentos de diagnóstico próprios pode se enquadrar
+
+**TESE 4.5 — IRPJ/CSLL sobre SELIC em repetição de indébito (Tema 1.079 STF)**
+- Fundamento: RE 1.063.187 — Tema 1.079 STF (julgado em 2021, repercussão geral)
+- O STF decidiu que IRPJ e CSLL NÃO incidem sobre a taxa SELIC recebida em repetição de indébito tributário
+- Quando a empresa recebe de volta tributos pagos a maior (via PER/DCOMP ou restituição), a RFB atualiza o valor pela SELIC. Essa SELIC tem natureza de DANO EMERGENTE (recomposição patrimonial), não de acréscimo patrimonial
+- IMPACTO: toda empresa que já recuperou créditos tributários e recebeu SELIC pode excluir esses valores da base de IRPJ/CSLL
+- Cálculo: valor da SELIC recebida em restituições/compensações × 34% (IRPJ 25% + CSLL 9%)
+- Probabilidade: 95% — tese pacificada pelo STF com repercussão geral
+- CRÍTICO: Se a empresa já teve restituições ou compensações com SELIC, essa tese é praticamente certa. Também se aplica prospectivamente a futuras recuperações
+
+**TESE 4.6 — JCP (Juros sobre Capital Próprio) retroativo**
+- Fundamento: Lei 9.249/95, Art. 9° | IN RFB 1.700/2017 | Parecer COSIT 12/2012
+- Empresa no Lucro Real pode deduzir JCP da base de IRPJ/CSLL, limitado à TJLP × patrimônio líquido
+- PROBLEMA COMUM: muitas empresas não calculam nem pagam JCP mesmo tendo patrimônio líquido elevado — perdem a dedução
+- JCP pode ser calculado e pago retroativamente sobre exercícios anteriores (posição da RFB controversa, mas há jurisprudência favorável)
+- Cálculo: patrimônio líquido × TJLP do período × 34% de economia fiscal (limitado a 50% do lucro líquido ou 50% dos lucros acumulados)
+- Exemplo: empresa com PL de R$ 50M e TJLP de 6%: JCP = R$ 3M × 34% = R$ 1,02M de economia fiscal/ano
+- Probabilidade: 85% para JCP corrente (dedução garantida por lei); 55% para JCP retroativo (jurisprudência dividida)
+- APLICÁVEL A: toda empresa no Lucro Real com patrimônio líquido positivo significativo
 
 ### BLOCO 5: IPI (se aplicável a indústria)
 
@@ -326,14 +406,47 @@ ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Saldo credor pode ser ressarcido quando vinculado a exportação
 - Probabilidade: 65% — se empresa é industrial e importa insumos
 
+### BLOCO 8: AGROINDÚSTRIA E PRODUTOR RURAL
+
+**TESE 8.1 — Crédito presumido de PIS/COFINS na agroindústria**
+- Fundamento: Lei 10.925/2004, Art. 8° | IN RFB 1.911/2019, Arts. 518-530
+- Agroindústrias que adquirem insumos de pessoas físicas (produtores rurais PF) ou cooperativas têm direito a crédito PRESUMIDO de PIS/COFINS
+- Alíquotas do crédito presumido: PIS 0,99% e COFINS 4,56% (percentuais variam conforme o produto)
+- Produtos cobertos: carnes (bovina, suína, aves), leite, ovos, soja, trigo, milho, arroz, café, frutas, legumes
+- PROBLEMA COMUM: agroindústrias não calculam ou calculam parcialmente o crédito presumido, especialmente sobre compras de pequenos produtores
+- Cálculo: total de compras de PF/cooperativas × alíquotas presumidas × 5 anos
+- Exemplo: frigorífico com R$ 100M/ano em compras de gado de PF pode gerar R$ 5,55M/ano em créditos presumidos
+- Probabilidade: 90% — direito previsto em lei, amplamente utilizado, basta comprovar aquisições de PF
+- CRÍTICO: Frigoríficos, laticínios, usinas de açúcar e álcool, cerealistas, cooperativas agroindustriais, indústrias de sucos e conservas
+
+**TESE 8.2 — FUNRURAL — Contribuição do produtor rural**
+- Fundamento: RE 718.874 — Tema 669 STF | Art. 25 da Lei 8.212/91
+- Histórico complexo: FUNRURAL (contribuição sobre receita bruta da comercialização) foi declarado inconstitucional (RE 363.852), depois recriado pela Lei 10.256/2001
+- Para PERÍODO de 1991 a 2001: pagamento foi indevido — pode ser pedida restituição
+- Para PERÍODO pós-2001: STF considerou constitucional (Tema 669), mas existem teses acessórias:
+  * Exclusão de vendas para exportação da base do FUNRURAL (CF Art. 149, §2°, I)
+  * Sub-rogação: agroindústria que recolheu FUNRURAL sobre compras de PF pode ter crédito sobre base incorreta
+  * Venda para entrega futura: base de cálculo pode estar incorreta
+- Probabilidade: 70% para restituição período 1991-2001; 60% para teses acessórias pós-2001
+- APLICÁVEL A: produtores rurais PJ, agroindústrias que compram de PF (sub-rogação), cooperativas
+
 ## OBSERVAÇÕES PARA ESTIMATIVAS
 - Para estimar folha de pagamento: some despesas com pessoal + mão de obra direta + obrigações trabalhistas
-- Para estimar nº de funcionários: divida folha anual por salário médio do setor (metalurgia ~R$ 4.500/mês, serviços ~R$ 3.000/mês, saúde ~R$ 5.000/mês)
+- Para estimar nº de funcionários: divida folha anual por salário médio do setor (metalurgia ~R$ 4.500/mês, serviços ~R$ 3.000/mês, saúde ~R$ 5.000/mês, agro ~R$ 3.500/mês)
 - ICMS: use alíquota do estado sede (SP: 18% interno, 25% energia; RJ: 20%; MG: 18%; ES: 17% interno, 25% energia; RS: 17%; PR: 19%)
 - Se empresa EXPORTA parte da produção, SEMPRE analise TESE 2.4 (ICMS acumulado de exportação) e TESE 1.7 (PIS/COFINS exportação). Setores tipicamente exportadores: mármore/granito, siderurgia, celulose, café, soja, carnes, mineração, calçados, têxtil, autopeças
 - Se empresa é INDÚSTRIA com alto consumo de energia ou frete pesado, SEMPRE analise TESE 2.5 (frete) como item separado
 - Se empresa é do SETOR DE SAÚDE (hospital, clínica, centro médico), SEMPRE analise: TESE 1.5 (monofásico medicamentos), TESE 1.6 (ativo imobilizado), TESE 4.4 (equiparação hospitalar), TESE 6.1 (ISS), TESE 7.1 (importação)
 - Se empresa IMPORTA equipamentos ou insumos, SEMPRE analise TESE 7.1, 7.2 e 7.3 (créditos de importação)
+- Se empresa é VAREJO ou DISTRIBUIÇÃO com ICMS-ST, SEMPRE analise TESE 2.6 (ICMS-ST fora PIS/COFINS) e TESE 2.2 (ressarcimento ST)
+- Se empresa tem FILIAIS/MÚLTIPLOS ESTABELECIMENTOS, SEMPRE analise TESE 2.7 (ADC 49 transferência entre filiais)
+- Se empresa é AGROINDÚSTRIA ou compra de produtor rural PF, SEMPRE analise TESE 8.1 (crédito presumido) e TESE 8.2 (FUNRURAL)
+- Se empresa é prestadora de SERVIÇOS no Lucro Real, SEMPRE analise TESE 1.8 (ISS fora PIS/COFINS) e TESE 6.1 (ISS alíquota)
+- Se empresa já RECUPEROU CRÉDITOS anteriormente, SEMPRE analise TESE 4.5 (SELIC fora IRPJ/CSLL)
+- Se empresa tem PATRIMÔNIO LÍQUIDO elevado no Lucro Real, SEMPRE analise TESE 4.6 (JCP)
+- SEMPRE analise TESE 1.9 (receitas financeiras) para empresas no Lucro Real com aplicações financeiras
+- SEMPRE analise TESE 2.9 (crédito extemporâneo) se houver indício de troca de sistema ou erro de escrituração
+- SEMPRE analise TESE 3.4 (FGTS) junto com TESE 3.1 (INSS) — mesma lógica, impacto adicional
 - Se não tiver dados suficientes para calcular, ESTIME baseado em percentuais típicos e INFORME que é estimativa
 - NUNCA deixe de analisar uma tese por falta de dados — use estimativas conservadoras
 
@@ -344,7 +457,7 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários:
   "oportunidades": [
     {
       "tipo": "Nome descritivo (ex: Exclusão do ICMS da base do PIS - Tema 69)",
-      "tributo": "PIS|COFINS|ICMS|INSS|IRPJ|CSLL|IPI|RAT|FGTS|ISS|II|PIS-IMPORT|COFINS-IMPORT",
+      "tributo": "PIS|COFINS|ICMS|INSS|IRPJ|CSLL|IPI|RAT|FGTS|ISS|II|PIS-IMPORT|COFINS-IMPORT|FUNRURAL|DIFAL",
       "descricao": "Descrição detalhada com memória de cálculo resumida",
       "valorEstimado": 0.00,
       "fundamentacaoLegal": "Lei X art. Y | RE/REsp número — Tema Z STF/STJ",
