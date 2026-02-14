@@ -18,7 +18,7 @@ export default function PartnerSidebar() {
     localStorage.removeItem('token');
     localStorage.removeItem('userRole');
     localStorage.removeItem('partnerName');
-    router.push('/parceiro-login');
+    window.location.href = '/';
   };
 
   const partnerName = typeof window !== 'undefined' ? localStorage.getItem('partnerName') : '';

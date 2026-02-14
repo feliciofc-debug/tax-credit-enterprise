@@ -82,7 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('role');
-    router.push('/login');
+    window.location.href = '/';
   };
 
   // Don't wrap the login page itself

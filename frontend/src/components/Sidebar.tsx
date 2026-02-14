@@ -15,8 +15,8 @@ export default function Sidebar() {
   const router = useRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    router.push('/login');
+    localStorage.clear();
+    window.location.href = '/';
   };
 
   return (

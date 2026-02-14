@@ -78,7 +78,7 @@ export default function ClientProfilePage() {
 
   const handleLogout = () => {
     localStorage.clear();
-    window.location.href = '/login';
+    window.location.href = '/';
   };
 
   const updateField = (field: string, value: string) => {
