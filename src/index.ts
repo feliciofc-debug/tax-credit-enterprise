@@ -20,6 +20,7 @@ import adminRoutes from './routes/admin.routes';
 import authRoutes from './routes/auth.routes';
 import profileRoutes from './routes/profile.routes';
 import formalizationRoutes from './routes/formalization.routes';
+import hpcRoutes from './routes/hpc.routes';
 
 dotenv.config();
 
@@ -128,6 +129,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/formalization', formalizationRoutes);
+app.use('/api/hpc', hpcRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -147,6 +149,7 @@ app.listen(PORT, () => {
   logger.info(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`CORS: ${allowedOrigins.join(', ') || 'aberto (dev)'}`);
   logger.info(`Automacao de creditos: ATIVA`);
+  logger.info(`HPC Gateway: ${process.env.HPC_GATEWAY_URL ? 'ATIVO (' + process.env.HPC_GATEWAY_URL + ')' : 'DESATIVADO'}`);
 });
 
 export default app;
