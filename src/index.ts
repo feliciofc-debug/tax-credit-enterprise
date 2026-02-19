@@ -42,8 +42,9 @@ const allowedOrigins = [
   'https://tax-credit-enterprise-92lv.vercel.app',  // Vercel default
   'https://taxcreditenterprise.com',                 // Dominio principal
   'https://www.taxcreditenterprise.com',             // WWW
-  process.env.FRONTEND_URL,       // URL do frontend (configuravel)
-  process.env.CUSTOM_DOMAIN_URL,  // Dominio customizado extra
+  'https://hpc.taxcreditenterprise.com',             // Preview HPC branch
+  process.env.FRONTEND_URL,
+  process.env.CUSTOM_DOMAIN_URL,
 ].filter(Boolean) as string[];
 
 // Em desenvolvimento, permitir localhost
