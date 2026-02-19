@@ -471,6 +471,7 @@ router.get('/list', authenticateToken, async (req: Request, res: Response) => {
         totalRecovered: c.totalRecovered,
         partnerEarnings: c.partnerEarnings,
         estimatedCredits: (c as any).estimatedCredits || 0,
+        checklist: (c as any).checklist || null,
         createdAt: c.createdAt,
       })),
     });
@@ -524,6 +525,88 @@ router.get('/my-clients', authenticateToken, async (req: Request, res: Response)
   } catch (error: any) {
     logger.error('Error listing partner clients:', error);
     return res.status(500).json({ success: false, error: 'Erro ao listar clientes' });
+  }
+});
+
+/**
+ * PATCH /api/contract/:id/status
+ * Admin atualiza status do contrato manualmente
+ */
+router.patch('/:id/status', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Somente administradores' });
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const validStatuses = [
+      'draft', 'generated', 'sent_for_signature', 'signed',
+      'sent_to_bank', 'bank_registered', 'active', 'completed', 'cancelled',
+    ];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: `Status invalido. Validos: ${validStatuses.join(', ')}` });
+    }
+
+    const contract = await prisma.contract.findUnique({ where: { id } });
+    if (!contract) {
+      return res.status(404).json({ success: false, error: 'Contrato nao encontrado' });
+    }
+
+    await prisma.contract.update({ where: { id }, data: { status } });
+
+    logger.info(`Contract ${contract.contractNumber} status changed to ${status} by admin`);
+    return res.json({ success: true, message: `Status atualizado para ${status}` });
+  } catch (error: any) {
+    logger.error('Error updating contract status:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar status' });
+  }
+});
+
+/**
+ * PATCH /api/contract/:id/checklist
+ * Admin atualiza checklist de acompanhamento do contrato
+ * Auto-activates contract when bank_registered + fee_received are both checked
+ */
+router.patch('/:id/checklist', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Somente administradores' });
+    }
+
+    const { id } = req.params;
+    const { checklist } = req.body;
+
+    if (!checklist || typeof checklist !== 'object') {
+      return res.status(400).json({ success: false, error: 'Checklist invalido' });
+    }
+
+    const contract = await prisma.contract.findUnique({ where: { id } });
+    if (!contract) {
+      return res.status(404).json({ success: false, error: 'Contrato nao encontrado' });
+    }
+
+    const updateData: any = { checklist };
+
+    // Auto-activation: bank registered + fee received => active + unlock analysis
+    if (checklist.bank_registered && checklist.fee_received) {
+      updateData.status = 'active';
+      updateData.consultaLiberada = true;
+      updateData.formalizacaoLiberada = true;
+      updateData.setupFeePaid = true;
+      updateData.setupFeePaidAt = contract.setupFeePaidAt || new Date();
+      logger.info(`Contract ${contract.contractNumber} AUTO-ACTIVATED: bank registered + fee received`);
+    }
+
+    await prisma.contract.update({ where: { id }, data: updateData });
+
+    return res.json({ success: true, message: 'Checklist atualizado', autoActivated: !!(checklist.bank_registered && checklist.fee_received) });
+  } catch (error: any) {
+    logger.error('Error updating checklist:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao atualizar checklist' });
   }
 });
 

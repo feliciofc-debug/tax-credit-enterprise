@@ -239,6 +239,9 @@ model Contract {
   // Status: draft, pending_payment, payment_claimed, pending_signatures, active, completed, cancelled
   status          String  @default("draft")
   
+  // Checklist de acompanhamento (JSON com estados booleanos)
+  checklist        Json?
+  
   // Valores realizados
   totalRecovered   Float   @default(0)
   clientEarnings   Float   @default(0)

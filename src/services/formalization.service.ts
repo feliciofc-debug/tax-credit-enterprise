@@ -554,9 +554,24 @@ ou em processo de recuperacao durante a vigencia.
 11.3. Apos rescisao, a TAXCREDIT mantem direito sobre creditos
 identificados pelo prazo de 5 anos.
 
-CLAUSULA DECIMA SEGUNDA — DO FORO
+CLAUSULA DECIMA SEGUNDA — DA FORMALIZACAO E REGISTRO
 
-12.1. Foro da ${TAXCREDIT.foro}, com renuncia a qualquer
+12.1. O presente contrato sera assinado por todas as Partes com
+FIRMA RECONHECIDA EM CARTORIO, sendo esta condicao indispensavel
+para sua validade e plena execucao.
+
+12.2. Copia do contrato com firmas reconhecidas sera encaminhada
+ao Banco Fibra S.A. para cadastramento da operacao de conta escrow.
+
+12.3. A analise detalhada e entrega do relatorio completo de
+oportunidades somente ocorrera APOS:
+a) Assinatura do contrato por todas as Partes com firma reconhecida;
+b) Pagamento integral da taxa de adesao;
+c) Confirmacao do cadastramento da operacao pelo Banco Fibra S.A.
+
+CLAUSULA DECIMA TERCEIRA — DO FORO
+
+13.1. Foro da ${TAXCREDIT.foro}, com renuncia a qualquer
 outro, por mais privilegiado que seja.
 
 E por estarem justas e contratadas:
@@ -847,9 +862,24 @@ ou em processo de recuperacao durante a vigencia.
 12.3. Apos rescisao, a TAXCREDIT mantem direito sobre creditos
 identificados pelo prazo de 5 anos.
 
-CLAUSULA DECIMA TERCEIRA — DO FORO
+CLAUSULA DECIMA TERCEIRA — DA FORMALIZACAO E REGISTRO
 
-13.1. Foro da ${TAXCREDIT.foro}, com renuncia a qualquer
+13.1. O presente contrato sera assinado por todas as Partes com
+FIRMA RECONHECIDA EM CARTORIO, sendo esta condicao indispensavel
+para sua validade e plena execucao.
+
+13.2. Copia do contrato com firmas reconhecidas sera encaminhada
+ao Banco Fibra S.A. para cadastramento da operacao de conta escrow.
+
+13.3. A analise detalhada e entrega do relatorio completo de
+oportunidades somente ocorrera APOS:
+a) Assinatura do contrato por todas as Partes com firma reconhecida;
+b) Pagamento integral da taxa de adesao;
+c) Confirmacao do cadastramento da operacao pelo Banco Fibra S.A.
+
+CLAUSULA DECIMA QUARTA — DO FORO
+
+14.1. Foro da ${TAXCREDIT.foro}, com renuncia a qualquer
 outro, por mais privilegiado que seja.
 
 E por estarem justas e contratadas:

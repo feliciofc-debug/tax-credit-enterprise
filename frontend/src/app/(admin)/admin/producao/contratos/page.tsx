@@ -6,6 +6,19 @@ import { useState, useEffect, useCallback } from 'react';
 // Types
 // ============================
 
+interface ContractChecklist {
+  contract_generated?: boolean;
+  sent_for_client_signature?: boolean;
+  client_signed?: boolean;
+  taxcredit_signed?: boolean;
+  partner_signed?: boolean;
+  fee_received?: boolean;
+  sent_to_bank?: boolean;
+  bank_registered?: boolean;
+  escrow_active?: boolean;
+  analysis_released?: boolean;
+}
+
 interface Contract {
   id: string;
   contractNumber: string;
@@ -25,6 +38,7 @@ interface Contract {
   clientCompany: string;
   partnerName: string | null;
   partnerCompany: string | null;
+  checklist: ContractChecklist | null;
   createdAt: string;
 }
 
@@ -55,6 +69,14 @@ export default function AdminContratosPage() {
   const [previewText, setPreviewText] = useState('');
   const [filter, setFilter] = useState<'all' | 'bipartite' | 'tripartite'>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Detail view (checklist + Banco Fibra card)
+  const [detailContract, setDetailContract] = useState<Contract | null>(null);
+  const [checklistState, setChecklistState] = useState<ContractChecklist>({});
+  const [checklistSaving, setChecklistSaving] = useState(false);
+
+  // Status dropdown
+  const [statusDropdownId, setStatusDropdownId] = useState<string | null>(null);
 
   // Confirm payment modal
   const [confirmModal, setConfirmModal] = useState<string | null>(null);
@@ -399,28 +421,139 @@ export default function AdminContratosPage() {
 
   const statusColor = (s: string) => {
     const map: Record<string, string> = {
-      active: 'text-green-700 bg-green-100',
       draft: 'text-yellow-700 bg-yellow-100',
+      generated: 'text-gray-700 bg-gray-200',
+      sent_for_signature: 'text-blue-700 bg-blue-100',
+      signed: 'text-purple-700 bg-purple-100',
+      sent_to_bank: 'text-orange-700 bg-orange-100',
+      bank_registered: 'text-emerald-700 bg-emerald-100',
+      active: 'text-green-700 bg-green-100',
+      completed: 'text-blue-900 bg-blue-200',
+      cancelled: 'text-red-700 bg-red-100',
       pending_payment: 'text-orange-700 bg-orange-100',
       payment_claimed: 'text-blue-700 bg-blue-100 animate-pulse',
       pending_signatures: 'text-indigo-700 bg-indigo-100',
-      completed: 'text-purple-700 bg-purple-100',
-      cancelled: 'text-red-700 bg-red-100',
     };
     return map[s] || 'text-gray-600 bg-gray-100';
   };
 
   const statusLabel = (s: string) => {
     const map: Record<string, string> = {
-      active: 'Ativo',
       draft: 'Rascunho',
+      generated: 'Contrato Gerado',
+      sent_for_signature: 'Enviado p/ Assinatura',
+      signed: 'Assinado (Firma)',
+      sent_to_bank: 'Enviado ao Banco',
+      bank_registered: 'Cadastrado no Banco',
+      active: 'Ativo',
+      completed: 'Concluido',
+      cancelled: 'Cancelado',
       pending_payment: 'Aguardando Pagamento',
       payment_claimed: 'PAGAMENTO INFORMADO',
       pending_signatures: 'Aguardando Assinatura',
-      completed: 'Concluido',
-      cancelled: 'Cancelado',
     };
     return map[s] || s;
+  };
+
+  const STATUS_FLOW = [
+    'draft', 'generated', 'sent_for_signature', 'signed',
+    'sent_to_bank', 'bank_registered', 'active', 'completed', 'cancelled',
+  ];
+
+  const getNextStatuses = (current: string): string[] => {
+    const idx = STATUS_FLOW.indexOf(current);
+    if (idx === -1) return STATUS_FLOW;
+    return STATUS_FLOW.filter((_, i) => i > idx || STATUS_FLOW[i] === 'cancelled');
+  };
+
+  const handleStatusChange = async (contractId: string, newStatus: string) => {
+    setStatusDropdownId(null);
+    try {
+      const res = await fetch(`${apiBase}/api/contract/${contractId}/status`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchContracts();
+        if (detailContract?.id === contractId) {
+          setDetailContract({ ...detailContract, status: newStatus });
+        }
+      }
+    } catch {}
+  };
+
+  const handleOpenDetail = (c: Contract) => {
+    setDetailContract(c);
+    setChecklistState(c.checklist || {});
+  };
+
+  const handleChecklistToggle = async (key: keyof ContractChecklist) => {
+    if (!detailContract) return;
+    const updated = { ...checklistState, [key]: !checklistState[key] };
+    setChecklistState(updated);
+    setChecklistSaving(true);
+
+    try {
+      const res = await fetch(`${apiBase}/api/contract/${detailContract.id}/checklist`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checklist: updated }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.autoActivated) {
+          setConfirmSuccess('Contrato ATIVADO automaticamente! Analise liberada.');
+          setTimeout(() => setConfirmSuccess(''), 5000);
+          setDetailContract({ ...detailContract, status: 'active', checklist: updated });
+        } else {
+          setDetailContract({ ...detailContract, checklist: updated });
+        }
+        fetchContracts();
+      }
+    } catch {} finally {
+      setChecklistSaving(false);
+    }
+  };
+
+  const buildMailtoUrl = (c: Contract) => {
+    const to = 'ester.souza@bancofibra.com.br,rodrigo.santos@bancofibra.com.br';
+    const subject = encodeURIComponent(`Cadastro Operacao Escrow - TaxCredit Enterprise - ${c.clientCompany || c.clientName} - CNPJ ${''}`);
+    const isTripartite = c.contractType === 'tripartite';
+    const body = encodeURIComponent(
+`Prezados Ester e Rodrigo,
+
+Segue contrato de prestacao de servicos de recuperacao de creditos tributarios com firma reconhecida para cadastramento de operacao escrow.
+
+DADOS DA OPERACAO:
+Tipo: ${isTripartite ? 'Tripartite' : 'Bipartite'}
+
+PARTE 1 - CONTRATADA:
+ATOM BRASIL DIGITAL LTDA
+CNPJ: 22.003.550/0001-05
+
+PARTE 2 - CLIENTE:
+${c.clientCompany || c.clientName}
+
+${isTripartite ? `PARTE 3 - PARCEIRO:
+${c.partnerCompany || c.partnerName || 'N/A'}
+` : ''}
+PERCENTUAIS DE SPLIT:
+Cliente: ${c.clientSplitPercent}%
+TaxCredit: ${c.platformSplitPercent}%
+${isTripartite ? `Parceiro: ${c.partnerSplitPercent}%` : ''}
+
+Valor estimado da operacao: R$ ${c.estimatedCredits ? c.estimatedCredits.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
+
+Solicitamos a abertura da conta escrow e configuracao do split automatico conforme percentuais acima.
+
+Atenciosamente,
+Felicio Frauches Carega
+ATOM BRASIL DIGITAL LTDA
+CNPJ: 22.003.550/0001-05`
+    );
+    return `mailto:${to}?subject=${subject}&body=${body}`;
   };
 
   const typeLabel = (t: string) => t === 'bipartite' ? 'Bipartite' : 'Tripartite';
@@ -531,9 +664,11 @@ export default function AdminContratosPage() {
         >
           <option value="all">Todos Status</option>
           <option value="draft">Rascunho</option>
-          <option value="pending_payment">Aguardando Pgto</option>
-          <option value="payment_claimed">Pgto Informado</option>
-          <option value="pending_signatures">Aguardando Assinatura</option>
+          <option value="generated">Contrato Gerado</option>
+          <option value="sent_for_signature">Env. p/ Assinatura</option>
+          <option value="signed">Assinado (Firma)</option>
+          <option value="sent_to_bank">Enviado ao Banco</option>
+          <option value="bank_registered">Cadastrado Banco</option>
           <option value="active">Ativo</option>
           <option value="completed">Concluido</option>
           <option value="cancelled">Cancelado</option>
@@ -558,9 +693,29 @@ export default function AdminContratosPage() {
                       <span className={`text-xs px-2 py-0.5 rounded font-semibold ${typeBadge(c.contractType)}`}>
                         {typeLabel(c.contractType)}
                       </span>
-                      <span className={`text-xs px-2 py-0.5 rounded font-semibold ${statusColor(c.status)}`}>
-                        {statusLabel(c.status)}
-                      </span>
+                      {/* Clickable status badge with dropdown */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setStatusDropdownId(statusDropdownId === c.id ? null : c.id)}
+                          className={`text-xs px-2 py-0.5 rounded font-semibold cursor-pointer hover:opacity-80 ${statusColor(c.status)}`}
+                        >
+                          {statusLabel(c.status)}
+                        </button>
+                        {statusDropdownId === c.id && (
+                          <div className="absolute top-6 left-0 z-30 bg-white border border-gray-200 rounded-lg shadow-xl py-1 min-w-[180px]">
+                            {getNextStatuses(c.status).map(s => (
+                              <button
+                                key={s}
+                                onClick={() => handleStatusChange(c.id, s)}
+                                className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 flex items-center gap-2"
+                              >
+                                <span className={`w-2 h-2 rounded-full ${statusColor(s).replace('text-', 'bg-').split(' ')[0]}`} />
+                                {statusLabel(s)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       {c.setupFeePaid && (
                         <span className="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700 font-semibold">
                           Taxa Paga
@@ -592,19 +747,17 @@ export default function AdminContratosPage() {
                     </div>
                     <div className="flex gap-2 flex-wrap justify-end">
                       <button
+                        onClick={() => handleOpenDetail(c)}
+                        className="text-xs px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-medium"
+                      >
+                        Detalhes
+                      </button>
+                      <button
                         onClick={() => handleViewContract(c.id)}
                         className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium"
                       >
                         Ver Contrato
                       </button>
-                      {!c.partnerSigned && (
-                        <button
-                          onClick={() => handleSignContract(c.id)}
-                          className="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium"
-                        >
-                          Assinar (TaxCredit)
-                        </button>
-                      )}
                       {!c.setupFeePaid && (
                         <button
                           onClick={() => { setConfirmModal(c.id); setConfirmError(''); setAdminPassword(''); }}
@@ -1022,6 +1175,132 @@ export default function AdminContratosPage() {
               <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed bg-gray-50 p-6 rounded-xl border border-gray-200">
                 {previewText}
               </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================ */}
+      {/* Detail Modal: Checklist + Banco Fibra Card   */}
+      {/* ============================================ */}
+      {detailContract && (
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl mx-4">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">{detailContract.contractNumber}</h2>
+                <p className="text-gray-500 text-sm">{detailContract.clientCompany || detailContract.clientName} — {typeLabel(detailContract.contractType)}</p>
+              </div>
+              <button onClick={() => setDetailContract(null)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+
+            <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              {/* Status */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-gray-700">Status:</span>
+                <span className={`text-sm px-3 py-1 rounded font-bold ${statusColor(detailContract.status)}`}>{statusLabel(detailContract.status)}</span>
+              </div>
+
+              {/* Checklist */}
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <h3 className="text-sm font-bold text-gray-900 mb-4">Checklist de Acompanhamento</h3>
+                <div className="space-y-3">
+                  {[
+                    { key: 'contract_generated' as const, label: 'Contrato gerado' },
+                    { key: 'sent_for_client_signature' as const, label: 'Contrato enviado para assinatura do cliente' },
+                    { key: 'client_signed' as const, label: 'Cliente assinou com firma reconhecida' },
+                    { key: 'taxcredit_signed' as const, label: 'TaxCredit assinou com firma reconhecida' },
+                    ...(detailContract.contractType === 'tripartite'
+                      ? [{ key: 'partner_signed' as const, label: 'Parceiro assinou com firma reconhecida' }]
+                      : []),
+                    { key: 'fee_received' as const, label: `Taxa de adesao recebida (${formatCurrency(detailContract.setupFee)})` },
+                    { key: 'sent_to_bank' as const, label: 'Contrato enviado ao Banco Fibra' },
+                    { key: 'bank_registered' as const, label: 'Operacao cadastrada pelo Banco Fibra' },
+                    { key: 'escrow_active' as const, label: 'Conta escrow ativa' },
+                    { key: 'analysis_released' as const, label: 'Analise completa liberada ao cliente' },
+                  ].map(item => (
+                    <label key={item.key} className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={!!checklistState[item.key]}
+                        onChange={() => handleChecklistToggle(item.key)}
+                        disabled={checklistSaving}
+                        className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <span className={`text-sm ${checklistState[item.key] ? 'text-green-700 line-through' : 'text-gray-700'} group-hover:text-indigo-700`}>
+                        {item.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                {checklistSaving && <p className="text-xs text-indigo-500 mt-2 animate-pulse">Salvando...</p>}
+                {checklistState.bank_registered && checklistState.fee_received && (
+                  <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-green-700 text-xs font-bold">
+                      Banco cadastrado + Taxa recebida = Contrato ATIVADO automaticamente. Analise liberada!
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Banco Fibra Card — shown when signed or later */}
+              {['signed', 'sent_to_bank', 'bank_registered', 'active'].includes(detailContract.status) && (
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-5">
+                  <h3 className="text-sm font-bold text-amber-900 mb-3">Enviar ao Banco Fibra para Cadastro da Escrow</h3>
+                  <p className="text-xs text-amber-800 mb-3">
+                    Envie o contrato assinado com firma reconhecida para:
+                  </p>
+                  <div className="space-y-2 mb-4">
+                    {[
+                      { name: 'Ester Souza', email: 'ester.souza@bancofibra.com.br' },
+                      { name: 'Rodrigo Santos', email: 'rodrigo.santos@bancofibra.com.br' },
+                    ].map(contact => (
+                      <div key={contact.email} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-amber-200">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{contact.name}</p>
+                          <p className="text-xs text-gray-500">{contact.email}</p>
+                        </div>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(contact.email)}
+                          className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded"
+                          title="Copiar email"
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-3">
+                    <a
+                      href={buildMailtoUrl(detailContract)}
+                      className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-lg text-center"
+                    >
+                      Abrir Email com Dados
+                    </a>
+                    {detailContract.status === 'signed' && (
+                      <button
+                        onClick={() => handleStatusChange(detailContract.id, 'sent_to_bank')}
+                        className="px-4 py-2.5 bg-white border border-amber-400 hover:bg-amber-50 text-amber-700 text-sm font-medium rounded-lg"
+                      >
+                        Marcar como Enviado
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Post-generation instructions — shown right after generating */}
+              {['draft', 'generated'].includes(detailContract.status) && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                  <h3 className="text-sm font-bold text-blue-900 mb-2">Proximo Passo</h3>
+                  <p className="text-xs text-blue-800 leading-relaxed">
+                    Todas as partes devem assinar o contrato com <strong>FIRMA RECONHECIDA EM CARTORIO</strong> e enviar copia digitalizada para o Banco Fibra para cadastramento da operacao escrow.
+                  </p>
+                  <p className="text-xs text-blue-700 mt-2">
+                    Contatos Banco Fibra: ester.souza@bancofibra.com.br | rodrigo.santos@bancofibra.com.br
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
