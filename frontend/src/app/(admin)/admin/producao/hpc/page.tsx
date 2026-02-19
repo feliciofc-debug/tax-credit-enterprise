@@ -83,9 +83,13 @@ export default function HPCTestPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
 
+  const apiBase = typeof window !== 'undefined'
+    ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
+    : '';
+
   useEffect(() => {
     checkStatus();
-  }, []);
+  }, [apiBase]);
 
   useEffect(() => {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
@@ -96,7 +100,7 @@ export default function HPCTestPage() {
     setStatusError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/hpc/status', {
+      const res = await fetch(`${apiBase}/api/hpc/status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -149,7 +153,7 @@ export default function HPCTestPage() {
         formData.append('documentType', 'sped');
       }
 
-      const endpoint = mode === 'process-only' ? '/api/hpc/process-only' : '/api/hpc/analyze';
+      const endpoint = mode === 'process-only' ? `${apiBase}/api/hpc/process-only` : `${apiBase}/api/hpc/analyze`;
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -200,7 +204,7 @@ export default function HPCTestPage() {
           HPC Motor — Teste de Pipeline
         </h1>
         <p className="text-gray-500 text-sm mt-1">
-          Envie arquivos SPED para testar o processamento Go+Chapel + análise Claude Opus
+          Envie arquivos SPED (.txt ou .zip) para processamento Go+Chapel + análise Claude Opus
         </p>
       </div>
 
@@ -301,7 +305,7 @@ export default function HPCTestPage() {
           >
             <p className="font-semibold text-gray-900 text-sm">Análise Completa (HPC + Claude)</p>
             <p className="text-xs text-gray-500 mt-1">
-              Parse no HPC + análise jurídica com Claude Opus. Pipeline completo.
+              Parse no HPC + análise jurídica com Claude Opus. Aceita ZIP. Fallback automático.
             </p>
           </button>
         </div>
@@ -389,7 +393,7 @@ export default function HPCTestPage() {
         {/* Submit */}
         <button
           onClick={handleProcess}
-          disabled={processing || files.length === 0 || !hpcOnline}
+          disabled={processing || files.length === 0 || (mode === 'process-only' && !hpcOnline)}
           className={`w-full py-3.5 font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-white ${
             mode === 'process-only'
               ? 'bg-amber-500 hover:bg-amber-600'
