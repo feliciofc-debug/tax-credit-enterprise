@@ -602,6 +602,13 @@ export default function AdminAnalisesPage() {
               </div>
             )}
 
+            {/* Nota conservadora */}
+            <div className="px-6 py-3 bg-blue-50 border-t border-blue-100">
+              <p className="text-xs text-blue-700 italic">
+                Valores sao estimativas conservadoras. O valor real recuperado pode ser superior ao estimado.
+              </p>
+            </div>
+
             {/* Rodape */}
             <div className="px-6 py-3 bg-gray-100 text-xs text-gray-400 flex justify-between">
               <span>Analise: IA Avancada | TaxCredit Enterprise</span>
@@ -738,6 +745,12 @@ export default function AdminAnalisesPage() {
                 <div className="summary-box">{detail.fundamentacaoGeral}</div>
               </div>
             )}
+
+            <div className="summary-box" style={{ background: '#eff6ff', border: '1px solid #bfdbfe', marginBottom: '12px' }}>
+              <p style={{ fontSize: '10px', color: '#1d4ed8', fontStyle: 'italic' }}>
+                Valores sao estimativas conservadoras. O valor real recuperado pode ser superior ao estimado.
+              </p>
+            </div>
 
             <div className="footer">
               <span>Analise: IA Avancada | TaxCredit Enterprise | taxcreditenterprise.com</span>

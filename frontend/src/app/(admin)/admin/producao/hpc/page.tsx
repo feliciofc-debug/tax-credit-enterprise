@@ -769,6 +769,13 @@ export default function HPCTestPage() {
               </div>
             )}
 
+            {/* Nota conservadora */}
+            <div className="px-6 py-3 bg-blue-50 border-t border-blue-100">
+              <p className="text-xs text-blue-700 italic">
+                Valores sao estimativas conservadoras. O valor real recuperado pode ser superior ao estimado.
+              </p>
+            </div>
+
             {/* Rodape */}
             <div className="px-6 py-3 bg-gray-100 text-xs text-gray-400 flex justify-between">
               <span>Analise: IA Avancada (34 teses) | HPC Go+Chapel + Claude Opus | TaxCredit Enterprise</span>

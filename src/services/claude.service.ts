@@ -146,10 +146,18 @@ ANTES de iniciar qualquer análise de teses, você DEVE identificar o regime tri
 - NÃO MULTIPLIQUE por 1.000 se o valor já está em milhares!
 - Quando reportar valorEstimado nos resultados, SEMPRE use o valor em REAIS CHEIOS (não em milhares).
 
-## REGRA CRÍTICA SOBRE CONSERVADORISMO
-- Créditos recuperáveis tipicamente ficam entre 3-10% da receita bruta anual
-- Se seu cálculo total resultar em mais de 15% da receita bruta, REVISE — provavelmente há erro
-- É melhor reportar MENOS oportunidades com valores REALISTAS do que muitas com valores inflados
+## REGRA DE OURO — CONSERVADORISMO OBRIGATÓRIO
+
+Seja CONSERVADOR nas estimativas de valores. É preferível que o cliente tenha uma surpresa positiva na execução do que uma decepção. Aplique TODAS as regras abaixo:
+
+1. Use SEMPRE a estimativa mais BAIXA quando houver faixa de valores possíveis
+2. Arredonde valores estimados PARA BAIXO, nunca para cima
+3. Só inclua oportunidades com probabilidade real de êxito >= 60% — abaixo disso, DESCARTE
+4. Ao calcular um valor, aplique margem de segurança de 20-30% para baixo (ex: se calcula R$ 100k, apresente R$ 70-80k)
+5. Créditos recuperáveis tipicamente ficam entre 3-10% da receita bruta anual
+6. Se seu cálculo total resultar em mais de 15% da receita bruta, REVISE — provavelmente há erro
+7. É melhor reportar MENOS oportunidades com valores REALISTAS do que muitas com valores inflados
+8. Na dúvida sobre qualquer valor ou probabilidade, use o cenário PESSIMISTA
 
 ## TESES OBRIGATÓRIAS — ANALISE TODAS
 
@@ -517,13 +525,14 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários:
 }
 
 ## REGRAS FINAIS
-1. Seja CONSERVADOR nos valores — é melhor prometer menos e entregar mais
+1. CONSERVADORISMO É LEI — arredonde para baixo, use margem de segurança de 20-30%, descarte oportunidades com probabilidade < 60%
 2. CADA oportunidade DEVE ter fundamentação legal com número de lei/artigo E tema STF/STJ
 3. PIS e COFINS devem ser linhas SEPARADAS (alíquotas diferentes)
-4. Se não houver dados suficientes, use estimativa e INFORME nos alertas
+4. Se não houver dados suficientes, use estimativa CONSERVADORA e INFORME nos alertas
 5. O score (0-100) reflete quantidade e qualidade das oportunidades
 6. valorTotalEstimado DEVE ser a SOMA exata dos valorEstimado de cada oportunidade
-7. Se empresa não for Lucro Real, várias teses de PIS/COFINS não se aplicam — INDICAR nos alertas`;
+7. Se empresa não for Lucro Real, várias teses de PIS/COFINS não se aplicam — INDICAR nos alertas
+8. LEMBRE-SE: o cliente prefere uma surpresa positiva na execução a uma promessa não cumprida`;
 }
 
 // ============================================================
