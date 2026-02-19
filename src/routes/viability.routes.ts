@@ -95,7 +95,8 @@ async function processUploadedFiles(files: Express.Multer.File[]) {
  */
 router.post('/analyze', authenticateToken, upload.array('documents', 10), async (req: Request, res: Response) => {
   try {
-    const partnerId = await getOperatorPartnerId((req as any).user);
+    const user = (req as any).user;
+    const partnerId = await getOperatorPartnerId(user);
     if (!partnerId) {
       return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros e administradores' });
     }
@@ -109,6 +110,27 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
 
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, error: 'Envie pelo menos um documento para análise' });
+    }
+
+    // Limite diário: 2 análises por parceiro (admin isento)
+    if (user.role !== 'admin') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayCount = await prisma.viabilityAnalysis.count({
+        where: {
+          partnerId,
+          createdAt: { gte: today },
+        },
+      });
+      if (todayCount >= 2) {
+        return res.status(429).json({
+          success: false,
+          error: 'Limite diário atingido',
+          message: 'Você já realizou 2 consultas hoje. Para mais consultas, entre em contato pelo WhatsApp (21) 96752-0706.',
+          whatsapp: '5521967520706',
+          limiteRestante: 0,
+        });
+      }
     }
 
     // Criar registro da análise
@@ -478,7 +500,13 @@ router.get('/admin-analyses', authenticateToken, async (req: Request, res: Respo
       orderBy: { createdAt: 'desc' },
       include: {
         partner: {
-          select: { company: true, name: true },
+          select: {
+            id: true, company: true, name: true, cnpj: true,
+            oabNumber: true, oabState: true, phone: true,
+            endereco: true, cidade: true, estado: true,
+            bankName: true, bankAgency: true, bankAccount: true,
+            bankAccountHolder: true, bankCpfCnpj: true,
+          },
         },
       },
     });
@@ -504,7 +532,24 @@ router.get('/admin-analyses', authenticateToken, async (req: Request, res: Respo
         alertas,
         status: a.status,
         hasFullAnalysis: oportunidades.length > 0,
+        partnerId: a.partnerId,
         partnerName: a.partner?.company || a.partner?.name || 'Admin direto',
+        partner: a.partner ? {
+          id: a.partner.id,
+          name: a.partner.name,
+          company: a.partner.company,
+          cnpj: a.partner.cnpj,
+          oabNumber: a.partner.oabNumber,
+          oabState: a.partner.oabState,
+          endereco: a.partner.endereco,
+          cidade: a.partner.cidade,
+          estado: a.partner.estado,
+          bankName: a.partner.bankName,
+          bankAgency: a.partner.bankAgency,
+          bankAccount: a.partner.bankAccount,
+          bankAccountHolder: a.partner.bankAccountHolder,
+          bankCpfCnpj: a.partner.bankCpfCnpj,
+        } : null,
         createdAt: a.createdAt,
       };
     });

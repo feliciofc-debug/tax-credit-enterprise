@@ -3,6 +3,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { CHECKLISTS, UF_OPTIONS, TIPO_LABELS, TIPO_COLORS, type ChecklistEstado, type ChecklistEtapa } from '@/data/checklists';
 
+interface PartnerData {
+  id: string;
+  name: string;
+  company?: string;
+  cnpj?: string;
+  oabNumber?: string;
+  oabState?: string;
+  endereco?: string;
+  cidade?: string;
+  estado?: string;
+  bankName?: string;
+  bankAgency?: string;
+  bankAccount?: string;
+  bankAccountHolder?: string;
+  bankCpfCnpj?: string;
+}
+
 interface AnalysisForFormalization {
   id: string;
   companyName: string;
@@ -10,7 +27,9 @@ interface AnalysisForFormalization {
   estimatedCredit: number;
   viabilityScore: number;
   scoreLabel: string;
+  partnerId?: string;
   partnerName: string;
+  partner?: PartnerData | null;
   createdAt: string;
   opportunities: any[];
   contractId?: string;
@@ -54,14 +73,18 @@ export default function FormalizacaoPage() {
     periodoDebito: '',
   });
 
+  const apiBase = typeof window !== 'undefined'
+    ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
+    : '';
+
   useEffect(() => {
-    fetchAnalyses();
-  }, []);
+    if (apiBase !== undefined) fetchAnalyses();
+  }, [apiBase]);
 
   const fetchAnalyses = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/viability/admin-analyses', {
+      const res = await fetch(`${apiBase}/api/viability/admin-analyses`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -106,7 +129,7 @@ export default function FormalizacaoPage() {
     setGenerating(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/formalization/generate-sefaz', {
+      const res = await fetch(`${apiBase}/api/formalization/generate-sefaz`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -133,7 +156,7 @@ export default function FormalizacaoPage() {
     setGenerating(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/formalization/generate-perdcomp', {
+      const res = await fetch(`${apiBase}/api/formalization/generate-perdcomp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -175,7 +198,7 @@ export default function FormalizacaoPage() {
     { id: 'checklist', label: 'Checklist por Estado', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
     { id: 'sefaz', label: 'Requerimento SEFAZ', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
     { id: 'perdcomp', label: 'Parecer PER/DCOMP', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-    { id: 'contrato', label: 'Contrato Bipartite', icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' },
+    { id: 'contrato', label: 'Gerar Contrato', icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' },
   ];
 
   return (
@@ -656,30 +679,35 @@ export default function FormalizacaoPage() {
         </div>
       )}
 
-      {/* CONTRATO BIPARTITE TAB */}
+      {/* CONTRATO TAB (auto-detects bipartite/tripartite) */}
       {activeTab === 'contrato' && (
-        <BipartiteContractTab analyses={analyses} loading={loading} formatCurrency={formatCurrency} formatDate={formatDate} />
+        <ContractTab analyses={analyses} loading={loading} formatCurrency={formatCurrency} formatDate={formatDate} apiBase={apiBase} />
       )}
     </div>
   );
 }
 
 // ==================================================================
-// SUB-COMPONENT: Contrato Bipartite — Entrada manual de dados
+// SUB-COMPONENT: Contrato inteligente — Auto-detecta bipartite/tripartite
 // ==================================================================
-function BipartiteContractTab({
-  analyses, loading, formatCurrency, formatDate
+function ContractTab({
+  analyses, loading, formatCurrency, formatDate, apiBase
 }: {
   analyses: AnalysisForFormalization[];
   loading: boolean;
   formatCurrency: (v: number) => string;
   formatDate: (d: string) => string;
+  apiBase: string;
 }) {
   const [generating, setGenerating] = useState(false);
   const [generatedContract, setGeneratedContract] = useState<string | null>(null);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisForFormalization | null>(null);
+  const [contractType, setContractType] = useState<'bipartite' | 'tripartite'>('bipartite');
+
   const [fields, setFields] = useState({
     empresaNome: '',
     cnpj: '',
+    ieCliente: '',
     endereco: '',
     cidade: '',
     uf: '',
@@ -687,17 +715,77 @@ function BipartiteContractTab({
     representanteNome: '',
     representanteCargo: '',
     representanteCpf: '',
-    percentualPlataforma: 60,
+    percentualCliente: 80,
+    percentualPlataforma: 20,
+    percentualParceiro: 0,
+    taxaAdesao: 2000,
+    valorEstimado: 0,
+    advogadoNome: '',
+    advogadoOab: '',
+    escrowAgencia: '',
+    escrowConta: '',
   });
 
-  // Preencher dados a partir de uma analise selecionada
+  const [partnerFields, setPartnerFields] = useState({
+    parceiroNome: '',
+    parceiroCnpjCpf: '',
+    parceiroTipoPessoa: 'juridica',
+    parceiroOab: '',
+    parceiroEndereco: '',
+    parceiroCidade: '',
+    parceiroUf: '',
+    parceiroBanco: '',
+    parceiroAgencia: '',
+    parceiroConta: '',
+    parceiroTitular: '',
+    parceiroDocBanco: '',
+  });
+
   const handleSelectAnalysis = (id: string) => {
     const a = analyses.find(x => x.id === id);
-    if (a) {
+    if (!a) {
+      setSelectedAnalysis(null);
+      return;
+    }
+    setSelectedAnalysis(a);
+
+    setFields(prev => ({
+      ...prev,
+      empresaNome: a.companyName || prev.empresaNome,
+      cnpj: a.cnpj || prev.cnpj,
+      valorEstimado: a.estimatedCredit || prev.valorEstimado,
+    }));
+
+    const hasPartner = a.partner && a.partnerName !== 'Admin direto';
+    if (hasPartner && a.partner) {
+      setContractType('tripartite');
       setFields(prev => ({
         ...prev,
-        empresaNome: a.companyName || prev.empresaNome,
-        cnpj: a.cnpj || prev.cnpj,
+        percentualCliente: 80,
+        percentualPlataforma: 12,
+        percentualParceiro: 8,
+      }));
+      setPartnerFields({
+        parceiroNome: a.partner.company || a.partner.name || '',
+        parceiroCnpjCpf: a.partner.cnpj || '',
+        parceiroTipoPessoa: a.partner.cnpj ? 'juridica' : 'fisica',
+        parceiroOab: a.partner.oabNumber ? `${a.partner.oabNumber}/${a.partner.oabState || ''}` : '',
+        parceiroEndereco: a.partner.endereco || '',
+        parceiroCidade: a.partner.cidade || '',
+        parceiroUf: a.partner.estado || '',
+        parceiroBanco: a.partner.bankName || '',
+        parceiroAgencia: a.partner.bankAgency || '',
+        parceiroConta: a.partner.bankAccount || '',
+        parceiroTitular: a.partner.bankAccountHolder || '',
+        parceiroDocBanco: a.partner.bankCpfCnpj || '',
+      });
+    } else {
+      setContractType('bipartite');
+      setFields(prev => ({
+        ...prev,
+        percentualCliente: 80,
+        percentualPlataforma: 20,
+        percentualParceiro: 0,
       }));
     }
   };
@@ -707,22 +795,37 @@ function BipartiteContractTab({
     setGenerating(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('/api/formalization/generate-bipartite-contract', {
+      const body: any = {
+        manual: true,
+        contractType,
+        empresaNome: fields.empresaNome,
+        cnpj: fields.cnpj,
+        ieCliente: fields.ieCliente,
+        endereco: fields.endereco,
+        cidade: fields.cidade,
+        uf: fields.uf,
+        cep: fields.cep,
+        representanteNome: fields.representanteNome,
+        representanteCargo: fields.representanteCargo,
+        representanteCpf: fields.representanteCpf,
+        percentualCliente: fields.percentualCliente,
+        percentualPlataforma: fields.percentualPlataforma,
+        taxaAdesao: fields.taxaAdesao,
+        valorEstimado: fields.valorEstimado,
+        advogadoNome: fields.advogadoNome,
+        advogadoOab: fields.advogadoOab,
+        escrowAgencia: fields.escrowAgencia,
+        escrowConta: fields.escrowConta,
+      };
+      if (contractType === 'tripartite') {
+        body.percentualParceiro = fields.percentualParceiro;
+        Object.assign(body, partnerFields);
+      }
+
+      const res = await fetch(`${apiBase}/api/formalization/generate-bipartite-contract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          manual: true,
-          empresaNome: fields.empresaNome,
-          cnpj: fields.cnpj,
-          endereco: fields.endereco,
-          cidade: fields.cidade,
-          uf: fields.uf,
-          cep: fields.cep,
-          representanteNome: fields.representanteNome,
-          representanteCargo: fields.representanteCargo,
-          representanteCpf: fields.representanteCpf,
-          percentualPlataforma: fields.percentualPlataforma,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.success) {
@@ -741,8 +844,9 @@ function BipartiteContractTab({
     if (!generatedContract) return;
     const w = window.open('', '_blank');
     if (!w) return;
+    const title = contractType === 'tripartite' ? 'Contrato Tripartite' : 'Contrato Bipartite';
     w.document.write(`
-      <html><head><title>Contrato Bipartite - TaxCredit Enterprise</title>
+      <html><head><title>${title} - TaxCredit Enterprise</title>
       <style>
         body { font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.7; margin: 40px; color: #111; }
         pre { white-space: pre-wrap; word-wrap: break-word; }
@@ -753,54 +857,123 @@ function BipartiteContractTab({
     setTimeout(() => w.print(), 500);
   };
 
-  const f = (key: keyof typeof fields, val: string | number) => setFields(p => ({ ...p, [key]: val }));
+  const f = (key: string, val: string | number) => setFields(p => ({ ...p, [key]: val }));
+  const pf = (key: string, val: string) => setPartnerFields(p => ({ ...p, [key]: val }));
+
+  const isTripartite = contractType === 'tripartite';
+  const iColor = isTripartite ? 'emerald' : 'purple';
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-5">
-        <h3 className="font-bold text-purple-900 flex items-center gap-2">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-          </svg>
-          Contrato Bipartite (Venda Direta)
-        </h3>
-        <p className="text-purple-700 text-sm mt-1">
-          Contrato entre a plataforma (ATOM BRASIL DIGITAL) e o cliente, sem parceiro intermediario.
-          100% da taxa e do percentual sobre creditos recuperados fica com a plataforma.
-        </p>
+      {/* Header com tipo detectado */}
+      <div className={`bg-gradient-to-r ${isTripartite ? 'from-emerald-50 to-teal-50 border-emerald-200' : 'from-purple-50 to-indigo-50 border-purple-200'} rounded-xl border p-5`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className={`font-bold ${isTripartite ? 'text-emerald-900' : 'text-purple-900'} flex items-center gap-2`}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+              </svg>
+              {isTripartite ? 'Contrato Tripartite (Parceiro + TaxCredit + Cliente)' : 'Contrato Bipartite (TaxCredit + Cliente)'}
+            </h3>
+            <p className={`${isTripartite ? 'text-emerald-700' : 'text-purple-700'} text-sm mt-1`}>
+              {isTripartite
+                ? 'Empresa indicada por parceiro. O parceiro recebe parte dos creditos recuperados (da fatia da TaxCredit).'
+                : 'Venda direta. Contrato entre ATOM BRASIL DIGITAL e o cliente, sem parceiro intermediario.'
+              }
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { setContractType('bipartite'); setFields(p => ({ ...p, percentualPlataforma: 20, percentualParceiro: 0 })); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${!isTripartite ? 'bg-purple-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
+            >Bipartite</button>
+            <button
+              onClick={() => { setContractType('tripartite'); setFields(p => ({ ...p, percentualPlataforma: 12, percentualParceiro: 8 })); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isTripartite ? 'bg-emerald-600 text-white' : 'bg-white text-gray-500 border border-gray-200'}`}
+            >Tripartite</button>
+          </div>
+        </div>
       </div>
 
-      {/* Preencher a partir de analise */}
+      {/* Selecionar analise */}
       {analyses.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="font-semibold text-gray-900 mb-3">Preencher a partir de uma Analise (opcional)</h3>
           <select
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            value={selectedAnalysis?.id || ''}
             onChange={e => handleSelectAnalysis(e.target.value)}
-            defaultValue=""
           >
             <option value="">-- Selecionar analise para preencher dados --</option>
             {analyses.map(a => (
               <option key={a.id} value={a.id}>
-                {a.companyName} — {a.cnpj || 'S/CNPJ'} — {formatCurrency(a.estimatedCredit || 0)}
+                {a.companyName} — {a.cnpj || 'S/CNPJ'} — {formatCurrency(a.estimatedCredit || 0)} — [{a.partnerName}]
               </option>
             ))}
           </select>
-          <p className="text-xs text-gray-400 mt-2">Ao selecionar, os campos empresa e CNPJ serao preenchidos automaticamente</p>
+          <p className="text-xs text-gray-400 mt-2">
+            Ao selecionar, os dados serao preenchidos automaticamente.
+            {' '}<strong>Empresas de parceiro geram contrato tripartite automaticamente.</strong>
+          </p>
         </div>
       )}
+
+      {/* Percentuais */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="font-semibold text-gray-900 mb-4">Distribuicao de Percentuais</h3>
+        <div className={`grid ${isTripartite ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">% Cliente</label>
+            <input type="number" min={50} max={90} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-green-700" value={fields.percentualCliente} onChange={e => {
+              const v = Number(e.target.value);
+              const rest = 100 - v;
+              if (isTripartite) {
+                f('percentualCliente', v);
+                f('percentualPlataforma', rest - fields.percentualParceiro);
+              } else {
+                f('percentualCliente', v);
+                f('percentualPlataforma', rest);
+              }
+            }} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">% TaxCredit</label>
+            <input type="number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-indigo-700 bg-gray-50" value={fields.percentualPlataforma} readOnly />
+          </div>
+          {isTripartite && (
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">% Parceiro</label>
+              <input type="number" min={0} max={20} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-emerald-700" value={fields.percentualParceiro} onChange={e => {
+                const v = Number(e.target.value);
+                f('percentualParceiro', v);
+                f('percentualPlataforma', 100 - fields.percentualCliente - v);
+              }} />
+            </div>
+          )}
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <div className={`text-xs font-bold px-2 py-1 rounded ${(fields.percentualCliente + fields.percentualPlataforma + fields.percentualParceiro) === 100 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            Total: {fields.percentualCliente + fields.percentualPlataforma + fields.percentualParceiro}%
+          </div>
+          <span className="text-xs text-gray-400">Deve ser sempre 100%</span>
+        </div>
+      </div>
 
       {/* Dados do Cliente */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h3 className="font-semibold text-gray-900 mb-4">Dados do Cliente (Contratante)</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="text-xs text-gray-500 mb-1 block">Nome / Razao Social *</label>
+            <label className="text-xs text-gray-500 mb-1 block">Razao Social *</label>
             <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.empresaNome} onChange={e => f('empresaNome', e.target.value)} placeholder="Ex: SERTECPET DO BRASIL LTDA" />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">CNPJ</label>
             <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.cnpj} onChange={e => f('cnpj', e.target.value)} placeholder="00.000.000/0001-00" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">IE</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.ieCliente} onChange={e => f('ieCliente', e.target.value)} placeholder="Inscricao Estadual" />
           </div>
           <div>
             <label className="text-xs text-gray-500 mb-1 block">Endereco</label>
@@ -831,31 +1004,128 @@ function BipartiteContractTab({
             <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.representanteCpf} onChange={e => f('representanteCpf', e.target.value)} placeholder="000.000.000-00" />
           </div>
           <div>
-            <label className="text-xs text-gray-500 mb-1 block">% Plataforma sobre Creditos Recuperados</label>
-            <input type="number" min={1} max={100} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.percentualPlataforma} onChange={e => f('percentualPlataforma', Number(e.target.value))} />
-            <p className="text-xs text-gray-400 mt-1">Padrao: 60% (venda direta)</p>
+            <label className="text-xs text-gray-500 mb-1 block">Valor Estimado dos Creditos</label>
+            <input type="number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.valorEstimado} onChange={e => f('valorEstimado', Number(e.target.value))} placeholder="0" />
           </div>
         </div>
-        <button
-          onClick={handleGenerate}
-          disabled={generating || !fields.empresaNome}
-          className="mt-5 w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
-        >
-          {generating ? (
-            <>
-              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              Gerando...
-            </>
-          ) : 'Gerar Contrato Bipartite'}
-        </button>
       </div>
 
+      {/* Dados do Parceiro (tripartite) */}
+      {isTripartite && (
+        <div className="bg-white rounded-xl border-2 border-emerald-200 p-5">
+          <h3 className="font-semibold text-emerald-900 mb-4 flex items-center gap-2">
+            <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Dados do Parceiro
+            {selectedAnalysis?.partnerName && selectedAnalysis.partnerName !== 'Admin direto' && (
+              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full ml-2">
+                Preenchido: {selectedAnalysis.partnerName}
+              </span>
+            )}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="text-xs text-gray-500 mb-1 block">Razao Social / Nome do Parceiro</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroNome} onChange={e => pf('parceiroNome', e.target.value)} placeholder="Escritorio XYZ Advogados" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">CNPJ/CPF</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroCnpjCpf} onChange={e => pf('parceiroCnpjCpf', e.target.value)} placeholder="00.000.000/0001-00" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">OAB (se advogado)</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroOab} onChange={e => pf('parceiroOab', e.target.value)} placeholder="123.456/RJ" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Endereco</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroEndereco} onChange={e => pf('parceiroEndereco', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Cidade</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroCidade} onChange={e => pf('parceiroCidade', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">UF</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroUf} onChange={e => pf('parceiroUf', e.target.value)} maxLength={2} />
+            </div>
+          </div>
+          <h4 className="font-medium text-gray-700 mt-5 mb-3 text-sm">Dados Bancarios do Parceiro (para split escrow)</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Banco</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroBanco} onChange={e => pf('parceiroBanco', e.target.value)} placeholder="Banco do Brasil" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Agencia</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroAgencia} onChange={e => pf('parceiroAgencia', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Conta</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroConta} onChange={e => pf('parceiroConta', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Titular</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroTitular} onChange={e => pf('parceiroTitular', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">CPF/CNPJ Titular</label>
+              <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={partnerFields.parceiroDocBanco} onChange={e => pf('parceiroDocBanco', e.target.value)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dados Contrato (advogado + escrow) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="font-semibold text-gray-900 mb-4">Dados do Contrato</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Taxa de Adesao (R$)</label>
+            <input type="number" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.taxaAdesao} onChange={e => f('taxaAdesao', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Advogado Vinculado</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.advogadoNome} onChange={e => f('advogadoNome', e.target.value)} placeholder="Nome do advogado" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">OAB</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.advogadoOab} onChange={e => f('advogadoOab', e.target.value)} placeholder="123.456/RJ" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Escrow - Agencia (Banco Fibra)</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.escrowAgencia} onChange={e => f('escrowAgencia', e.target.value)} placeholder="0001" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 mb-1 block">Escrow - Conta (Banco Fibra)</label>
+            <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" value={fields.escrowConta} onChange={e => f('escrowConta', e.target.value)} placeholder="123456-7" />
+          </div>
+        </div>
+      </div>
+
+      {/* Botao gerar */}
+      <button
+        onClick={handleGenerate}
+        disabled={generating || !fields.empresaNome || (fields.percentualCliente + fields.percentualPlataforma + fields.percentualParceiro) !== 100}
+        className={`w-full py-3.5 font-bold rounded-xl transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-white flex items-center justify-center gap-2 ${isTripartite ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-purple-600 hover:bg-purple-700'}`}
+      >
+        {generating ? (
+          <>
+            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+            Gerando...
+          </>
+        ) : isTripartite ? 'Gerar Contrato Tripartite' : 'Gerar Contrato Bipartite'}
+      </button>
+
+      {/* Contrato gerado */}
       {generatedContract && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-            <h3 className="font-semibold text-gray-900">Contrato Gerado</h3>
+            <h3 className="font-semibold text-gray-900">
+              {isTripartite ? 'Contrato Tripartite' : 'Contrato Bipartite'} Gerado
+            </h3>
             <div className="flex gap-2">
-              <button onClick={handlePrintContract} className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700">
+              <button onClick={handlePrintContract} className={`px-4 py-2 text-white text-sm font-medium rounded-lg ${isTripartite ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-purple-600 hover:bg-purple-700'}`}>
                 Imprimir / PDF
               </button>
               <button

@@ -3,6 +3,9 @@
 import { useState } from 'react';
 
 export default function ViabilidadePage() {
+  const apiBase = typeof window !== 'undefined'
+    ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
+    : '';
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -30,7 +33,7 @@ export default function ViabilidadePage() {
       if (form.annualRevenue) formData.append('annualRevenue', form.annualRevenue);
       files.forEach(f => formData.append('documents', f));
 
-      const res = await fetch('/api/viability/analyze', {
+      const res = await fetch(`${apiBase}/api/viability/analyze`, {
         method: 'POST',
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: formData,
@@ -38,7 +41,11 @@ export default function ViabilidadePage() {
 
       const data = await res.json();
       if (!data.success) {
-        alert(data.error || 'Erro na análise');
+        if (data.whatsapp || res.status === 429) {
+          alert(`${data.error}\n\n${data.message || 'Entre em contato pelo WhatsApp (21) 96752-0706 para liberar mais consultas.'}`);
+        } else {
+          alert(data.error || 'Erro na análise');
+        }
         setLoading(false);
         return;
       }
@@ -60,7 +67,7 @@ export default function ViabilidadePage() {
 
       const pollInterval = setInterval(async () => {
         try {
-          const pollRes = await fetch(`/api/viability/${viabilityId}/status`, {
+          const pollRes = await fetch(`${apiBase}/api/viability/${viabilityId}/status`, {
             headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           });
           const pollData = await pollRes.json();
