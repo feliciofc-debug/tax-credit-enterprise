@@ -257,7 +257,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
 
     const analysis = await claudeService.analyzeDocument(
       textoParaClaude,
-      documentType || 'sped_fiscal',
+      documentType || 'dre',
       companyInfo
     );
 

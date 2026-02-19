@@ -34,12 +34,17 @@ interface HPCResult {
 }
 
 interface AnalysisOportunidade {
-  tese: string;
+  tipo: string;
   tributo: string;
-  risco: string;
+  descricao: string;
   valorEstimado: number;
   fundamentacaoLegal: string;
-  periodo: string;
+  prazoRecuperacao: string;
+  complexidade: string;
+  probabilidadeRecuperacao: number;
+  risco: string;
+  documentacaoNecessaria: string[];
+  passosPraticos: string[];
 }
 
 interface FullAnalysisResult {
@@ -537,122 +542,238 @@ export default function HPCTestPage() {
       )}
 
       {/* ============================================================ */}
-      {/* RESULTS: Full Analysis (HPC + Claude) */}
+      {/* RESULTS: Full Analysis — EXTRATO PROFISSIONAL */}
       {/* ============================================================ */}
       {fullResult && (
         <div className="space-y-6">
-          {/* Timing */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-bold text-gray-900 mb-4">Pipeline Completo</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-amber-50 rounded-xl p-4 text-center border border-amber-200">
-                <p className="text-xs text-amber-600 font-medium">HPC Go+Chapel</p>
-                <p className="text-2xl font-bold text-amber-700">{formatMs(fullResult.timing.hpcProcessingMs)}</p>
+          {/* Timing bar */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-gray-900">Pipeline</span>
+              <span className="text-xs font-mono text-gray-400">{fullResult.pipeline}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-3 mt-3">
+              <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100">
+                <p className="text-[10px] text-amber-600 font-medium">HPC Go+Chapel</p>
+                <p className="text-lg font-bold text-amber-700">{formatMs(fullResult.timing.hpcProcessingMs)}</p>
               </div>
-              <div className="bg-indigo-50 rounded-xl p-4 text-center border border-indigo-200">
-                <p className="text-xs text-indigo-600 font-medium">Claude Opus</p>
-                <p className="text-2xl font-bold text-indigo-700">{formatMs(fullResult.timing.claudeAnalysisMs)}</p>
+              <div className="bg-indigo-50 rounded-lg p-3 text-center border border-indigo-100">
+                <p className="text-[10px] text-indigo-600 font-medium">Claude Opus (34 teses)</p>
+                <p className="text-lg font-bold text-indigo-700">{formatMs(fullResult.timing.claudeAnalysisMs)}</p>
               </div>
-              <div className="bg-green-50 rounded-xl p-4 text-center border border-green-200">
-                <p className="text-xs text-green-600 font-medium">Total</p>
-                <p className="text-2xl font-bold text-green-700">{formatMs(fullResult.timing.totalMs)}</p>
+              <div className="bg-green-50 rounded-lg p-3 text-center border border-green-100">
+                <p className="text-[10px] text-green-600 font-medium">Total</p>
+                <p className="text-lg font-bold text-green-700">{formatMs(fullResult.timing.totalMs)}</p>
               </div>
             </div>
-            <p className="text-xs text-gray-400 text-center mt-3 font-mono">{fullResult.pipeline}</p>
           </div>
 
-          {/* Score + Overview */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900">Resultado da Análise</h3>
-              <div className={`px-4 py-2 rounded-full text-sm font-bold ${
-                fullResult.analysis.score >= 70 ? 'bg-green-100 text-green-700' :
-                fullResult.analysis.score >= 40 ? 'bg-yellow-100 text-yellow-700' :
-                'bg-red-100 text-red-700'
-              }`}>
-                Score: {fullResult.analysis.score}/100
+          {/* EXTRATO — Mesmo template da plataforma original */}
+          <div className="bg-white border-2 border-indigo-200 rounded-xl shadow-lg overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-6 py-5 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">EXTRATO DE CREDITOS TRIBUTARIOS</h2>
+                  <p className="text-indigo-200 text-sm mt-1">
+                    {companyName || ''} {cnpj ? `| CNPJ: ${cnpj}` : ''}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-extrabold">{formatCurrency(fullResult.analysis.valorTotalEstimado)}</p>
+                  <p className="text-indigo-200 text-xs">Total Estimado de Recuperacao</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-4 mt-3 text-xs text-indigo-200">
+                {fullResult.analysis.periodoAnalisado && <span>Periodo: {fullResult.analysis.periodoAnalisado}</span>}
+                {fullResult.analysis.regimeTributario && <><span>|</span><span>Regime: {fullResult.analysis.regimeTributario}</span></>}
+                {fullResult.analysis.riscoGeral && <><span>|</span><span>Risco: <span className="font-bold text-white capitalize">{fullResult.analysis.riscoGeral}</span></span></>}
+                <span>|</span>
+                <span>Score: <span className="font-bold text-white">{fullResult.analysis.score}</span></span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-              <div className="bg-green-50 rounded-lg p-3 border border-green-100">
-                <p className="text-xs text-green-600">Valor Estimado</p>
-                <p className="text-lg font-bold text-green-700">{formatCurrency(fullResult.analysis.valorTotalEstimado)}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Oportunidades</p>
-                <p className="text-lg font-bold text-gray-900">{fullResult.analysis.oportunidades?.length || 0}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Regime</p>
-                <p className="text-sm font-bold text-gray-900">{fullResult.analysis.regimeTributario || '-'}</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Risco Geral</p>
-                <p className={`text-sm font-bold ${
-                  fullResult.analysis.riscoGeral === 'baixo' ? 'text-green-600' :
-                  fullResult.analysis.riscoGeral === 'medio' ? 'text-yellow-600' :
-                  'text-red-600'
-                }`}>{fullResult.analysis.riscoGeral || '-'}</p>
-              </div>
-            </div>
-
-            {/* Resumo executivo */}
+            {/* Resumo Executivo */}
             {fullResult.analysis.resumoExecutivo && (
-              <div className="bg-indigo-50 rounded-lg p-4 mb-4 border border-indigo-100">
-                <p className="text-xs text-indigo-600 font-medium mb-1">Resumo Executivo</p>
-                <p className="text-sm text-gray-800 leading-relaxed">{fullResult.analysis.resumoExecutivo}</p>
+              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <p className="text-sm font-semibold text-gray-700 mb-1">Resumo Executivo</p>
+                <p className="text-sm text-gray-600 leading-relaxed">{fullResult.analysis.resumoExecutivo}</p>
               </div>
             )}
 
-            {/* Oportunidades */}
+            {/* Tabela de Oportunidades */}
             {fullResult.analysis.oportunidades?.length > 0 && (
-              <div>
-                <p className="font-semibold text-gray-900 text-sm mb-3">Oportunidades Identificadas</p>
+              <div className="px-6 py-4">
+                <p className="text-sm font-bold text-gray-900 mb-3">
+                  EXTRATO DE OPORTUNIDADES ({fullResult.analysis.oportunidades.length})
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-100 text-gray-600 text-xs uppercase">
+                        <th className="px-3 py-3 text-left font-semibold">#</th>
+                        <th className="px-3 py-3 text-left font-semibold">Oportunidade</th>
+                        <th className="px-3 py-3 text-left font-semibold">Tributo</th>
+                        <th className="px-3 py-3 text-right font-semibold">Valor Estimado</th>
+                        <th className="px-3 py-3 text-center font-semibold">Prob.</th>
+                        <th className="px-3 py-3 text-center font-semibold">Complex.</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {fullResult.analysis.oportunidades.map((op, i) => (
+                        <tr key={i} className="hover:bg-indigo-50 transition-colors">
+                          <td className="px-3 py-3 text-gray-400 font-mono">{String(i + 1).padStart(2, '0')}</td>
+                          <td className="px-3 py-3">
+                            <p className="font-medium text-gray-900">{op.tipo || ''}</p>
+                            <p className="text-gray-500 text-xs mt-0.5 line-clamp-2">{op.descricao || ''}</p>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded">{op.tributo || ''}</span>
+                          </td>
+                          <td className="px-3 py-3 text-right font-bold text-green-700 whitespace-nowrap">
+                            {formatCurrency(op.valorEstimado)}
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`text-xs font-bold px-2 py-1 rounded ${(op.probabilidadeRecuperacao || 0) >= 80 ? 'bg-green-100 text-green-700' : (op.probabilidadeRecuperacao || 0) >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                              {op.probabilidadeRecuperacao ?? 0}%
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-center">
+                            <span className={`text-xs font-bold px-2 py-1 rounded capitalize ${op.complexidade === 'baixa' ? 'bg-green-100 text-green-700' : op.complexidade === 'media' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                              {op.complexidade || '-'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-indigo-50 font-bold">
+                        <td className="px-3 py-3" colSpan={3}>
+                          <span className="text-indigo-900">TOTAL ESTIMADO DE RECUPERACAO</span>
+                        </td>
+                        <td className="px-3 py-3 text-right text-green-800 text-lg whitespace-nowrap">
+                          {formatCurrency(fullResult.analysis.valorTotalEstimado)}
+                        </td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Detalhamento por Oportunidade */}
+            {fullResult.analysis.oportunidades?.length > 0 && (
+              <div className="px-6 py-4 border-t border-gray-200">
+                <p className="text-sm font-bold text-gray-900 mb-3">DETALHAMENTO POR OPORTUNIDADE</p>
                 <div className="space-y-3">
                   {fullResult.analysis.oportunidades.map((op, i) => (
-                    <div key={i} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900 text-sm">{op.tese}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">
-                              {op.tributo}
-                            </span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                              op.risco === 'baixo' ? 'bg-green-100 text-green-700' :
-                              op.risco === 'medio' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              Risco: {op.risco}
-                            </span>
-                            {op.periodo && (
-                              <span className="text-[10px] text-gray-400">{op.periodo}</span>
-                            )}
-                          </div>
+                    <details key={i} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                      <summary className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-400 font-mono text-xs">{String(i + 1).padStart(2, '0')}</span>
+                          <span className="font-medium text-gray-900 text-sm">{op.tipo || ''}</span>
+                          <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded">{op.tributo || ''}</span>
                         </div>
-                        <p className="text-green-700 font-bold text-sm ml-3">{formatCurrency(op.valorEstimado)}</p>
+                        <span className="font-bold text-green-700 text-sm">{formatCurrency(op.valorEstimado)}</span>
+                      </summary>
+                      <div className="px-4 py-4 bg-white border-t border-gray-200 space-y-3 text-sm">
+                        {op.descricao && (
+                          <div>
+                            <p className="font-semibold text-gray-700">Descricao</p>
+                            <p className="text-gray-600">{op.descricao}</p>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-4">
+                          {op.fundamentacaoLegal && (
+                            <div>
+                              <p className="font-semibold text-gray-700">Fundamentacao Legal</p>
+                              <p className="text-gray-600">{op.fundamentacaoLegal}</p>
+                            </div>
+                          )}
+                          {op.prazoRecuperacao && (
+                            <div>
+                              <p className="font-semibold text-gray-700">Prazo de Recuperacao</p>
+                              <p className="text-gray-600">{op.prazoRecuperacao}</p>
+                            </div>
+                          )}
+                        </div>
+                        {op.risco && (
+                          <div>
+                            <p className="font-semibold text-gray-700">Risco</p>
+                            <p className="text-yellow-700">{op.risco}</p>
+                          </div>
+                        )}
+                        {(op.documentacaoNecessaria || []).length > 0 && (
+                          <div>
+                            <p className="font-semibold text-gray-700">Documentacao Necessaria</p>
+                            <ul className="list-disc list-inside text-gray-600">
+                              {(op.documentacaoNecessaria || []).map((d: string, j: number) => (
+                                <li key={j}>{d}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {(op.passosPraticos || []).length > 0 && (
+                          <div>
+                            <p className="font-semibold text-gray-700">Passos Praticos</p>
+                            <ol className="list-decimal list-inside text-gray-600">
+                              {(op.passosPraticos || []).map((p: string, j: number) => (
+                                <li key={j}>{p}</li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
                       </div>
-                      {op.fundamentacaoLegal && (
-                        <p className="text-xs text-gray-500 mt-1">{op.fundamentacaoLegal}</p>
-                      )}
-                    </div>
+                    </details>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Alertas */}
-            {fullResult.analysis.alertas?.length > 0 && (
-              <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-xs text-yellow-700 font-bold mb-2">Alertas</p>
-                <ul className="space-y-1">
-                  {fullResult.analysis.alertas.map((a, i) => (
-                    <li key={i} className="text-xs text-yellow-700">{a}</li>
-                  ))}
-                </ul>
+            {/* Recomendacoes e Alertas */}
+            {((fullResult.analysis.recomendacoes?.length || 0) > 0 || (fullResult.analysis.alertas?.length || 0) > 0) && (
+              <div className="px-6 py-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(fullResult.analysis.recomendacoes?.length || 0) > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="font-semibold text-green-800 text-sm mb-2">Recomendacoes</p>
+                    <ul className="space-y-1">
+                      {fullResult.analysis.recomendacoes.map((r: string, i: number) => (
+                        <li key={i} className="text-green-700 text-xs flex items-start gap-1">
+                          <span className="mt-0.5">+</span> {r}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(fullResult.analysis.alertas?.length || 0) > 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="font-semibold text-yellow-800 text-sm mb-2">Alertas</p>
+                    <ul className="space-y-1">
+                      {fullResult.analysis.alertas.map((a: string, i: number) => (
+                        <li key={i} className="text-yellow-700 text-xs flex items-start gap-1">
+                          <span className="mt-0.5">!</span> {a}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Fundamentacao Geral */}
+            {fullResult.analysis.fundamentacaoGeral && (
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <p className="font-semibold text-gray-700 text-sm mb-1">Fundamentacao Geral</p>
+                <p className="text-gray-600 text-xs leading-relaxed">{fullResult.analysis.fundamentacaoGeral}</p>
+              </div>
+            )}
+
+            {/* Rodape */}
+            <div className="px-6 py-3 bg-gray-100 text-xs text-gray-400 flex justify-between">
+              <span>Analise: IA Avancada (34 teses) | HPC Go+Chapel + Claude Opus | TaxCredit Enterprise</span>
+              <span>{new Date().toLocaleDateString('pt-BR')}</span>
+            </div>
           </div>
 
           {/* HPC Details (collapsed) */}
@@ -661,7 +782,7 @@ export default function HPCTestPage() {
               Detalhes do Parse HPC ({fullResult.hpc.arquivosProcessados} arquivo(s))
             </summary>
             <div className="px-5 pb-5">
-              {fullResult.hpc.resultados?.map((r, i) => (
+              {fullResult.hpc.resultados?.map((r: HPCResult, i: number) => (
                 <div key={i} className="border border-gray-100 rounded-lg p-3 mt-3">
                   <p className="font-medium text-sm text-gray-900">{r.arquivo}</p>
                   <p className="text-xs text-gray-500">
@@ -671,6 +792,19 @@ export default function HPCTestPage() {
               ))}
             </div>
           </details>
+
+          {/* Print button */}
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => window.print()}
+              className="px-5 py-2.5 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 text-sm font-medium flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Imprimir / Salvar PDF
+            </button>
+          </div>
         </div>
       )}
     </div>
