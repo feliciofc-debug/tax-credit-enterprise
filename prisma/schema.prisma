@@ -190,30 +190,45 @@ model ClientInvite {
 model Contract {
   id            String   @id @default(uuid())
   
-  // Partes
-  partnerId     String
-  partner       Partner  @relation(fields: [partnerId], references: [id])
+  // Tipo: bipartite (TaxCredit + Cliente) ou tripartite (TaxCredit + Cliente + Parceiro)
+  contractType  String   @default("tripartite") // bipartite | tripartite
+  
+  // Partes — partnerId opcional (null no bipartite)
+  partnerId     String?
+  partner       Partner?  @relation(fields: [partnerId], references: [id])
   clientId      String
   client        User     @relation("ClientContracts", fields: [clientId], references: [id])
   
-  // Taxa inicial R$ 2.000 (R$ 800 parceiro + R$ 1.200 plataforma)
+  // Taxa de adesao (padrao R$ 2.000, 100% plataforma)
   setupFee            Float    @default(2000)
-  setupFeePartner     Float    @default(800)   // R$ 800 para o advogado
-  setupFeePlatform    Float    @default(1200)   // R$ 1.200 para a plataforma
+  setupFeePartner     Float    @default(0)
+  setupFeePlatform    Float    @default(2000)
   setupFeePaid        Boolean  @default(false)
   setupFeePaidAt      DateTime?
   
-  // Split de receita sobre creditos recuperados (40/60)
-  partnerSplitPercent  Float  @default(40)  // % parceiro
-  platformSplitPercent Float  @default(60)  // % TaxCredit
+  // Split sobre creditos recuperados (novo modelo: cliente fica com a maior parte)
+  clientSplitPercent   Float  @default(80)  // % cliente (padrao 80%)
+  platformSplitPercent Float  @default(20)  // % TaxCredit (20% bipartite, 12% tripartite)
+  partnerSplitPercent  Float  @default(0)   // % parceiro (0% bipartite, 8% tripartite)
   
   // Apos pagamento da taxa, libera:
-  consultaLiberada     Boolean @default(false) // Consulta completa
-  formalizacaoLiberada Boolean @default(false) // Formalizacao do processo
+  consultaLiberada     Boolean @default(false)
+  formalizacaoLiberada Boolean @default(false)
   
   // Detalhes do contrato
   contractNumber  String  @unique
-  contractText    String? @db.Text  // Texto completo do contrato
+  contractText    String? @db.Text
+  
+  // Advogado vinculado
+  lawyerName       String?
+  lawyerOab        String?  // Ex: "RJ 123.456"
+  
+  // Conta escrow Banco Fibra
+  escrowAgencia    String?
+  escrowConta      String?
+  
+  // Valor estimado de creditos (da analise)
+  estimatedCredits Float?
   
   // Assinaturas
   partnerSignedAt  DateTime?
@@ -221,13 +236,14 @@ model Contract {
   partnerSignatureIp String?
   clientSignatureIp  String?
   
-  // Status: draft, pending_payment, pending_signatures, active, completed, cancelled
+  // Status: draft, pending_payment, payment_claimed, pending_signatures, active, completed, cancelled
   status          String  @default("draft")
   
   // Valores realizados
-  totalRecovered  Float   @default(0)
-  partnerEarnings Float   @default(0)
-  platformEarnings Float  @default(0)
+  totalRecovered   Float   @default(0)
+  clientEarnings   Float   @default(0)
+  partnerEarnings  Float   @default(0)
+  platformEarnings Float   @default(0)
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -235,6 +251,7 @@ model Contract {
   @@index([partnerId])
   @@index([clientId])
   @@index([status])
+  @@index([contractType])
 }
 
 model BatchJob {

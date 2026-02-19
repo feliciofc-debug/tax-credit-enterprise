@@ -6,8 +6,11 @@ import {
   generateSefazDocument,
   generatePerdcompDocument,
   generateBipartiteContract,
+  generateTripartiteContract,
   type SefazDocumentParams,
   type PerdcompDocumentParams,
+  type BipartiteContractParams,
+  type TripartiteContractParams,
 } from '../services/formalization.service';
 import crypto from 'crypto';
 
@@ -267,30 +270,67 @@ router.post('/generate-bipartite-contract', authenticateToken, async (req: Reque
       };
     }
 
-    const contractText = generateBipartiteContract({
-      cnpjPlataforma: process.env.PLATFORM_CNPJ || '[CNPJ ATOM BRASIL DIGITAL]',
-      enderecoPlataforma: process.env.PLATFORM_ADDRESS || '[Endereco]',
-      cidadePlataforma: process.env.PLATFORM_CITY || 'Sao Paulo',
-      ufPlataforma: process.env.PLATFORM_STATE || 'SP',
-      cepPlataforma: process.env.PLATFORM_CEP || '[CEP]',
-      representantePlataforma: process.env.PLATFORM_REPRESENTATIVE || '[Representante]',
-      cargoRepresentantePlataforma: 'Socio-Administrador',
-      cpfRepresentantePlataforma: process.env.PLATFORM_REP_CPF || '[CPF]',
+    const {
+      percentualCliente, percentualParceiro, taxaAdesao, valorEstimado,
+      advogadoNome, advogadoOab, escrowAgencia, escrowConta,
+      contractType, ieCliente,
+      parceiroNome, parceiroCnpjCpf, parceiroTipoPessoa, parceiroOab,
+      parceiroEndereco, parceiroCidade, parceiroUf,
+      parceiroBanco, parceiroAgencia, parceiroConta, parceiroTitular, parceiroDocBanco,
+    } = req.body;
+
+    const isTripartite = contractType === 'tripartite';
+    const pctCliente = percentualCliente || 80;
+    const pctParceiro = isTripartite ? (percentualParceiro || 8) : 0;
+    const pctPlataforma = 100 - pctCliente - pctParceiro;
+
+    if (pctCliente + pctPlataforma + pctParceiro !== 100) {
+      return res.status(400).json({ success: false, error: 'Percentuais devem somar 100%' });
+    }
+
+    const baseParams: BipartiteContractParams = {
       empresaClienteNome: clientData.empresaNome,
       cnpjCliente: clientData.cnpj,
-      ieCliente: '[IE]',
+      ieCliente: ieCliente || '[IE]',
       enderecoCliente: clientData.endereco,
+      cepCliente: clientData.cep || '[CEP]',
       cidadeCliente: clientData.cidade,
       ufCliente: clientData.uf,
-      cepCliente: clientData.cep,
       representanteCliente: clientData.representanteNome,
       cargoRepresentanteCliente: clientData.representanteCargo,
       cpfRepresentanteCliente: clientData.representanteCpf,
-      percentualPlataforma: percentualPlataforma || 60,
-      chavePix: process.env.PLATFORM_PIX_KEY || 'felicio@atacadistadigital.com',
+      percentualCliente: pctCliente,
+      percentualPlataforma: pctPlataforma,
+      taxaAdesao: taxaAdesao || 2000,
+      valorEstimado: valorEstimado || 0,
+      advogadoNome: advogadoNome || '[ADVOGADO]',
+      advogadoOab: advogadoOab || '[OAB]',
+      escrowAgencia: escrowAgencia || '[AGENCIA]',
+      escrowConta: escrowConta || '[CONTA]',
       dataContrato: new Date().toLocaleDateString('pt-BR'),
-      cidadeContrato: 'Sao Paulo',
-    });
+    };
+
+    let contractText: string;
+    if (isTripartite) {
+      contractText = generateTripartiteContract({
+        ...baseParams,
+        percentualParceiro: pctParceiro,
+        parceiroNome: parceiroNome || '[PARCEIRO]',
+        parceiroCnpjCpf: parceiroCnpjCpf || '[DOC]',
+        parceiroTipoPessoa: parceiroTipoPessoa || 'juridica',
+        parceiroOab: parceiroOab || '',
+        parceiroEndereco: parceiroEndereco || '[Endereco]',
+        parceiroCidade: parceiroCidade || '[Cidade]',
+        parceiroUf: parceiroUf || '[UF]',
+        parceiroBanco: parceiroBanco || '[BANCO]',
+        parceiroAgencia: parceiroAgencia || '[AGENCIA]',
+        parceiroConta: parceiroConta || '[CONTA]',
+        parceiroTitular: parceiroTitular || '[TITULAR]',
+        parceiroDocBanco: parceiroDocBanco || '[DOC]',
+      });
+    } else {
+      contractText = generateBipartiteContract(baseParams);
+    }
 
     logger.info(`Bipartite contract generated (manual: ${!!manual})`);
 

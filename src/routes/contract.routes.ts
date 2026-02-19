@@ -4,130 +4,173 @@ import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
 import { sendPaymentConfirmationEmail } from '../services/email.service';
 import { getOperatorPartnerId } from '../utils/operator';
+import {
+  generateBipartiteContract,
+  generateTripartiteContract,
+  type BipartiteContractParams,
+} from '../services/formalization.service';
 import crypto from 'crypto';
 
 const router = Router();
 
 /**
  * POST /api/contract/create
- * Cria contrato entre parceiro e cliente
+ * Cria contrato bipartite ou tripartite
  * 
- * Regra de negocio:
- * - partnerSplitPercent >= 20% -> Liberado, sem limite
- * - partnerSplitPercent < 20%  -> Requer adminPassword para autorizar
+ * contractType: 'bipartite' (TaxCredit + Cliente) ou 'tripartite' (TaxCredit + Cliente + Parceiro)
+ * Percentuais devem somar 100%. Cliente sempre fica com a maior parte.
  */
 router.post('/create', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const partnerId = await getOperatorPartnerId((req as any).user);
-    if (!partnerId) {
-      return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros e administradores' });
-    }
-
-    const { clientId, setupFee, partnerSplitPercent, platformSplitPercent, adminPassword } = req.body;
+    const user = (req as any).user;
+    const {
+      clientId, contractType = 'tripartite',
+      clientSplitPercent, partnerSplitPercent, platformSplitPercent,
+      setupFee, adminPassword,
+      ieCliente, lawyerName, lawyerOab,
+      escrowAgencia, escrowConta, estimatedCredits,
+      // Dados do parceiro para tripartite
+      partnerId: requestPartnerId,
+      parceiroNome, parceiroCnpjCpf, parceiroTipoPessoa, parceiroOab,
+      parceiroEndereco, parceiroCidade, parceiroUf,
+      parceiroBanco, parceiroAgencia, parceiroConta, parceiroTitular, parceiroDocBanco,
+    } = req.body;
 
     if (!clientId) {
       return res.status(400).json({ success: false, error: 'clientId e obrigatorio' });
     }
 
-    const partnerSplit = partnerSplitPercent || 40;
+    const isTripartite = contractType === 'tripartite';
 
-    // REGRA: Qualquer percentual diferente de 40% requer senha do administrador
-    if (partnerSplit !== 40) {
-      if (!adminPassword) {
-        return res.status(403).json({
-          success: false,
-          error: 'Alterar o percentual padrao (40%) requer autorizacao do administrador',
-          requiresAdminAuth: true,
-        });
-      }
+    // Determine percentages
+    const pctCliente = clientSplitPercent || 80;
+    const pctParceiro = isTripartite ? (partnerSplitPercent || 8) : 0;
+    const pctPlataforma = platformSplitPercent || (100 - pctCliente - pctParceiro);
 
-      // Validar senha do admin
-      const adminSecret = process.env.ADMIN_AUTH_PASSWORD || 'taxcredit@admin2026';
-      if (adminPassword !== adminSecret) {
-        return res.status(403).json({
-          success: false,
-          error: 'Senha de autorizacao invalida',
-          requiresAdminAuth: true,
-        });
-      }
-
-      logger.info(`Admin authorized custom commission contract: ${partnerSplit}% for partner ${partnerId}`);
+    if (pctCliente + pctPlataforma + pctParceiro !== 100) {
+      return res.status(400).json({ success: false, error: 'Percentuais devem somar 100%' });
+    }
+    if (pctCliente < 50 || pctCliente > 90) {
+      return res.status(400).json({ success: false, error: 'Percentual do cliente deve ser entre 50% e 90%' });
     }
 
-    // Verificar se o cliente existe
+    // Determine partnerId
+    let partnerId: string | null = null;
+    if (isTripartite) {
+      partnerId = requestPartnerId || await getOperatorPartnerId(user);
+      if (!partnerId) {
+        return res.status(400).json({ success: false, error: 'partnerId obrigatorio para contrato tripartite' });
+      }
+    }
+
+    // Non-default percentages require admin password
+    const defaultPctChanged = isTripartite
+      ? (pctCliente !== 80 || pctParceiro !== 8 || pctPlataforma !== 12)
+      : (pctCliente !== 80 || pctPlataforma !== 20);
+
+    if (defaultPctChanged) {
+      const adminSecret = process.env.ADMIN_AUTH_PASSWORD || 'taxcredit@admin2026';
+      if (!adminPassword || adminPassword !== adminSecret) {
+        return res.status(403).json({
+          success: false,
+          error: 'Alterar percentuais padrao requer autorizacao do administrador',
+          requiresAdminAuth: true,
+        });
+      }
+      logger.info(`Admin authorized custom split: client=${pctCliente}% platform=${pctPlataforma}% partner=${pctParceiro}%`);
+    }
+
     const client = await prisma.user.findUnique({ where: { id: clientId } });
     if (!client) {
       return res.status(404).json({ success: false, error: 'Cliente nao encontrado' });
     }
 
-    // Gerar numero do contrato
     const contractNumber = `TC-${new Date().getFullYear()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const taxaAdesao = setupFee || 2000;
 
-    // Gerar texto do contrato
-    const partner = await prisma.partner.findUnique({ where: { id: partnerId } });
+    // Build base contract params
+    const baseParams: BipartiteContractParams = {
+      empresaClienteNome: client.company || client.name || '',
+      cnpjCliente: client.cnpj || '',
+      ieCliente: ieCliente || '',
+      enderecoCliente: client.endereco || '',
+      cepCliente: '',
+      cidadeCliente: client.cidade || '',
+      ufCliente: client.estado || '',
+      representanteCliente: client.legalRepName || client.name || '',
+      cargoRepresentanteCliente: client.legalRepCargo || '',
+      cpfRepresentanteCliente: client.legalRepCpf || '',
+      percentualCliente: pctCliente,
+      percentualPlataforma: pctPlataforma,
+      taxaAdesao,
+      valorEstimado: estimatedCredits || 0,
+      advogadoNome: lawyerName || '',
+      advogadoOab: lawyerOab || '',
+      escrowAgencia: escrowAgencia || '',
+      escrowConta: escrowConta || '',
+      dataContrato: new Date().toLocaleDateString('pt-BR'),
+    };
 
-    const contractText = generateContractText({
-      contractNumber,
-      // Parceiro
-      partnerName: partner?.name || '',
-      partnerCompany: partner?.company || '',
-      partnerOab: partner?.oabNumber ? `OAB/${partner.oabState} ${partner.oabNumber}` : '',
-      partnerCnpj: partner?.cnpj || '',
-      partnerEndereco: partner?.endereco || '',
-      partnerCidade: partner?.cidade || '',
-      partnerEstado: partner?.estado || '',
-      partnerBank: partner?.bankName || '',
-      partnerBankAgency: partner?.bankAgency || '',
-      partnerBankAccount: partner?.bankAccount || '',
-      partnerBankPix: partner?.bankPixKey || '',
-      // Cliente
-      clientName: client.name || client.email,
-      clientCompany: client.company || '',
-      clientCnpj: client.cnpj || '',
-      clientEndereco: client.endereco || '',
-      clientCidade: client.cidade || '',
-      clientEstado: client.estado || '',
-      clientLegalRep: client.legalRepName || client.name || '',
-      clientLegalRepCpf: client.legalRepCpf || '',
-      clientLegalRepCargo: client.legalRepCargo || '',
-      clientBank: client.bankName || '',
-      clientBankAgency: client.bankAgency || '',
-      clientBankAccount: client.bankAccount || '',
-      clientBankPix: client.bankPixKey || '',
-      clientBankHolder: client.bankAccountHolder || '',
-      clientBankCpfCnpj: client.bankCpfCnpj || '',
-      // Valores
-      setupFee: setupFee || 2000,
-      partnerSplit: partnerSplit,
-      platformSplit: 100 - partnerSplit,
-    });
+    let contractText: string;
+    let partner: any = null;
+
+    if (isTripartite && partnerId) {
+      partner = await prisma.partner.findUnique({ where: { id: partnerId } });
+      contractText = generateTripartiteContract({
+        ...baseParams,
+        percentualParceiro: pctParceiro,
+        parceiroNome: parceiroNome || partner?.company || partner?.name || '',
+        parceiroCnpjCpf: parceiroCnpjCpf || partner?.cnpj || '',
+        parceiroTipoPessoa: parceiroTipoPessoa || 'juridica',
+        parceiroOab: parceiroOab || (partner?.oabNumber ? `${partner.oabState || ''} ${partner.oabNumber}` : ''),
+        parceiroEndereco: parceiroEndereco || partner?.endereco || '',
+        parceiroCidade: parceiroCidade || partner?.cidade || '',
+        parceiroUf: parceiroUf || partner?.estado || '',
+        parceiroBanco: parceiroBanco || partner?.bankName || '',
+        parceiroAgencia: parceiroAgencia || partner?.bankAgency || '',
+        parceiroConta: parceiroConta || partner?.bankAccount || '',
+        parceiroTitular: parceiroTitular || partner?.company || partner?.name || '',
+        parceiroDocBanco: parceiroDocBanco || partner?.cnpj || '',
+      });
+    } else {
+      contractText = generateBipartiteContract(baseParams);
+    }
 
     const contract = await prisma.contract.create({
       data: {
-        partnerId,
+        contractType: isTripartite ? 'tripartite' : 'bipartite',
+        partnerId: partnerId || undefined,
         clientId,
-        setupFee: setupFee || 2000,
-        setupFeePartner: 800,
-        setupFeePlatform: 1200,
-        partnerSplitPercent: partnerSplit,
-        platformSplitPercent: 100 - partnerSplit,
+        setupFee: taxaAdesao,
+        setupFeePartner: 0,
+        setupFeePlatform: taxaAdesao,
+        clientSplitPercent: pctCliente,
+        platformSplitPercent: pctPlataforma,
+        partnerSplitPercent: pctParceiro,
         contractNumber,
         contractText,
-        status: 'pending_payment',
+        lawyerName: lawyerName || undefined,
+        lawyerOab: lawyerOab || undefined,
+        escrowAgencia: escrowAgencia || undefined,
+        escrowConta: escrowConta || undefined,
+        estimatedCredits: estimatedCredits || undefined,
+        status: 'draft',
         consultaLiberada: false,
         formalizacaoLiberada: false,
       },
     });
 
-    logger.info(`Contract created: ${contractNumber}`);
+    logger.info(`Contract created: ${contractNumber} (${contractType})`);
 
     return res.status(201).json({
       success: true,
       data: {
         contractId: contract.id,
         contractNumber: contract.contractNumber,
+        contractType: contract.contractType,
         setupFee: contract.setupFee,
         status: contract.status,
+        clientSplitPercent: contract.clientSplitPercent,
         partnerSplitPercent: contract.partnerSplitPercent,
         platformSplitPercent: contract.platformSplitPercent,
       },
@@ -155,31 +198,35 @@ router.post('/:id/sign', authenticateToken, async (req: Request, res: Response) 
 
     const updateData: any = {};
 
-    // Admin pode assinar como parceiro da plataforma
+    const isBipartite = (contract as any).contractType === 'bipartite';
+
     const operatorPartnerId = user.partnerId || (user.role === 'admin' ? await getOperatorPartnerId(user) : null);
     
-    if (operatorPartnerId && operatorPartnerId === contract.partnerId) {
+    if (user.role === 'admin') {
+      // Admin assina como TaxCredit (representante da plataforma)
+      updateData.partnerSignedAt = new Date();
+      updateData.partnerSignatureIp = String(ip);
+    } else if (operatorPartnerId && operatorPartnerId === contract.partnerId) {
       updateData.partnerSignedAt = new Date();
       updateData.partnerSignatureIp = String(ip);
     } else if (user.userId && user.userId === contract.clientId) {
       updateData.clientSignedAt = new Date();
       updateData.clientSignatureIp = String(ip);
-    } else if (user.role === 'admin') {
-      // Admin pode assinar qualquer contrato como representante da plataforma
-      updateData.partnerSignedAt = new Date();
-      updateData.partnerSignatureIp = String(ip);
     } else {
       return res.status(403).json({ success: false, error: 'Voce nao e parte deste contrato' });
     }
 
-    // Verificar se ambos assinaram
     const updated = await prisma.contract.update({
       where: { id },
       data: updateData,
     });
 
-    // Se ambos assinaram, ativar contrato
-    if (updated.partnerSignedAt && updated.clientSignedAt) {
+    // Bipartite: ativo quando admin (TaxCredit) + cliente assinaram
+    // Tripartite: ativo quando parceiro + cliente assinaram
+    const fullySignedBipartite = isBipartite && updated.partnerSignedAt && updated.clientSignedAt;
+    const fullySignedTripartite = !isBipartite && updated.partnerSignedAt && updated.clientSignedAt;
+
+    if (fullySignedBipartite || fullySignedTripartite) {
       await prisma.contract.update({
         where: { id },
         data: { status: 'active' },
@@ -361,11 +408,12 @@ router.get('/my-pending', authenticateToken, async (req: Request, res: Response)
       data: {
         id: contract.id,
         contractNumber: contract.contractNumber,
+        contractType: (contract as any).contractType || 'tripartite',
         setupFee: contract.setupFee,
         status: contract.status,
         partnerSigned: !!contract.partnerSignedAt,
         clientSigned: !!contract.clientSignedAt,
-        partnerName: contract.partner?.company || contract.partner?.name || '',
+        partnerName: contract.partner?.company || contract.partner?.name || null,
       },
     });
   } catch (error: any) {
@@ -407,12 +455,14 @@ router.get('/list', authenticateToken, async (req: Request, res: Response) => {
       data: contracts.map(c => ({
         id: c.id,
         contractNumber: c.contractNumber,
-        partnerName: c.partner.name,
-        partnerCompany: c.partner.company,
+        contractType: (c as any).contractType || 'tripartite',
+        partnerName: c.partner?.name || null,
+        partnerCompany: c.partner?.company || null,
         clientName: c.client.name || c.client.email,
         clientCompany: c.client.company,
         setupFee: c.setupFee,
         setupFeePaid: c.setupFeePaid,
+        clientSplitPercent: (c as any).clientSplitPercent || 0,
         partnerSplitPercent: c.partnerSplitPercent,
         platformSplitPercent: c.platformSplitPercent,
         status: c.status,
@@ -420,12 +470,60 @@ router.get('/list', authenticateToken, async (req: Request, res: Response) => {
         clientSigned: !!c.clientSignedAt,
         totalRecovered: c.totalRecovered,
         partnerEarnings: c.partnerEarnings,
+        estimatedCredits: (c as any).estimatedCredits || 0,
         createdAt: c.createdAt,
       })),
     });
   } catch (error: any) {
     logger.error('Error listing contracts:', error);
     return res.status(500).json({ success: false, error: 'Erro ao listar contratos' });
+  }
+});
+
+/**
+ * GET /api/contract/my-clients
+ * Lista clientes vinculados ao parceiro (para selecionar ao criar contrato)
+ */
+router.get('/my-clients', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const partnerId = await getOperatorPartnerId((req as any).user);
+    if (!partnerId) {
+      return res.status(403).json({ success: false, error: 'Acesso restrito a parceiros e administradores' });
+    }
+
+    const clients = await prisma.user.findMany({
+      where: { invitedByPartnerId: partnerId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        company: true,
+        cnpj: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const existingContracts = await prisma.contract.findMany({
+      where: {
+        partnerId,
+        status: { notIn: ['cancelled'] },
+      },
+      select: { clientId: true },
+    });
+
+    const clientsWithContracts = new Set(existingContracts.map(c => c.clientId));
+
+    return res.json({
+      success: true,
+      data: clients.map(c => ({
+        ...c,
+        hasContract: clientsWithContracts.has(c.id),
+      })),
+    });
+  } catch (error: any) {
+    logger.error('Error listing partner clients:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao listar clientes' });
   }
 });
 
@@ -441,7 +539,13 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
       where: { id },
       include: {
         partner: { select: { name: true, company: true, oabNumber: true, oabState: true } },
-        client: { select: { name: true, company: true, cnpj: true, email: true } },
+        client: {
+          select: {
+            name: true, company: true, cnpj: true, email: true,
+            endereco: true, cidade: true, estado: true,
+            legalRepName: true, legalRepCpf: true, legalRepCargo: true,
+          },
+        },
       },
     });
 
@@ -455,149 +559,5 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
     return res.status(500).json({ success: false, error: 'Erro ao buscar contrato' });
   }
 });
-
-/**
- * Gera texto do contrato
- */
-function generateContractText(data: {
-  contractNumber: string;
-  partnerName: string; partnerCompany: string; partnerOab: string; partnerCnpj: string;
-  partnerEndereco: string; partnerCidade: string; partnerEstado: string;
-  partnerBank: string; partnerBankAgency: string; partnerBankAccount: string; partnerBankPix: string;
-  clientName: string; clientCompany: string; clientCnpj: string;
-  clientEndereco: string; clientCidade: string; clientEstado: string;
-  clientLegalRep: string; clientLegalRepCpf: string; clientLegalRepCargo: string;
-  clientBank: string; clientBankAgency: string; clientBankAccount: string; clientBankPix: string;
-  clientBankHolder: string; clientBankCpfCnpj: string;
-  setupFee: number; partnerSplit: number; platformSplit: number;
-}): string {
-  return `
-CONTRATO DE PRESTACAO DE SERVICOS DE RECUPERACAO DE CREDITOS TRIBUTARIOS
-Contrato N.: ${data.contractNumber}
-Data: ${new Date().toLocaleDateString('pt-BR')}
-
-=====================================
-PARTES CONTRATANTES
-=====================================
-
-1. PLATAFORMA (Gestora da Operacao):
-ATOM BRASIL DIGITAL LTDA
-CNPJ: [CNPJ ATOM BRASIL DIGITAL]
-Endereco: [Endereco ATOM BRASIL DIGITAL]
-Doravante denominada "PLATAFORMA"
-
-2. ESCRITORIO PARCEIRO (Supervisao Juridica):
-${data.partnerCompany || data.partnerName}
-${data.partnerCnpj ? `CNPJ: ${data.partnerCnpj}` : ''}
-Responsavel: ${data.partnerName}
-${data.partnerOab ? `Inscricao: ${data.partnerOab}` : ''}
-${data.partnerEndereco ? `Endereco: ${data.partnerEndereco}, ${data.partnerCidade}/${data.partnerEstado}` : ''}
-Doravante denominado "PARCEIRO"
-
-3. CONTRATANTE (Cliente Demandante):
-${data.clientCompany || data.clientName}
-${data.clientCnpj ? `CNPJ: ${data.clientCnpj}` : '[CNPJ A DEFINIR]'}
-${data.clientEndereco ? `Endereco: ${data.clientEndereco}, ${data.clientCidade}/${data.clientEstado}` : ''}
-Representante Legal: ${data.clientLegalRep}
-${data.clientLegalRepCpf ? `CPF: ${data.clientLegalRepCpf}` : ''}
-${data.clientLegalRepCargo ? `Cargo: ${data.clientLegalRepCargo}` : ''}
-Doravante denominado "CONTRATANTE"
-
-=====================================
-DADOS BANCARIOS DAS PARTES
-=====================================
-
-PLATAFORMA - ATOM BRASIL DIGITAL:
-Banco: [BANCO ATOM BRASIL]
-Agencia: [AGENCIA]
-Conta: [CONTA]
-PIX: [CHAVE PIX ATOM]
-
-PARCEIRO:
-${data.partnerBank ? `Banco: ${data.partnerBank}` : 'Banco: [A INFORMAR]'}
-${data.partnerBankAgency ? `Agencia: ${data.partnerBankAgency}` : ''}
-${data.partnerBankAccount ? `Conta: ${data.partnerBankAccount}` : 'Conta: [A INFORMAR]'}
-${data.partnerBankPix ? `PIX: ${data.partnerBankPix}` : ''}
-
-CONTRATANTE:
-${data.clientBank ? `Banco: ${data.clientBank}` : 'Banco: [A INFORMAR]'}
-${data.clientBankAgency ? `Agencia: ${data.clientBankAgency}` : ''}
-${data.clientBankAccount ? `Conta: ${data.clientBankAccount}` : 'Conta: [A INFORMAR]'}
-${data.clientBankPix ? `PIX: ${data.clientBankPix}` : ''}
-${data.clientBankHolder ? `Titular: ${data.clientBankHolder}` : ''}
-${data.clientBankCpfCnpj ? `CPF/CNPJ Titular: ${data.clientBankCpfCnpj}` : ''}
-
-=====================================
-CLAUSULAS CONTRATUAIS
-=====================================
-
-CLAUSULA 1 - DO OBJETO
-O presente contrato tem por objeto a prestacao de servicos de analise, identificacao e formalizacao de creditos tributarios do CONTRATANTE, utilizando a plataforma TaxCredit Enterprise com inteligencia artificial, sob gestao da PLATAFORMA e supervisao tecnica e juridica do PARCEIRO.
-
-CLAUSULA 2 - DA TAXA INICIAL (PAGA PELO CONTRATANTE)
-O CONTRATANTE pagara, a titulo de taxa de adesao, o valor unico de R$ 2.000,00 (dois mil reais), distribuidos da seguinte forma:
-a) R$ 800,00 (oitocentos reais) destinados ao PARCEIRO;
-b) R$ 1.200,00 (mil e duzentos reais) destinados a PLATAFORMA.
-Paragrafo unico: Apos a confirmacao do pagamento, serao liberados:
-I - Consulta completa com inteligencia artificial para identificacao de creditos tributarios;
-II - Formalizacao integral do processo tributario (peticoes, memorias de calculo, pareceres tecnicos).
-
-CLAUSULA 3 - DA REMUNERACAO SOBRE CREDITOS RECUPERADOS
-Sobre os valores efetivamente recuperados pelo CONTRATANTE:
-a) ${data.partnerSplit}% (${data.partnerSplit} por cento) para o PARCEIRO;
-b) ${data.platformSplit}% (${data.platformSplit} por cento) para a PLATAFORMA.
-Paragrafo unico: Nao ha limite maximo de ganho sobre creditos recuperados.
-
-CLAUSULA 4 - DOS PAGAMENTOS E TRANSFERENCIAS
-4.1. Todos os pagamentos e transferencias decorrentes deste contrato serao realizados exclusivamente para as contas bancarias descritas na secao "DADOS BANCARIOS DAS PARTES".
-4.2. E de INTEIRA RESPONSABILIDADE do CONTRATANTE verificar as empresas contratadas, seus respectivos percentuais e os dados bancarios informados.
-4.3. Em caso de erro em transferencias ou depositos para contas dos beneficiarios deste contrato, decorrente de informacoes incorretas fornecidas pelo CONTRATANTE, a responsabilidade e 100% (cem por cento) do CONTRATANTE.
-4.4. A PLATAFORMA e o PARCEIRO nao se responsabilizam por transferencias realizadas para contas incorretas informadas pelo CONTRATANTE.
-
-CLAUSULA 5 - DAS OBRIGACOES DO CONTRATANTE
-a) Fornecer todos os documentos necessarios (DREs, Balancos, Balancetes, notas fiscais);
-b) Fornecer dados corretos e atualizados do representante legal e dados bancarios;
-c) Verificar as informacoes constantes neste contrato antes da assinatura;
-d) Efetuar o pagamento da taxa de adesao no prazo estipulado;
-e) Manter seus dados cadastrais e bancarios atualizados na plataforma.
-
-CLAUSULA 6 - DAS OBRIGACOES DO PARCEIRO
-a) Revisar e validar a documentacao gerada pela plataforma;
-b) Acompanhar os processos junto aos orgaos competentes;
-c) Manter sigilo sobre as informacoes do CONTRATANTE;
-d) Prestar assessoria juridica durante todo o processo.
-
-CLAUSULA 7 - DAS OBRIGACOES DA PLATAFORMA
-a) Realizar a analise dos documentos com inteligencia artificial;
-b) Gerar pareceres tecnicos, peticoes e memorias de calculo;
-c) Manter a plataforma em funcionamento e com seguranca;
-d) Processar os pagamentos e splits conforme acordado neste contrato.
-
-CLAUSULA 8 - DA RESPONSABILIDADE
-8.1. O CONTRATANTE declara ter verificado e conferido todos os dados constantes neste contrato, incluindo dados bancarios, percentuais e informacoes das partes contratadas.
-8.2. Qualquer divergencia nos dados informados e de exclusiva responsabilidade da parte que os forneceu.
-8.3. A PLATAFORMA atua como intermediadora tecnologica e nao se responsabiliza por eventuais divergencias entre as partes.
-
-CLAUSULA 9 - DA VIGENCIA
-Este contrato tem vigencia de 12 (doze) meses a partir da assinatura, renovavel automaticamente por igual periodo.
-
-CLAUSULA 10 - DO FORO
-Fica eleito o foro da Comarca de Sao Paulo/SP para dirimir quaisquer controversias oriundas deste contrato.
-
-=====================================
-ASSINATURAS
-=====================================
-
-PLATAFORMA - ATOM BRASIL DIGITAL:
-Data: ___/___/______  Assinatura: _________________________
-
-PARCEIRO - ${data.partnerCompany || data.partnerName}:
-Data: ___/___/______  Assinatura: _________________________
-
-CONTRATANTE - ${data.clientCompany || data.clientName}:
-Data: ___/___/______  Assinatura: _________________________
-Rep. Legal: ${data.clientLegalRep}
-  `.trim();
-}
 
 export default router;
