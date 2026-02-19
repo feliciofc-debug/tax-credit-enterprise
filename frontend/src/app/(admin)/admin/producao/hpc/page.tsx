@@ -48,6 +48,7 @@ interface AnalysisOportunidade {
 }
 
 interface FullAnalysisResult {
+  savedId?: string | null;
   pipeline: string;
   timing: { hpcProcessingMs: number; claudeAnalysisMs: number; totalMs: number };
   hpc: { arquivosProcessados: number; resultados: HPCResult[]; erros?: string[] };
@@ -87,6 +88,7 @@ export default function HPCTestPage() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
+  const extratoRef = useRef<HTMLDivElement>(null);
 
   const apiBase = typeof window !== 'undefined'
     ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
@@ -195,6 +197,100 @@ export default function HPCTestPage() {
     new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(v);
 
   const hpcOnline = status?.hpc?.status === 'ok' || status?.hpc?.status === 'online';
+
+  const handlePrintExtrato = () => {
+    if (!extratoRef.current || !fullResult) return;
+    const content = extratoRef.current.innerHTML;
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) return;
+    w.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Extrato - ${companyName || 'Analise'}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#1a1a1a;padding:0;font-size:11px;line-height:1.5;background:white}
+.extrato-print>div:first-child{background:linear-gradient(135deg,#4338ca,#7c3aed)!important;color:white;padding:24px;border-radius:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.extrato-print .text-3xl{font-size:22px;font-weight:800}
+.extrato-print .text-xl{font-size:16px;font-weight:700}
+.extrato-print .text-indigo-200{opacity:0.85;font-size:11px}
+table{width:100%;border-collapse:collapse;margin-bottom:12px}
+th{background:#f1f5f9;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;color:#64748b;font-weight:600;border-bottom:2px solid #e2e8f0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+td{padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:11px}
+.text-right{text-align:right}
+.text-center{text-align:center}
+.font-bold{font-weight:700}
+.text-green-700{color:#15803d}
+.text-green-800{color:#166534}
+.text-indigo-900{color:#312e81}
+.text-gray-900{color:#111827}
+.text-gray-700{color:#374151}
+.text-gray-600{color:#4b5563}
+.text-gray-500{color:#6b7280}
+.text-gray-400{color:#9ca3af}
+.text-yellow-700{color:#a16207}
+.text-blue-700{color:#1d4ed8}
+.bg-indigo-50{background:#eef2ff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bg-gray-50{background:#f9fafb;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bg-gray-100{background:#f3f4f6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bg-green-50{background:#f0fdf4;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bg-yellow-50{background:#fefce8;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bg-blue-50{background:#eff6ff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bg-indigo-100{background:#e0e7ff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bg-green-100{background:#dcfce7;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bg-yellow-100{background:#fef9c3;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bg-red-100{background:#fee2e2;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rounded{border-radius:4px}.rounded-lg{border-radius:8px}.rounded-xl{border-radius:12px}
+.px-6{padding-left:24px;padding-right:24px}
+.py-4{padding-top:16px;padding-bottom:16px}
+.py-3{padding-top:12px;padding-bottom:12px}
+.px-3{padding-left:12px;padding-right:12px}
+.px-2{padding-left:8px;padding-right:8px}
+.py-1{padding-top:4px;padding-bottom:4px}
+.mb-1{margin-bottom:4px}.mb-2{margin-bottom:8px}.mb-3{margin-bottom:12px}
+.mt-0\\.5{margin-top:2px}
+.gap-4{gap:16px}.gap-3{gap:12px}.gap-2{gap:8px}.gap-1{gap:4px}
+.text-xs{font-size:10px}.text-sm{font-size:12px}.text-lg{font-size:16px}
+.font-medium{font-weight:500}.font-semibold{font-weight:600}
+.border-t{border-top:1px solid #e5e7eb}.border-b{border-bottom:1px solid #e5e7eb}
+.border{border:1px solid #e5e7eb}
+.border-gray-200{border-color:#e5e7eb}
+.border-green-200{border-color:#bbf7d0}
+.border-yellow-200{border-color:#fde68a}
+.border-blue-100{border-color:#dbeafe}
+.space-y-3>*+*{margin-top:12px}
+.space-y-1>*+*{margin-top:4px}
+.line-clamp-2{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.whitespace-nowrap{white-space:nowrap}
+.capitalize{text-transform:capitalize}
+.italic{font-style:italic}
+.flex{display:flex}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-between{justify-content:space-between}
+.grid{display:grid}.grid-cols-1{grid-template-columns:1fr}.grid-cols-2{grid-template-columns:1fr 1fr}
+.overflow-x-auto{overflow-x:auto}
+.list-disc{list-style:disc}.list-decimal{list-style:decimal}.list-inside{list-style-position:inside}
+.leading-relaxed{line-height:1.625}
+details{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;page-break-inside:avoid}
+summary{padding:12px 16px;cursor:pointer;font-size:12px}
+details>div{padding:16px;border-top:1px solid #e5e7eb;font-size:11px}
+details[open]{background:white}
+@media print{
+  body{padding:0!important}
+  .extrato-print>div:first-child{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  details{break-inside:avoid}
+  table{break-inside:auto}
+  tr{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="extrato-print">${content}</div>
+</body>
+</html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
+  };
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -568,8 +664,38 @@ export default function HPCTestPage() {
             </div>
           </div>
 
+          {/* Banner — Análise salva */}
+          {fullResult.savedId ? (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-green-800 font-semibold text-sm">Analise salva com sucesso</p>
+                  <p className="text-green-600 text-xs">Disponivel no Dashboard e em Analises a qualquer momento</p>
+                </div>
+              </div>
+              <a
+                href="/admin/producao/analises"
+                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Ver em Analises
+              </a>
+            </div>
+          ) : (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-center gap-2">
+              <svg className="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-yellow-700 text-xs">Analise nao foi salva no banco. Salve o PDF para nao perder o resultado.</p>
+            </div>
+          )}
+
           {/* EXTRATO — Mesmo template da plataforma original */}
-          <div className="bg-white border-2 border-indigo-200 rounded-xl shadow-lg overflow-hidden">
+          <div ref={extratoRef} className="bg-white border-2 border-indigo-200 rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-6 py-5 text-white">
               <div className="flex items-center justify-between">
@@ -803,7 +929,7 @@ export default function HPCTestPage() {
           {/* Print button */}
           <div className="flex gap-3 justify-end">
             <button
-              onClick={() => window.print()}
+              onClick={handlePrintExtrato}
               className="px-5 py-2.5 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 text-sm font-medium flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

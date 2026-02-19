@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import useSWR from 'swr';
+import { authedFetcher } from '@/lib/fetcher';
 
 /* ============================================================
    INTERFACES
@@ -66,34 +68,16 @@ interface AnalysisDetail {
    ============================================================ */
 
 export default function AdminAnalisesPage() {
-  const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: analyses = [], isLoading: loading } = useSWR<AnalysisItem[]>(
+    '/api/viability/admin-analyses',
+    authedFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 120000 }
+  );
   const [detail, setDetail] = useState<AnalysisDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'full' | 'quick'>('all');
   const [search, setSearch] = useState('');
   const printRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetchAnalyses();
-  }, []);
-
-  const fetchAnalyses = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/viability/admin-analyses', {
-        headers: { Authorization: `Bearer ${token || ''}` },
-      });
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data)) {
-        setAnalyses(data.data);
-      }
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchDetail = async (id: string) => {
     setDetailLoading(true);

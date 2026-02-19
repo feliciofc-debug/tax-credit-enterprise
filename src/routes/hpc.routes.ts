@@ -6,6 +6,8 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { prisma } from '../utils/prisma';
+import { getOperatorPartnerId } from '../utils/operator';
 import { hpcGateway } from '../services/hpc-gateway.service';
 import { claudeService } from '../services/claude.service';
 import multer from 'multer';
@@ -275,10 +277,55 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
     pipeline += ' + claude-opus';
 
     // -----------------------------------------------
-    // PASSO 4: Retornar resultado completo
+    // PASSO 4: SALVAR no banco de dados
+    // -----------------------------------------------
+    const scoreLabel = analysis.score >= 85 ? 'excelente'
+      : analysis.score >= 70 ? 'bom'
+      : analysis.score >= 50 ? 'medio'
+      : analysis.score >= 30 ? 'baixo'
+      : 'inviavel';
+
+    let savedId: string | null = null;
+    try {
+      const partnerId = await getOperatorPartnerId(user);
+      if (partnerId) {
+        const saved = await prisma.viabilityAnalysis.create({
+          data: {
+            partnerId,
+            companyName: companyName || 'Empresa HPC',
+            cnpj: cnpj || null,
+            regime: regime || null,
+            sector: sector || null,
+            docsUploaded: files.length,
+            docsText: textoParaClaude.substring(0, 50000),
+            viabilityScore: analysis.score,
+            scoreLabel,
+            estimatedCredit: analysis.valorTotalEstimado,
+            opportunities: JSON.stringify(analysis.oportunidades),
+            aiSummary: analysis.resumoExecutivo || '',
+            risks: JSON.stringify(analysis.alertas || []),
+            status: 'completed',
+          },
+        });
+        savedId = saved.id;
+        logger.info(`[HPC-ROUTE] Analise salva no banco: ${saved.id}`, {
+          empresa: companyName,
+          score: analysis.score,
+          valor: analysis.valorTotalEstimado,
+        });
+      } else {
+        logger.warn(`[HPC-ROUTE] Nao foi possivel resolver partnerId — analise NAO salva`);
+      }
+    } catch (saveErr: any) {
+      logger.error(`[HPC-ROUTE] Erro ao salvar analise no banco:`, saveErr.message);
+    }
+
+    // -----------------------------------------------
+    // PASSO 5: Retornar resultado completo
     // -----------------------------------------------
     return res.json({
       success: true,
+      savedId,
       pipeline,
       timing: {
         hpcProcessingMs: hpcData?.tempoTotalMs || 0,
@@ -288,6 +335,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
       hpc: hpcData || { arquivosProcessados: 0, nota: 'Processamento direto (sem HPC parser)' },
       analysis: {
         score: analysis.score,
+        scoreLabel,
         regimeTributario: analysis.regimeTributario,
         riscoGeral: analysis.riscoGeral,
         valorTotalEstimado: analysis.valorTotalEstimado,

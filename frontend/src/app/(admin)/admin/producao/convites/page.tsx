@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
+import { authedFetcher, getApiUrl, getToken } from '@/lib/fetcher';
 
 interface Invite {
   id: string;
@@ -15,7 +17,11 @@ interface Invite {
 }
 
 export default function AdminConvitesPage() {
-  const [invites, setInvites] = useState<Invite[]>([]);
+  const { data: invites = [], mutate: mutateInvites } = useSWR<Invite[]>(
+    '/api/invite/list',
+    authedFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 120000 }
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -25,21 +31,6 @@ export default function AdminConvitesPage() {
     companyName: '',
     cnpj: '',
   });
-
-  useEffect(() => {
-    fetchInvites();
-  }, []);
-
-  const fetchInvites = async () => {
-    const token = localStorage.getItem('token');
-    try {
-      const res = await fetch('/api/invite/list', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setInvites(data.data);
-    } catch {}
-  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +44,9 @@ export default function AdminConvitesPage() {
     setSuccess('');
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/invite/create', {
+      const token = getToken();
+      const base = getApiUrl();
+      const res = await fetch(`${base}/api/invite/create`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,7 +59,7 @@ export default function AdminConvitesPage() {
       if (data.success) {
         setSuccess(`Convite criado! Código: ${data.data.inviteCode}\nLink: ${data.data.inviteLink}`);
         setForm({ clientEmail: '', clientName: '', companyName: '', cnpj: '' });
-        fetchInvites();
+        mutateInvites();
       } else {
         setError(data.error || 'Erro ao criar convite');
       }
@@ -79,13 +71,14 @@ export default function AdminConvitesPage() {
   };
 
   const handleRevoke = async (id: string) => {
-    const token = localStorage.getItem('token');
+    const token = getToken();
+    const base = getApiUrl();
     try {
-      await fetch(`/api/invite/${id}`, {
+      await fetch(`${base}/api/invite/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      fetchInvites();
+      mutateInvites();
     } catch {}
   };
 

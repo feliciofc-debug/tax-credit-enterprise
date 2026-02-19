@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import PartnerSidebar from '@/components/PartnerSidebar';
+import { warmBackend } from '@/lib/fetcher';
 
 export default function PartnerLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -12,7 +13,9 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
     const role = localStorage.getItem('userRole');
     if (!token || role !== 'partner') {
       router.push('/parceiro-login');
+      return;
     }
+    warmBackend();
   }, [router]);
 
   return (

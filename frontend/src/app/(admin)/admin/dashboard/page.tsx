@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import useSWR from 'swr';
+import { authedFetcher } from '@/lib/fetcher';
 
 interface DashboardData {
   users: { total: number; clients: number };
@@ -22,39 +24,21 @@ interface DashboardData {
 }
 
 export default function AdminDashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data, error: swrError, isLoading: loading } = useSWR<DashboardData>(
+    '/api/admin/dashboard',
+    authedFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 300000 }
+  );
+  const error = swrError?.message || '';
   const [user, setUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'contracts' | 'partners'>('overview');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
-    if (!token) return;
     if (savedUser) {
       try { setUser(JSON.parse(savedUser)); } catch {}
     }
-    fetchDashboard(token);
   }, []);
-
-  const fetchDashboard = async (token: string) => {
-    try {
-      const res = await fetch('/api/admin/dashboard', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = await res.json();
-      if (result.success) {
-        setData(result.data);
-      } else {
-        setError(result.error || 'Erro ao carregar dados');
-      }
-    } catch {
-      setError('Erro de conexão com o servidor');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fmt = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -90,10 +74,32 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Carregando painel...</p>
+      <div className="px-6 lg:px-8 py-8 max-w-[1400px] mx-auto animate-pulse">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <div className="h-7 w-48 bg-gray-200 rounded mb-2" />
+            <div className="h-4 w-72 bg-gray-200 rounded" />
+          </div>
+          <div className="h-10 w-32 bg-gray-200 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="h-4 w-20 bg-gray-200 rounded mb-3" />
+              <div className="h-8 w-24 bg-gray-200 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-8">
+          <div className="h-5 w-40 bg-gray-200 rounded mb-4" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-gray-50 rounded-xl p-4">
+                <div className="h-3 w-24 bg-gray-200 rounded mb-2" />
+                <div className="h-6 w-28 bg-gray-200 rounded" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );

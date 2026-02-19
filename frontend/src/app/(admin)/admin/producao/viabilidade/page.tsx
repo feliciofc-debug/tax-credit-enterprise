@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import useSWR from 'swr';
+import { authedFetcher } from '@/lib/fetcher';
 
 /* ============================================================
    INTERFACES — Todos os campos opcionais para segurança
@@ -69,7 +71,11 @@ export default function AdminViabilidadePage() {
   const [fullLoading, setFullLoading] = useState<string | null>(null);
   const [result, setResult] = useState<ViabilityResult | null>(null);
   const [fullResult, setFullResult] = useState<FullAnalysisResult | null>(null);
-  const [history, setHistory] = useState<ViabilityListItem[]>([]);
+  const { data: history = [], mutate: mutateHistory } = useSWR<ViabilityListItem[]>(
+    '/api/viability/list',
+    authedFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 120000 }
+  );
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     companyName: '',
@@ -86,27 +92,11 @@ export default function AdminViabilidadePage() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    fetchHistory();
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
-
-  const fetchHistory = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/viability/list', {
-        headers: { Authorization: `Bearer ${token || ''}` },
-      });
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data)) {
-        setHistory(data.data);
-      }
-    } catch {
-      // Silently fail — history just stays empty
-    }
-  };
 
   /* ============================================================
      QUICK SCORE — Assíncrono com polling
@@ -151,7 +141,7 @@ export default function AdminViabilidadePage() {
       // Resultado sincrono (compatibilidade com versao anterior)
       if (data.data?.score !== undefined && data.data?.summary) {
         setResult(data.data);
-        fetchHistory();
+        mutateHistory();
         setLoading(false);
         return;
       }
@@ -247,7 +237,7 @@ export default function AdminViabilidadePage() {
             setFullResult(pollData.data);
             setFullLoading(null);
           }
-          fetchHistory();
+          mutateHistory();
         } else if (pollData.status === 'failed') {
           if (pollRef.current) clearInterval(pollRef.current);
           if (timeoutRef.current) clearTimeout(timeoutRef.current);

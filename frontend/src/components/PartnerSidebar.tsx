@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -10,7 +11,7 @@ const menuItems = [
   { href: '/parceiro/contratos', label: 'Contratos', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
 ];
 
-export default function PartnerSidebar() {
+function PartnerSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -44,7 +45,7 @@ export default function PartnerSidebar() {
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           return (
-            <Link key={item.href} href={item.href}
+            <Link key={item.href} href={item.href} prefetch={true}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}>
@@ -68,3 +69,5 @@ export default function PartnerSidebar() {
     </aside>
   );
 }
+
+export default memo(PartnerSidebar);

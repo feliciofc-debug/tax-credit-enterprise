@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import useSWR from 'swr';
+import { authedFetcher } from '@/lib/fetcher';
 
 // ============================
 // Types
@@ -62,8 +64,11 @@ interface PartnerOption {
 // ============================
 
 export default function AdminContratosPage() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: contracts = [], isLoading: loading, mutate: mutateContracts } = useSWR<Contract[]>(
+    '/api/contract/list',
+    authedFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 120000 }
+  );
   const [showForm, setShowForm] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewText, setPreviewText] = useState('');
@@ -131,18 +136,6 @@ export default function AdminContratosPage() {
     ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
     : '';
 
-  const fetchContracts = useCallback(async () => {
-    try {
-      const res = await fetch(`${apiBase}/api/contract/list`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setContracts(data.data);
-    } catch {} finally {
-      setLoading(false);
-    }
-  }, [apiBase, token]);
-
   const fetchClients = useCallback(async () => {
     try {
       const res = await fetch(`${apiBase}/api/admin/clients`, {
@@ -164,10 +157,9 @@ export default function AdminContratosPage() {
   }, [apiBase, token]);
 
   useEffect(() => {
-    fetchContracts();
     fetchClients();
     fetchPartners();
-  }, [fetchContracts, fetchClients, fetchPartners]);
+  }, [fetchClients, fetchPartners]);
 
   // Percentage logic
   useEffect(() => {
@@ -288,7 +280,7 @@ export default function AdminContratosPage() {
       if (data.success) {
         setShowForm(false);
         resetForm();
-        fetchContracts();
+        mutateContracts();
         setConfirmSuccess(`Contrato ${data.data.contractNumber} criado com sucesso!`);
         setTimeout(() => setConfirmSuccess(''), 5000);
       } else {
@@ -377,7 +369,7 @@ export default function AdminContratosPage() {
         setConfirmSuccess('Pagamento confirmado! Consulta e formalizacao liberadas.');
         setConfirmModal(null);
         setAdminPassword('');
-        fetchContracts();
+        mutateContracts();
         setTimeout(() => setConfirmSuccess(''), 5000);
       } else {
         setConfirmError(data.error || 'Erro ao confirmar');
@@ -399,7 +391,7 @@ export default function AdminContratosPage() {
         },
       });
       const data = await res.json();
-      if (data.success) fetchContracts();
+      if (data.success) mutateContracts();
     } catch {}
   };
 
@@ -476,7 +468,7 @@ export default function AdminContratosPage() {
       });
       const data = await res.json();
       if (data.success) {
-        fetchContracts();
+        mutateContracts();
         if (detailContract?.id === contractId) {
           setDetailContract({ ...detailContract, status: newStatus });
         }
@@ -510,7 +502,7 @@ export default function AdminContratosPage() {
         } else {
           setDetailContract({ ...detailContract, checklist: updated });
         }
-        fetchContracts();
+        mutateContracts();
       }
     } catch {} finally {
       setChecklistSaving(false);

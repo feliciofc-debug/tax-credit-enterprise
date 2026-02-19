@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
+import { authedFetcher, getApiUrl, getToken } from '@/lib/fetcher';
 
 interface Partner {
   id: string;
@@ -22,38 +24,25 @@ interface Partner {
 }
 
 export default function AdminParceirosPage() {
-  const [partners, setPartners] = useState<Partner[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: partners = [], isLoading: loading, mutate } = useSWR<Partner[]>(
+    '/api/admin/partners',
+    authedFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 120000 }
+  );
   const [filter, setFilter] = useState<'all' | 'pending' | 'active' | 'rejected'>('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchPartners();
-  }, []);
-
-  const fetchPartners = async () => {
-    const token = localStorage.getItem('token');
-    try {
-      const res = await fetch('/api/admin/partners', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setPartners(data.data);
-    } catch {} finally {
-      setLoading(false);
-    }
-  };
-
   const handleAction = async (id: string, action: 'approve' | 'reject') => {
     setActionLoading(id);
-    const token = localStorage.getItem('token');
+    const token = getToken();
+    const base = getApiUrl();
     try {
-      const res = await fetch(`/api/admin/partners/${id}/${action}`, {
+      const res = await fetch(`${base}/api/admin/partners/${id}/${action}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (data.success) fetchPartners();
+      if (data.success) mutate();
     } catch {} finally {
       setActionLoading(null);
     }

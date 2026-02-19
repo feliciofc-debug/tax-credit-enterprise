@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
+import { authedFetcher } from '@/lib/fetcher';
 
 interface Client {
   id: string;
@@ -17,26 +19,12 @@ interface Client {
 }
 
 export default function AdminClientesPage() {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: clients = [], isLoading: loading } = useSWR<Client[]>(
+    '/api/admin/clients',
+    authedFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 300000 }
+  );
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    fetchClients();
-  }, []);
-
-  const fetchClients = async () => {
-    const token = localStorage.getItem('token');
-    try {
-      const res = await fetch('/api/admin/clients', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setClients(data.data);
-    } catch {} finally {
-      setLoading(false);
-    }
-  };
 
   const filtered = clients.filter(c => {
     if (!search) return true;
