@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { authedFetcher } from '@/lib/fetcher';
+import { authedFetcher, SWR_OPTIONS_FAST } from '@/lib/fetcher';
 
 interface DashboardData {
   users: { total: number; clients: number };
@@ -27,7 +27,7 @@ export default function AdminDashboardPage() {
   const { data, error: swrError, isLoading: loading } = useSWR<DashboardData>(
     '/api/admin/dashboard',
     authedFetcher,
-    { revalidateOnFocus: false, dedupingInterval: 300000 }
+    SWR_OPTIONS_FAST,
   );
   const error = swrError?.message || '';
   const [user, setUser] = useState<any>(null);

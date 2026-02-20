@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
+import { authedFetcher, SWR_OPTIONS_MEDIUM } from '@/lib/fetcher';
 
 interface Contract {
   id: string;
@@ -273,9 +275,12 @@ function NewContractModal({
 }
 
 export default function ContratosPage() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const { data: contracts = [], isLoading: loading, mutate: mutateContracts } = useSWR<Contract[]>(
+    '/api/contract/list',
+    authedFetcher,
+    SWR_OPTIONS_MEDIUM,
+  );
   const [clients, setClients] = useState<ClientOption[]>([]);
-  const [loading, setLoading] = useState(true);
   const [loadingClients, setLoadingClients] = useState(false);
   const [showNewContract, setShowNewContract] = useState(false);
   const [signingId, setSigningId] = useState<string | null>(null);
@@ -284,23 +289,6 @@ export default function ContratosPage() {
   const apiBase = typeof window !== 'undefined'
     ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
     : '';
-
-  useEffect(() => {
-    fetchContracts();
-  }, []);
-
-  const fetchContracts = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${apiBase}/api/contract/list`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setContracts(data.data || []);
-    } catch {} finally {
-      setLoading(false);
-    }
-  };
 
   const fetchClients = async () => {
     setLoadingClients(true);
@@ -335,7 +323,7 @@ export default function ContratosPage() {
       const data = await res.json();
       if (data.success) {
         setSignSuccess('Contrato assinado com sucesso!');
-        fetchContracts();
+        mutateContracts();
         setTimeout(() => setSignSuccess(''), 5000);
       }
     } catch {} finally {
@@ -376,7 +364,7 @@ export default function ContratosPage() {
       {showNewContract && (
         <NewContractModal
           onClose={() => setShowNewContract(false)}
-          onCreated={fetchContracts}
+          onCreated={() => mutateContracts()}
           clients={clients}
           loadingClients={loadingClients}
         />

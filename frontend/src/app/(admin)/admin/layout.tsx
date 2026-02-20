@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { warmBackend } from '@/lib/fetcher';
+import { SWRConfig } from 'swr';
+import { warmBackend, startKeepAlive, stopKeepAlive } from '@/lib/fetcher';
 
 const menuItems = [
   { label: 'Dashboard', href: '/admin/dashboard', section: 'gestao', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -48,6 +49,14 @@ function MenuLink({ item, active, open }: { item: typeof menuItems[number]; acti
 
 const MemoMenuLink = memo(MenuLink);
 
+const swrGlobalConfig = {
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  keepPreviousData: true,
+  errorRetryCount: 2,
+  dedupingInterval: 120000,
+};
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -84,6 +93,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }, 3000);
       return () => clearTimeout(timer);
     }
+
+    startKeepAlive();
+    return () => stopKeepAlive();
   }, []);
 
   useEffect(() => {
@@ -91,6 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [warming]);
 
   const handleLogout = useCallback(() => {
+    stopKeepAlive();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('role');
@@ -103,77 +116,78 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isActive = (href: string) => pathname === href || pathname?.startsWith(href + '/');
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Connection banner */}
-      {!backendReady && warming && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center justify-center gap-2 text-sm text-yellow-800">
-          <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
-          Conectando ao servidor...
-        </div>
-      )}
-
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white border-r border-gray-200 flex flex-col transition-all duration-200 shrink-0 sticky top-0 h-screen`}>
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0 hover:bg-emerald-700 transition-colors shadow-sm"
-            >
-              <span className="text-white font-bold text-lg">T</span>
-            </button>
-            {sidebarOpen && (
-              <div>
-                <h1 className="text-gray-900 font-bold text-sm">TaxCredit</h1>
-                <p className="text-gray-400 text-xs">Administrador</p>
-              </div>
-            )}
+    <SWRConfig value={swrGlobalConfig}>
+      <div className="min-h-screen bg-gray-50 flex">
+        {!backendReady && warming && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-50 border-b border-yellow-200 px-4 py-2 flex items-center justify-center gap-2 text-sm text-yellow-800">
+            <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin" />
+            Conectando ao servidor... aguarde alguns segundos
           </div>
-        </div>
+        )}
 
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {sidebarOpen && (
-            <p className="text-[10px] text-gray-400 uppercase tracking-widest px-3 py-2 font-bold">Gestão</p>
-          )}
-          {menuItems.filter(i => i.section === 'gestao').map(item => (
-            <MemoMenuLink key={item.href} item={item} active={isActive(item.href)} open={sidebarOpen} />
-          ))}
+        <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white border-r border-gray-200 flex flex-col transition-all duration-200 shrink-0 sticky top-0 h-screen`}>
+          <div className="p-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0 hover:bg-emerald-700 transition-colors shadow-sm"
+              >
+                <span className="text-white font-bold text-lg">T</span>
+              </button>
+              {sidebarOpen && (
+                <div>
+                  <h1 className="text-gray-900 font-bold text-sm">TaxCredit</h1>
+                  <p className="text-gray-400 text-xs">Administrador</p>
+                </div>
+              )}
+            </div>
+          </div>
 
-          <div className="pt-2">
+          <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
             {sidebarOpen && (
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest px-3 py-2 font-bold">Produção</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest px-3 py-2 font-bold">Gestao</p>
             )}
-            {menuItems.filter(i => i.section === 'producao').map(item => (
+            {menuItems.filter(i => i.section === 'gestao').map(item => (
               <MemoMenuLink key={item.href} item={item} active={isActive(item.href)} open={sidebarOpen} />
             ))}
-          </div>
-        </nav>
 
-        <div className="p-3 border-t border-gray-100">
-          {sidebarOpen ? (
-            <div className="flex items-center justify-between">
-              <div className="min-w-0">
-                <p className="text-gray-900 text-sm font-medium truncate">{user?.name || 'Admin'}</p>
-                <p className="text-gray-400 text-xs truncate">{user?.email}</p>
+            <div className="pt-2">
+              {sidebarOpen && (
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest px-3 py-2 font-bold">Producao</p>
+              )}
+              {menuItems.filter(i => i.section === 'producao').map(item => (
+                <MemoMenuLink key={item.href} item={item} active={isActive(item.href)} open={sidebarOpen} />
+              ))}
+            </div>
+          </nav>
+
+          <div className="p-3 border-t border-gray-100">
+            {sidebarOpen ? (
+              <div className="flex items-center justify-between">
+                <div className="min-w-0">
+                  <p className="text-gray-900 text-sm font-medium truncate">{user?.name || 'Admin'}</p>
+                  <p className="text-gray-400 text-xs truncate">{user?.email}</p>
+                </div>
+                <button onClick={handleLogout} className="text-gray-400 hover:text-red-600 transition-colors ml-2" title="Sair">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                  </svg>
+                </button>
               </div>
-              <button onClick={handleLogout} className="text-gray-400 hover:text-red-600 transition-colors ml-2" title="Sair">
+            ) : (
+              <button onClick={handleLogout} className="w-full flex justify-center text-gray-400 hover:text-red-600" title="Sair">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                 </svg>
               </button>
-            </div>
-          ) : (
-            <button onClick={handleLogout} className="w-full flex justify-center text-gray-400 hover:text-red-600" title="Sair">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-              </svg>
-            </button>
-          )}
-        </div>
-      </aside>
+            )}
+          </div>
+        </aside>
 
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
-    </div>
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
+    </SWRConfig>
   );
 }

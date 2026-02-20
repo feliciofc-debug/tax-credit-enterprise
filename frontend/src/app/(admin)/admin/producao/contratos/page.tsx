@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { authedFetcher } from '@/lib/fetcher';
+import { authedFetcher, SWR_OPTIONS_FAST, SWR_OPTIONS_MEDIUM } from '@/lib/fetcher';
 
 // ============================
 // Types
@@ -67,7 +67,7 @@ export default function AdminContratosPage() {
   const { data: contracts = [], isLoading: loading, mutate: mutateContracts } = useSWR<Contract[]>(
     '/api/contract/list',
     authedFetcher,
-    { revalidateOnFocus: false, dedupingInterval: 120000 }
+    SWR_OPTIONS_MEDIUM,
   );
   const [showForm, setShowForm] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -125,8 +125,16 @@ export default function AdminContratosPage() {
   const [parceiroTitular, setParceiroTitular] = useState('');
   const [parceiroDocBanco, setParceiroDocBanco] = useState('');
 
-  const [clients, setClients] = useState<ClientOption[]>([]);
-  const [partners, setPartners] = useState<PartnerOption[]>([]);
+  const { data: clients = [] } = useSWR<ClientOption[]>(
+    showForm ? '/api/admin/clients' : null,
+    authedFetcher,
+    SWR_OPTIONS_FAST,
+  );
+  const { data: partners = [] } = useSWR<PartnerOption[]>(
+    showForm ? '/api/admin/partners' : null,
+    authedFetcher,
+    SWR_OPTIONS_FAST,
+  );
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [formAdminPassword, setFormAdminPassword] = useState('');
@@ -135,31 +143,6 @@ export default function AdminContratosPage() {
   const apiBase = typeof window !== 'undefined'
     ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
     : '';
-
-  const fetchClients = useCallback(async () => {
-    try {
-      const res = await fetch(`${apiBase}/api/admin/clients`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setClients(data.data || []);
-    } catch {}
-  }, [apiBase, token]);
-
-  const fetchPartners = useCallback(async () => {
-    try {
-      const res = await fetch(`${apiBase}/api/admin/partners`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) setPartners(data.data || []);
-    } catch {}
-  }, [apiBase, token]);
-
-  useEffect(() => {
-    fetchClients();
-    fetchPartners();
-  }, [fetchClients, fetchPartners]);
 
   // Percentage logic
   useEffect(() => {

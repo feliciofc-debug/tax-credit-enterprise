@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
+import useSWR from 'swr';
+import { authedFetcher, SWR_OPTIONS_FAST } from '@/lib/fetcher';
 import { CHECKLISTS, UF_OPTIONS, TIPO_LABELS, TIPO_COLORS, type ChecklistEstado, type ChecklistEtapa } from '@/data/checklists';
 
 interface PartnerData {
@@ -41,9 +43,12 @@ type Tab = 'checklist' | 'sefaz' | 'perdcomp' | 'contrato';
 export default function FormalizacaoPage() {
   const [activeTab, setActiveTab] = useState<Tab>('checklist');
   const [selectedUf, setSelectedUf] = useState('SP');
-  const [analyses, setAnalyses] = useState<AnalysisForFormalization[]>([]);
+  const { data: analyses = [], isLoading: loading } = useSWR<AnalysisForFormalization[]>(
+    '/api/viability/admin-analyses',
+    authedFetcher,
+    SWR_OPTIONS_FAST,
+  );
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisForFormalization | null>(null);
-  const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [generatedDoc, setGeneratedDoc] = useState<string | null>(null);
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
@@ -76,27 +81,6 @@ export default function FormalizacaoPage() {
   const apiBase = typeof window !== 'undefined'
     ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
     : '';
-
-  useEffect(() => {
-    if (apiBase !== undefined) fetchAnalyses();
-  }, [apiBase]);
-
-  const fetchAnalyses = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${apiBase}/api/viability/admin-analyses`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAnalyses(data.data || []);
-      }
-    } catch (e) {
-      console.error('Erro ao buscar analises:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleCheck = (id: string) => {
     setCheckedItems(prev => ({ ...prev, [id]: !prev[id] }));

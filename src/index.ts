@@ -102,6 +102,12 @@ app.use('/api/', apiLimiter);
 // Health checks
 // ==============================
 app.get('/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
