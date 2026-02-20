@@ -109,7 +109,11 @@ router.post('/analyze', authenticateToken, upload.array('documents', 10), async 
     }
 
     if (!files || files.length === 0) {
-      return res.status(400).json({ success: false, error: 'Envie pelo menos um documento para análise' });
+      return res.status(400).json({
+        success: false,
+        error: 'Documentação fiscal obrigatória',
+        message: 'Anexe pelo menos um documento fiscal (DRE, Balanço, Balancete ou SPED) para que a análise possa ser gerada. Sem documentação, não é possível calcular os créditos tributários.',
+      });
     }
 
     // Limite diário: 2 análises por parceiro (admin isento)

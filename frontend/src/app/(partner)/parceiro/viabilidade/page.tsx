@@ -9,6 +9,7 @@ export default function ViabilidadePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [docError, setDocError] = useState('');
   const [form, setForm] = useState({
     companyName: '', cnpj: '', regime: '', sector: '', annualRevenue: '',
   });
@@ -19,7 +20,14 @@ export default function ViabilidadePage() {
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDocError('');
     if (!form.companyName) return;
+
+    if (files.length === 0) {
+      setDocError('Anexe pelo menos um documento fiscal (DRE, Balanco ou Balancete) para gerar a analise. Sem documentacao, a plataforma nao consegue calcular os creditos.');
+      return;
+    }
+
     setLoading(true);
     setResult(null);
 
@@ -121,6 +129,30 @@ export default function ViabilidadePage() {
         <p className="text-gray-500 text-sm mt-1">Avalie o potencial de recuperação antes de abordar o cliente</p>
       </div>
 
+      {/* Regras e Limites */}
+      <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-xl p-5">
+        <h3 className="text-indigo-900 font-bold text-sm mb-3 flex items-center gap-2">
+          <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Como funciona a Analise de Viabilidade
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg p-3 border border-indigo-100">
+            <p className="text-indigo-700 font-bold text-lg mb-1">2 analises/dia</p>
+            <p className="text-gray-600 text-xs">Limite diario por parceiro. Precisa de mais? Contate (21) 96752-0706.</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-indigo-100">
+            <p className="text-indigo-700 font-bold text-lg mb-1">Documentos obrigatorios</p>
+            <p className="text-gray-600 text-xs">Anexe DRE, Balanco ou Balancete. Sem documentos, a analise nao sera gerada.</p>
+          </div>
+          <div className="bg-white rounded-lg p-3 border border-indigo-100">
+            <p className="text-indigo-700 font-bold text-lg mb-1">IA avancada</p>
+            <p className="text-gray-600 text-xs">Cada analise usa inteligencia artificial de alto custo. Use com responsabilidade.</p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Form */}
         <div>
@@ -157,17 +189,56 @@ export default function ViabilidadePage() {
               </div>
             </div>
 
-            {/* Upload docs */}
+            {/* Upload docs — OBRIGATÓRIO */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Documentos (opcional)</label>
-              <input
-                type="file"
-                multiple
-                accept=".pdf,.xlsx,.xls,.txt,.zip"
-                onChange={(e) => setFiles(e.target.files ? Array.from(e.target.files) : [])}
-                className="input text-sm"
-              />
-              <p className="text-xs text-gray-500 mt-1">PDF, Excel, SPED (.txt) ou ZIP com toda documentação</p>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Documentos Fiscais *
+              </label>
+              <div className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
+                files.length > 0 ? 'border-green-300 bg-green-50' : docError ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-indigo-400'
+              }`}>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.xlsx,.xls,.txt,.zip"
+                  onChange={(e) => {
+                    setFiles(e.target.files ? Array.from(e.target.files) : []);
+                    setDocError('');
+                  }}
+                  className="hidden"
+                  id="doc-upload"
+                />
+                <label htmlFor="doc-upload" className="cursor-pointer">
+                  {files.length > 0 ? (
+                    <div>
+                      <svg className="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                      <p className="text-green-700 font-semibold text-sm">{files.length} arquivo(s) selecionado(s)</p>
+                      <p className="text-green-600 text-xs mt-1">{files.map(f => f.name).join(', ')}</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                      <p className="text-gray-600 font-medium text-sm">Clique para anexar documentos</p>
+                      <p className="text-gray-400 text-xs mt-1">DRE, Balanco, Balancete, SPED (.txt) ou ZIP</p>
+                    </div>
+                  )}
+                </label>
+              </div>
+              {docError && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700 text-sm font-medium">{docError}</p>
+                </div>
+              )}
+              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-amber-800 text-xs font-medium">
+                  Documentos aceitos: DRE, Balanco Patrimonial, Balancete, SPED Fiscal/Contribuicoes.
+                  Sem documentacao fiscal, a analise nao pode ser gerada.
+                </p>
+              </div>
             </div>
 
             <button
