@@ -285,6 +285,8 @@ export default function ContratosPage() {
   const [showNewContract, setShowNewContract] = useState(false);
   const [signingId, setSigningId] = useState<string | null>(null);
   const [signSuccess, setSignSuccess] = useState('');
+  const [fullAnalysisLoading, setFullAnalysisLoading] = useState<string | null>(null);
+  const [fullAnalysisResult, setFullAnalysisResult] = useState<string | null>(null);
 
   const apiBase = typeof window !== 'undefined'
     ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
@@ -331,6 +333,34 @@ export default function ContratosPage() {
     }
   };
 
+  const handleFullAnalysis = async (contractId: string) => {
+    setFullAnalysisLoading(contractId);
+    setFullAnalysisResult(null);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${apiBase}/api/viability/full-analysis`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contractId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFullAnalysisResult('Relatorio completo gerado com sucesso! Verifique na area de Analises.');
+        mutateContracts();
+        setTimeout(() => setFullAnalysisResult(null), 8000);
+      } else {
+        alert(data.error || data.details || 'Erro ao gerar relatorio');
+      }
+    } catch {
+      alert('Erro de conexao com o servidor');
+    } finally {
+      setFullAnalysisLoading(null);
+    }
+  };
+
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
@@ -373,6 +403,12 @@ export default function ContratosPage() {
       {signSuccess && (
         <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4">
           <p className="text-green-700 font-medium text-sm">{signSuccess}</p>
+        </div>
+      )}
+
+      {fullAnalysisResult && (
+        <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4">
+          <p className="text-green-700 font-medium text-sm">{fullAnalysisResult}</p>
         </div>
       )}
 
@@ -462,18 +498,47 @@ export default function ContratosPage() {
                   </div>
                 </div>
 
-                {!contract.partnerSigned && (
-                  <div className="mt-4 pt-4 border-t border-gray-100">
+                {/* Acoes do contrato */}
+                <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-3">
+                  {!contract.partnerSigned && (
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleSignContract(contract.id)}
+                        disabled={signingId === contract.id}
+                        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {signingId === contract.id ? 'Assinando...' : 'Assinar Contrato'}
+                      </button>
+                      <span className="text-xs text-gray-400">Sua assinatura digital sera registrada</span>
+                    </div>
+                  )}
+
+                  {contract.setupFeePaid && contract.partnerSigned && contract.clientSigned && (
                     <button
-                      onClick={() => handleSignContract(contract.id)}
-                      disabled={signingId === contract.id}
-                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                      onClick={() => handleFullAnalysis(contract.id)}
+                      disabled={!!fullAnalysisLoading}
+                      className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
                     >
-                      {signingId === contract.id ? 'Assinando...' : 'Assinar Contrato'}
+                      {fullAnalysisLoading === contract.id ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                          Gerando Relatorio...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                          Gerar Relatorio Completo
+                        </>
+                      )}
                     </button>
-                    <span className="text-xs text-gray-400 ml-3">Sua assinatura digital sera registrada</span>
-                  </div>
-                )}
+                  )}
+
+                  {!contract.setupFeePaid && contract.partnerSigned && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2">
+                      <p className="text-yellow-700 text-xs font-medium">Aguardando pagamento da taxa de adesao para liberar relatorio completo</p>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
