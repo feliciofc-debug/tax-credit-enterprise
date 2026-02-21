@@ -76,13 +76,13 @@ export default function OportunidadesPage() {
             <div className="space-y-3">
               <StepItem done={true} label="Cadastro na plataforma" />
               <StepItem done={true} label="Upload dos documentos fiscais" desc="Envie DRE, Balanço ou Balancete na aba Upload" />
-              <StepItem done={access.hasActiveContract} label="Assinatura do contrato" desc="Contrato assinado com firma reconhecida em cartório" />
-              <StepItem done={access.bankConfirmed} label="Registro no Banco Fibra" desc="Contrato registrado e operação confirmada pelo banco" />
+              <StepItem done={access?.hasActiveContract || false} label="Assinatura do contrato" desc="Contrato assinado com firma reconhecida em cartório" />
+              <StepItem done={access?.bankConfirmed || false} label="Registro no Banco Fibra" desc="Contrato registrado e operação confirmada pelo banco" />
               <StepItem done={false} label="Liberação das oportunidades" desc="Análise completa, Parecer DCOMP, Requerimento SEFAZ e Procuração" />
             </div>
           </div>
 
-          {!access.hasActiveContract && (
+          {!access?.hasActiveContract && (
             <p className="text-sm text-gray-400">
               Entre em contato com a TaxCredit para dar andamento ao seu processo.
               <br/>WhatsApp: <a href="https://wa.me/5521967520706" className="text-blue-600 hover:underline">(21) 96752-0706</a>
