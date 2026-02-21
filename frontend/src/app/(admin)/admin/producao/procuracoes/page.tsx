@@ -552,7 +552,7 @@ function GenerateForm({
           {/* Contract selection */}
           {sourceType === 'contract' && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Contrato *</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Contrato</label>
               {contracts.length === 0 ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700">
                   Nenhum contrato encontrado. Gere um contrato na aba de Formalização primeiro.
@@ -570,35 +570,21 @@ function GenerateForm({
             </div>
           )}
 
-          {/* Manual client selection */}
-          {sourceType === 'manual' && (
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Cliente *</label>
-              <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" required>
-                <option value="">Selecione o cliente...</option>
-                {clients?.map(c => (
-                  <option key={c.id} value={c.id}>{c.company || c.name} — {c.cnpj || c.email}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Analysis client matching */}
-          {sourceType === 'analysis' && analysisInfo && !selectedClient && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <p className="text-sm text-amber-800 font-medium mb-1">Cliente não cadastrado na plataforma</p>
-              <p className="text-xs text-amber-700">
-                A empresa "{analysisInfo.companyName}" ({analysisInfo.cnpj}) não tem cadastro de cliente.
-                Selecione manualmente:
+          {/* Client selection — SEMPRE visível para o admin */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Cliente *</label>
+            <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" required>
+              <option value="">Selecione o cliente...</option>
+              {clients?.map(c => (
+                <option key={c.id} value={c.id}>{c.company || c.name} — {c.cnpj || c.email}</option>
+              ))}
+            </select>
+            {sourceType === 'analysis' && analysisInfo && !selectedClient && (
+              <p className="text-xs text-amber-600 mt-1">
+                Selecione o cliente correspondente à análise de "{analysisInfo.companyName}"
               </p>
-              <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)} className="mt-2 w-full px-3 py-2 border rounded-lg text-sm">
-                <option value="">Selecione o cliente...</option>
-                {clients?.map(c => (
-                  <option key={c.id} value={c.id}>{c.company || c.name} — {c.cnpj || c.email}</option>
-                ))}
-              </select>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Selected client info */}
           {selectedClientData && (
@@ -629,10 +615,9 @@ function GenerateForm({
             </div>
           </div>
 
-          {/* Lawyer details */}
-          {(lawyerScenario !== 'atom_lawyer' || advNome) && (
-            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-              <p className="text-xs font-medium text-gray-700">Dados do Advogado</p>
+          {/* Lawyer details — sempre visível */}
+          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <p className="text-xs font-medium text-gray-700">Dados do Advogado <span className="text-gray-400 font-normal">(preencha se houver advogado no processo)</span></p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] text-gray-500 mb-0.5">Nome</label>
@@ -651,8 +636,7 @@ function GenerateForm({
                   <input type="text" value={advEndereco} onChange={e => setAdvEndereco(e.target.value)} className="w-full px-3 py-1.5 border rounded text-sm"/>
                 </div>
               </div>
-            </div>
-          )}
+          </div>
 
           {/* Types */}
           <div>
