@@ -16,6 +16,143 @@ function requireAdmin(req: Request, res: Response, next: any) {
 }
 
 // ============================================================
+// STATIC ROUTES FIRST (before /:id)
+// ============================================================
+
+// GET /api/procuration/clients/list
+router.get('/clients/list', authenticateToken, requireAdmin, async (_req: Request, res: Response) => {
+  try {
+    const clients = await prisma.user.findMany({
+      where: { role: 'user' },
+      select: {
+        id: true, name: true, company: true, cnpj: true, email: true,
+        endereco: true, cidade: true, estado: true,
+        legalRepName: true, legalRepCpf: true, legalRepRg: true, legalRepCargo: true,
+      },
+      orderBy: { company: 'asc' },
+    });
+    res.json({ success: true, data: clients });
+  } catch (err: any) {
+    logger.error('Erro ao listar clientes:', err);
+    res.status(500).json({ success: false, error: 'Erro ao listar clientes' });
+  }
+});
+
+// GET /api/procuration/contracts/list
+router.get('/contracts/list', authenticateToken, requireAdmin, async (_req: Request, res: Response) => {
+  try {
+    const contracts = await prisma.contract.findMany({
+      where: { status: { not: 'cancelled' } },
+      select: {
+        id: true, contractNumber: true, contractType: true, status: true,
+        clientId: true, partnerId: true,
+        lawyerName: true, lawyerOab: true,
+        client: { select: { id: true, name: true, company: true, cnpj: true } },
+        partner: { select: { id: true, name: true, company: true, oabNumber: true, oabState: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ success: true, data: contracts });
+  } catch (err: any) {
+    logger.error('Erro ao listar contratos:', err);
+    res.status(500).json({ success: false, error: 'Erro ao listar contratos' });
+  }
+});
+
+// GET /api/procuration/list — admin lista todas
+router.get('/list', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { status, type, lawyerScenario, clientId } = req.query;
+    const where: any = {};
+    if (status) where.status = status as string;
+    if (type) where.type = type as string;
+    if (lawyerScenario) where.lawyerScenario = lawyerScenario as string;
+    if (clientId) where.clientId = clientId as string;
+
+    const procurations = await prisma.procuration.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const clientIds = [...new Set(procurations.map(p => p.clientId))];
+    let clientMap: Record<string, any> = {};
+    if (clientIds.length > 0) {
+      const clients = await prisma.user.findMany({
+        where: { id: { in: clientIds } },
+        select: { id: true, name: true, company: true, cnpj: true, email: true },
+      });
+      clientMap = Object.fromEntries(clients.map(c => [c.id, c]));
+    }
+
+    const enriched = procurations.map(p => ({
+      ...p,
+      client: clientMap[p.clientId] || null,
+    }));
+
+    res.json({ success: true, data: enriched });
+  } catch (err: any) {
+    logger.error('Erro ao listar procurações:', err);
+    res.status(500).json({ success: false, error: 'Erro ao listar procurações' });
+  }
+});
+
+// GET /api/procuration/my — cliente vê as dele
+router.get('/my', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const userId = user.userId || user.id;
+    const procurations = await prisma.procuration.findMany({
+      where: { clientId: userId },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ success: true, data: procurations });
+  } catch (err: any) {
+    logger.error('Erro ao buscar procurações do cliente:', err);
+    res.status(500).json({ success: false, error: 'Erro ao buscar procurações' });
+  }
+});
+
+// GET /api/procuration/partner — parceiro vê dos clientes dele (só tripartite)
+router.get('/partner', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const partnerId = await getOperatorPartnerId(user);
+
+    if (!partnerId) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const procurations = await prisma.procuration.findMany({
+      where: {
+        partnerId,
+        lawyerScenario: 'partner_lawyer',
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const clientIds = [...new Set(procurations.map(p => p.clientId))];
+    let clientMap: Record<string, any> = {};
+    if (clientIds.length > 0) {
+      const clients = await prisma.user.findMany({
+        where: { id: { in: clientIds } },
+        select: { id: true, name: true, company: true, cnpj: true },
+      });
+      clientMap = Object.fromEntries(clients.map(c => [c.id, c]));
+    }
+
+    const enriched = procurations.map(p => ({
+      ...p,
+      client: clientMap[p.clientId] || null,
+    }));
+
+    res.json({ success: true, data: enriched });
+  } catch (err: any) {
+    logger.error('Erro ao buscar procurações do parceiro:', err);
+    res.status(500).json({ success: false, error: 'Erro ao buscar procurações' });
+  }
+});
+
+// ============================================================
 // POST /api/procuration/generate — gerar procuração (admin)
 // ============================================================
 router.post('/generate', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
@@ -101,105 +238,15 @@ router.post('/generate', authenticateToken, requireAdmin, async (req: Request, r
     res.json({ success: true, data: procuration });
   } catch (err: any) {
     logger.error('Erro ao gerar procuração:', err);
-    res.status(500).json({ success: false, error: 'Erro ao gerar procuração' });
+    res.status(500).json({ success: false, error: 'Erro ao gerar procuração: ' + (err.message || '') });
   }
 });
 
 // ============================================================
-// GET /api/procuration/list — admin lista todas
+// DYNAMIC ROUTES LAST (/:id pattern)
 // ============================================================
-router.get('/list', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
-  try {
-    const { status, type, lawyerScenario, clientId } = req.query;
-    const where: any = {};
-    if (status) where.status = status as string;
-    if (type) where.type = type as string;
-    if (lawyerScenario) where.lawyerScenario = lawyerScenario as string;
-    if (clientId) where.clientId = clientId as string;
 
-    const procurations = await prisma.procuration.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const clientIds = [...new Set(procurations.map(p => p.clientId))];
-    const clients = await prisma.user.findMany({
-      where: { id: { in: clientIds } },
-      select: { id: true, name: true, company: true, cnpj: true, email: true },
-    });
-    const clientMap = Object.fromEntries(clients.map(c => [c.id, c]));
-
-    const enriched = procurations.map(p => ({
-      ...p,
-      client: clientMap[p.clientId] || null,
-    }));
-
-    res.json({ success: true, data: enriched });
-  } catch (err: any) {
-    logger.error('Erro ao listar procurações:', err);
-    res.status(500).json({ success: false, error: 'Erro ao listar procurações' });
-  }
-});
-
-// ============================================================
-// GET /api/procuration/my — cliente vê as dele
-// ============================================================
-router.get('/my', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const user = (req as any).user;
-    const procurations = await prisma.procuration.findMany({
-      where: { clientId: user.id },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json({ success: true, data: procurations });
-  } catch (err: any) {
-    logger.error('Erro ao buscar procurações do cliente:', err);
-    res.status(500).json({ success: false, error: 'Erro ao buscar procurações' });
-  }
-});
-
-// ============================================================
-// GET /api/procuration/partner — parceiro vê dos clientes dele (só tripartite)
-// ============================================================
-router.get('/partner', authenticateToken, async (req: Request, res: Response) => {
-  try {
-    const user = (req as any).user;
-    const partnerId = await getOperatorPartnerId(user);
-
-    if (!partnerId) {
-      return res.json({ success: true, data: [] });
-    }
-
-    const procurations = await prisma.procuration.findMany({
-      where: {
-        partnerId,
-        lawyerScenario: 'partner_lawyer',
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const clientIds = [...new Set(procurations.map(p => p.clientId))];
-    const clients = await prisma.user.findMany({
-      where: { id: { in: clientIds } },
-      select: { id: true, name: true, company: true, cnpj: true },
-    });
-    const clientMap = Object.fromEntries(clients.map(c => [c.id, c]));
-
-    const enriched = procurations.map(p => ({
-      ...p,
-      client: clientMap[p.clientId] || null,
-    }));
-
-    res.json({ success: true, data: enriched });
-  } catch (err: any) {
-    logger.error('Erro ao buscar procurações do parceiro:', err);
-    res.status(500).json({ success: false, error: 'Erro ao buscar procurações' });
-  }
-});
-
-// ============================================================
 // GET /api/procuration/:id — detalhes de uma procuração
-// ============================================================
 router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -210,10 +257,13 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'Procuração não encontrada' });
     }
 
-    if (user.role !== 'admin' && procuration.clientId !== user.id) {
-      const partnerId = await getOperatorPartnerId(user);
-      if (!partnerId || procuration.partnerId !== partnerId) {
-        return res.status(403).json({ success: false, error: 'Sem permissão' });
+    if (user.role !== 'admin') {
+      const userId = user.userId || user.id;
+      if (procuration.clientId !== userId) {
+        const partnerId = await getOperatorPartnerId(user);
+        if (!partnerId || procuration.partnerId !== partnerId) {
+          return res.status(403).json({ success: false, error: 'Sem permissão' });
+        }
       }
     }
 
@@ -224,9 +274,7 @@ router.get('/:id', authenticateToken, async (req: Request, res: Response) => {
   }
 });
 
-// ============================================================
 // PUT /api/procuration/:id/status — atualizar status (admin)
-// ============================================================
 router.put('/:id/status', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -245,50 +293,6 @@ router.put('/:id/status', authenticateToken, requireAdmin, async (req: Request, 
   } catch (err: any) {
     logger.error('Erro ao atualizar status:', err);
     res.status(500).json({ success: false, error: 'Erro ao atualizar status' });
-  }
-});
-
-// ============================================================
-// GET /api/procuration/clients/list — lista clientes para dropdown
-// ============================================================
-router.get('/clients/list', authenticateToken, requireAdmin, async (_req: Request, res: Response) => {
-  try {
-    const clients = await prisma.user.findMany({
-      where: { role: 'user' },
-      select: {
-        id: true, name: true, company: true, cnpj: true, email: true,
-        endereco: true, cidade: true, estado: true,
-        legalRepName: true, legalRepCpf: true, legalRepRg: true, legalRepCargo: true,
-      },
-      orderBy: { company: 'asc' },
-    });
-    res.json({ success: true, data: clients });
-  } catch (err: any) {
-    logger.error('Erro ao listar clientes:', err);
-    res.status(500).json({ success: false, error: 'Erro ao listar clientes' });
-  }
-});
-
-// ============================================================
-// GET /api/procuration/contracts/list — lista contratos para dropdown
-// ============================================================
-router.get('/contracts/list', authenticateToken, requireAdmin, async (_req: Request, res: Response) => {
-  try {
-    const contracts = await prisma.contract.findMany({
-      where: { status: { not: 'cancelled' } },
-      select: {
-        id: true, contractNumber: true, contractType: true, status: true,
-        clientId: true, partnerId: true,
-        lawyerName: true, lawyerOab: true,
-        client: { select: { id: true, name: true, company: true, cnpj: true } },
-        partner: { select: { id: true, name: true, company: true, oabNumber: true, oabState: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json({ success: true, data: contracts });
-  } catch (err: any) {
-    logger.error('Erro ao listar contratos:', err);
-    res.status(500).json({ success: false, error: 'Erro ao listar contratos' });
   }
 });
 
