@@ -19,10 +19,10 @@ function requireAdmin(req: Request, res: Response, next: any) {
 // STATIC ROUTES FIRST (before /:id)
 // ============================================================
 
-// GET /api/procuration/clients/list
+// GET /api/procuration/clients/list — clientes reais + empresas de análises
 router.get('/clients/list', authenticateToken, requireAdmin, async (_req: Request, res: Response) => {
   try {
-    const clients = await prisma.user.findMany({
+    const users = await prisma.user.findMany({
       where: { role: 'user' },
       select: {
         id: true, name: true, company: true, cnpj: true, email: true,
@@ -31,7 +31,40 @@ router.get('/clients/list', authenticateToken, requireAdmin, async (_req: Reques
       },
       orderBy: { company: 'asc' },
     });
-    res.json({ success: true, data: clients });
+
+    const analyses = await prisma.viabilityAnalysis.findMany({
+      where: { status: 'completed', estimatedCredit: { gt: 0 } },
+      select: {
+        id: true, companyName: true, cnpj: true, estimatedCredit: true,
+        viabilityScore: true, partnerId: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    const seen = new Set(users.map(u => u.cnpj).filter(Boolean));
+    const analysisClients = analyses
+      .filter(a => !seen.has(a.cnpj))
+      .reduce((acc: any[], a) => {
+        const key = a.cnpj || a.companyName;
+        if (!acc.find(x => (x.cnpj || x.company) === key)) {
+          acc.push({
+            id: `analysis_${a.id}`,
+            name: a.companyName,
+            company: a.companyName,
+            cnpj: a.cnpj || '',
+            email: '',
+            endereco: null, cidade: null, estado: null,
+            legalRepName: null, legalRepCpf: null, legalRepRg: null, legalRepCargo: null,
+            _source: 'analysis',
+            estimatedCredit: a.estimatedCredit,
+            viabilityScore: a.viabilityScore,
+          });
+        }
+        return acc;
+      }, []);
+
+    res.json({ success: true, data: [...users, ...analysisClients] });
   } catch (err: any) {
     logger.error('Erro ao listar clientes:', err);
     res.status(500).json({ success: false, error: 'Erro ao listar clientes' });
@@ -220,12 +253,46 @@ router.post('/generate', authenticateToken, requireAdmin, async (req: Request, r
       });
     }
 
-    const client = await prisma.user.findUnique({ where: { id: clientId } });
-    if (!client) {
-      return res.status(404).json({ success: false, error: 'Cliente não encontrado' });
+    let clienteNome = '';
+    let clienteCnpj = '';
+    let clienteEndereco = '';
+    let representanteNome = '';
+    let representanteCpf = '';
+    let representanteRg: string | undefined;
+    let representanteCargo: string | undefined;
+    let clienteEstado: string | undefined;
+    let clienteCidade = 'Rio de Janeiro';
+    let realClientId = clientId;
+    let partnerId: string | null = null;
+
+    const isAnalysisSource = clientId.startsWith('analysis_');
+
+    if (isAnalysisSource) {
+      const analysisId = clientId.replace('analysis_', '');
+      const analysis = await prisma.viabilityAnalysis.findUnique({ where: { id: analysisId } });
+      if (!analysis) {
+        return res.status(404).json({ success: false, error: 'Análise não encontrada' });
+      }
+      clienteNome = analysis.companyName || 'EMPRESA';
+      clienteCnpj = analysis.cnpj || '';
+      realClientId = clientId;
+      if (analysis.partnerId) partnerId = analysis.partnerId;
+    } else {
+      const client = await prisma.user.findUnique({ where: { id: clientId } });
+      if (!client) {
+        return res.status(404).json({ success: false, error: 'Cliente não encontrado' });
+      }
+      clienteNome = client.company || client.name || 'EMPRESA';
+      clienteCnpj = client.cnpj || '';
+      clienteEndereco = [client.endereco, client.cidade, client.estado].filter(Boolean).join(', ') || '';
+      representanteNome = client.legalRepName || client.name || '';
+      representanteCpf = client.legalRepCpf || '';
+      representanteRg = client.legalRepRg || undefined;
+      representanteCargo = client.legalRepCargo || undefined;
+      clienteEstado = client.estado || undefined;
+      clienteCidade = client.cidade || 'Rio de Janeiro';
     }
 
-    let partnerId: string | null = null;
     let contract: any = null;
     if (contractId) {
       contract = await prisma.contract.findUnique({
@@ -240,21 +307,21 @@ router.post('/generate', authenticateToken, requireAdmin, async (req: Request, r
     const procParams: ProcurationParams = {
       type,
       lawyerScenario,
-      clienteNome: client.company || client.name || 'EMPRESA',
-      clienteCnpj: client.cnpj || '',
-      clienteEndereco: [client.endereco, client.cidade, client.estado].filter(Boolean).join(', ') || '',
-      representanteNome: client.legalRepName || client.name || '',
-      representanteCpf: client.legalRepCpf || '',
-      representanteRg: client.legalRepRg || undefined,
-      representanteCargo: client.legalRepCargo || undefined,
+      clienteNome,
+      clienteCnpj,
+      clienteEndereco,
+      representanteNome,
+      representanteCpf,
+      representanteRg,
+      representanteCargo,
       advogadoNome: advogadoNome || undefined,
       advogadoOab: advogadoOab || undefined,
       advogadoCpf: advogadoCpf || undefined,
       advogadoEndereco: advogadoEndereco || undefined,
-      uf: uf || client.estado || undefined,
+      uf: uf || clienteEstado || undefined,
       prazoAnos: prazoAnos || 2,
       poderes: poderes || undefined,
-      cidade: client.cidade || 'Rio de Janeiro',
+      cidade: clienteCidade,
     };
 
     const documentText = generateProcurationDocument(procParams);
@@ -264,7 +331,7 @@ router.post('/generate', authenticateToken, requireAdmin, async (req: Request, r
 
     const procuration = await prisma.procuration.create({
       data: {
-        clientId,
+        clientId: realClientId,
         contractId: contractId || null,
         partnerId: lawyerScenario === 'partner_lawyer' ? partnerId : null,
         type,
@@ -275,7 +342,7 @@ router.post('/generate', authenticateToken, requireAdmin, async (req: Request, r
         advogadoOab: advogadoOab || null,
         advogadoCpf: advogadoCpf || null,
         advogadoEndereco: advogadoEndereco || null,
-        uf: uf || client.estado || null,
+        uf: uf || clienteEstado || null,
         prazoAnos: prazoAnos || 2,
         poderes: poderes || null,
         documentText,

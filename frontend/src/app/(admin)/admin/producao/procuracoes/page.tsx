@@ -572,16 +572,29 @@ function GenerateForm({
 
           {/* Client selection — SEMPRE visível para o admin */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Cliente *</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Cliente / Empresa *</label>
             <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" required>
-              <option value="">Selecione o cliente...</option>
-              {clients?.map(c => (
-                <option key={c.id} value={c.id}>{c.company || c.name} — {c.cnpj || c.email}</option>
-              ))}
+              <option value="">Selecione o cliente ou empresa...</option>
+              {(clients || []).filter((c: any) => !c._source).length > 0 && (
+                <optgroup label="Clientes cadastrados">
+                  {(clients || []).filter((c: any) => !c._source).map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.company || c.name} — {c.cnpj || c.email}</option>
+                  ))}
+                </optgroup>
+              )}
+              {(clients || []).filter((c: any) => c._source === 'analysis').length > 0 && (
+                <optgroup label="Empresas analisadas (com crédito)">
+                  {(clients || []).filter((c: any) => c._source === 'analysis').map((c: any) => (
+                    <option key={c.id} value={c.id}>
+                      {c.company || c.name} — {c.cnpj || 'S/CNPJ'} — R$ {Number(c.estimatedCredit || 0).toLocaleString('pt-BR')}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
             {sourceType === 'analysis' && analysisInfo && !selectedClient && (
               <p className="text-xs text-amber-600 mt-1">
-                Selecione o cliente correspondente à análise de "{analysisInfo.companyName}"
+                Selecione o cliente correspondente à análise de &quot;{analysisInfo.companyName}&quot;
               </p>
             )}
           </div>
@@ -592,6 +605,9 @@ function GenerateForm({
               <p className="font-medium text-gray-800">{selectedClientData.company || selectedClientData.name}</p>
               <p>CNPJ: {selectedClientData.cnpj || '—'} | Rep. Legal: {selectedClientData.legalRepName || '—'} | CPF: {selectedClientData.legalRepCpf || '—'}</p>
               {selectedClientData.endereco && <p>Endereço: {[selectedClientData.endereco, selectedClientData.cidade, selectedClientData.estado].filter(Boolean).join(', ')}</p>}
+              {(selectedClientData as any)._source === 'analysis' && (
+                <p className="text-green-700 mt-1 font-medium">Crédito estimado: R$ {Number((selectedClientData as any).estimatedCredit || 0).toLocaleString('pt-BR')}</p>
+              )}
             </div>
           )}
 
