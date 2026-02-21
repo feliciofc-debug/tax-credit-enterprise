@@ -611,6 +611,50 @@ router.patch('/:id/checklist', authenticateToken, async (req: Request, res: Resp
 });
 
 /**
+ * GET /api/contract/my-status
+ * Cliente verifica se tem contrato ativo + banco confirmado
+ */
+router.get('/my-status', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const userId = user.userId || user.id;
+
+    const contract = await prisma.contract.findFirst({
+      where: {
+        clientId: userId,
+        status: { in: ['active', 'bank_registered', 'completed'] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!contract) {
+      return res.json({
+        success: true,
+        data: { hasActiveContract: false, bankConfirmed: false, contractStatus: 'none' },
+      });
+    }
+
+    const checklist = (contract.checklist as any) || {};
+    const bankConfirmed = !!(checklist.bank_registered || contract.status === 'bank_registered' || contract.status === 'active' || contract.status === 'completed');
+
+    return res.json({
+      success: true,
+      data: {
+        hasActiveContract: true,
+        bankConfirmed,
+        contractStatus: contract.status,
+        contractId: contract.id,
+        consultaLiberada: contract.consultaLiberada,
+        formalizacaoLiberada: contract.formalizacaoLiberada,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Error checking contract status:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao verificar status' });
+  }
+});
+
+/**
  * GET /api/contract/:id
  * Detalhe do contrato com texto completo
  */

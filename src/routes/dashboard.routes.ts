@@ -69,4 +69,75 @@ router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/dashboard/my-opportunities - Oportunidades reais do cliente (da análise)
+router.get('/my-opportunities', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { cnpj: true, company: true },
+    });
+
+    if (!user?.cnpj && !user?.company) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const whereClause: any = { status: 'completed' };
+    if (user.cnpj) {
+      whereClause.cnpj = user.cnpj;
+    } else if (user.company) {
+      whereClause.companyName = { contains: user.company, mode: 'insensitive' };
+    }
+
+    const analyses = await prisma.viabilityAnalysis.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      select: {
+        id: true,
+        companyName: true,
+        cnpj: true,
+        estimatedCredit: true,
+        status: true,
+        aiSummary: true,
+        opportunities: true,
+        createdAt: true,
+      },
+    });
+
+    const opportunities: any[] = [];
+    for (const analysis of analyses) {
+      if (analysis.opportunities) {
+        try {
+          const opps = typeof analysis.opportunities === 'string'
+            ? JSON.parse(analysis.opportunities)
+            : analysis.opportunities;
+          if (Array.isArray(opps)) {
+            opps.forEach((opp: any, i: number) => {
+              opportunities.push({
+                id: `${analysis.id}-${i}`,
+                analysisId: analysis.id,
+                tipo: opp.tipo || opp.tese || opp.name || 'Oportunidade',
+                tributo: opp.tributo || '',
+                valorEstimado: opp.valorEstimado || opp.valor || 0,
+                probabilidadeRecuperacao: opp.probabilidade || opp.probabilidadeRecuperacao || 70,
+                fundamentacaoLegal: opp.fundamentacao || opp.fundamentacaoLegal || '',
+                descricao: opp.descricao || '',
+                prazoRecuperacao: opp.prazo || opp.prazoRecuperacao || '3-12 meses',
+                empresa: analysis.companyName || '',
+              });
+            });
+          }
+        } catch { /* ignore parse errors */ }
+      }
+    }
+
+    return res.json({ success: true, data: opportunities });
+  } catch (error: any) {
+    logger.error('Error fetching client opportunities:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao buscar oportunidades' });
+  }
+});
+
 export default router;

@@ -5,6 +5,7 @@ import { prisma } from '../utils/prisma';
 import { documentQueue } from '../queues';
 import { logger } from '../utils/logger';
 import { authenticateToken } from '../middleware/auth';
+import { sendDocumentUploadNotification } from '../services/email.service';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -138,6 +139,24 @@ router.post('/upload', authenticateToken, upload.array('documents', 200), async 
     const documents = await Promise.all(documentPromises);
 
     logger.info(`${documents.length} documents added to queue for batch ${batchJob.id}`);
+
+    // Notificar admin por email sobre novo upload
+    try {
+      const uploaderUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, company: true, cnpj: true } });
+      if (uploaderUser) {
+        sendDocumentUploadNotification(
+          uploaderUser.name || 'Cliente',
+          uploaderUser.email,
+          companyName || uploaderUser.company || '',
+          cnpj || uploaderUser.cnpj || '',
+          documentType,
+          files.length,
+          files.map(f => f.originalname),
+        ).catch(err => logger.warn('Falha ao enviar notificação de upload:', err));
+      }
+    } catch (emailErr) {
+      logger.warn('Erro ao preparar notificação de upload:', emailErr);
+    }
 
     return res.json({
       success: true,

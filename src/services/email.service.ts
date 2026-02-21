@@ -167,8 +167,53 @@ export async function sendPaymentConfirmationEmail(to: string, name: string): Pr
   return sendEmail({ to, subject, html });
 }
 
+export async function sendDocumentUploadNotification(
+  clientName: string,
+  clientEmail: string,
+  companyName: string,
+  cnpj: string,
+  documentType: string,
+  fileCount: number,
+  fileNames: string[],
+): Promise<boolean> {
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'noreply@taxcreditenterprise.com';
+  const subject = `Novos documentos recebidos — ${companyName || clientName}`;
+  const filesHtml = fileNames.map(f => `<li>${f}</li>`).join('');
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #0f766e, #1e40af); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Novos Documentos Recebidos</h1>
+      </div>
+      <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+        <h2 style="color: #111827; margin-top: 0;">Upload de Cliente</h2>
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+          <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Cliente</td><td style="padding: 8px; color: #111827; font-weight: bold; border-bottom: 1px solid #f3f4f6;">${clientName}</td></tr>
+          <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Email</td><td style="padding: 8px; color: #111827; border-bottom: 1px solid #f3f4f6;">${clientEmail}</td></tr>
+          <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Empresa</td><td style="padding: 8px; color: #111827; font-weight: bold; border-bottom: 1px solid #f3f4f6;">${companyName || '—'}</td></tr>
+          <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">CNPJ</td><td style="padding: 8px; color: #111827; border-bottom: 1px solid #f3f4f6;">${cnpj || '—'}</td></tr>
+          <tr><td style="padding: 8px; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Tipo</td><td style="padding: 8px; color: #111827; border-bottom: 1px solid #f3f4f6;">${documentType}</td></tr>
+          <tr><td style="padding: 8px; color: #6b7280;">Quantidade</td><td style="padding: 8px; color: #111827; font-weight: bold;">${fileCount} arquivo(s)</td></tr>
+        </table>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="color: #374151; margin: 0 0 8px; font-weight: bold;">Arquivos:</p>
+          <ul style="color: #4b5563; margin: 0; padding-left: 20px; font-size: 14px;">${filesHtml}</ul>
+        </div>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${FRONTEND_URL}/admin/dashboard" style="display: inline-block; background: #0f766e; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+            Acessar Admin
+          </a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({ to: adminEmail, subject, html });
+}
+
 export const emailService = {
   sendWelcomeEmail,
   sendInviteEmail,
   sendPaymentConfirmationEmail,
+  sendDocumentUploadNotification,
 };
