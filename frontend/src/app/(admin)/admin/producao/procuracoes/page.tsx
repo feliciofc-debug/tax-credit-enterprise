@@ -108,10 +108,10 @@ export default function ProcuracoesAdminPage() {
   if (filterType) queryParts.push(`type=${filterType}`);
   const qs = queryParts.length ? `?${queryParts.join('&')}` : '';
 
-  const { data: procurations, mutate } = useSWR<Procuration[]>(
+  const { data: procurations, error: listError, mutate } = useSWR<Procuration[]>(
     `/api/procuration/list${qs}`,
     authedFetcher,
-    SWR_OPTIONS_MEDIUM,
+    { ...SWR_OPTIONS_MEDIUM, onErrorRetry: (err, _key, _config, revalidate, { retryCount }) => { if (retryCount >= 2) return; setTimeout(() => revalidate({ retryCount }), 3000); } },
   );
 
   const apiCall = useCallback(async (path: string, method: string, body?: any) => {
@@ -161,7 +161,7 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:inherit;font-size:inhe
       </div>
 
       {/* Stats */}
-      {procurations && (
+      {Array.isArray(procurations) && procurations.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
           {Object.entries(STATUS_COLORS).map(([key, val]) => {
             const count = procurations.filter(p => p.status === key).length;
@@ -220,9 +220,9 @@ pre{white-space:pre-wrap;word-wrap:break-word;font-family:inherit;font-size:inhe
       )}
 
       {/* List */}
-      {!procurations ? (
+      {!procurations && !listError ? (
         <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse"/>)}</div>
-      ) : procurations.length === 0 ? (
+      ) : !Array.isArray(procurations) || procurations.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <svg className="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           <p>Nenhuma procuração gerada</p>
@@ -335,14 +335,21 @@ function GenerateForm({
   );
 
   const contractsFetcher = async (url: string) => {
-    const base = getApiUrl();
-    const token = getToken();
-    const r = await fetch(`${base}${url}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const json = await r.json();
-    return json.data ?? json;
+    try {
+      const base = getApiUrl();
+      const token = getToken();
+      const r = await fetch(`${base}${url}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) return { contracts: [], analyses: [] };
+      const json = await r.json();
+      const d = json.data ?? json;
+      if (d && d.contracts) return d;
+      if (Array.isArray(d)) return { contracts: d, analyses: [] };
+      return { contracts: [], analyses: [] };
+    } catch {
+      return { contracts: [], analyses: [] };
+    }
   };
 
   const { data: sourceData } = useSWR<ContractsListData>(
@@ -457,25 +464,35 @@ function GenerateForm({
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">Selecionar fonte dos dados</label>
             <div className="grid grid-cols-3 gap-2">
-              {[
-                { key: 'analysis' as const, label: 'Análise com Crédito', count: analyses.length, color: 'green' },
-                { key: 'contract' as const, label: 'Contrato Existente', count: contracts.length, color: 'blue' },
-                { key: 'manual' as const, label: 'Selecionar Manual', count: null, color: 'gray' },
-              ].map(s => (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => { setSourceType(s.key); setSelectedContract(''); setSelectedAnalysis(''); setAnalysisInfo(null); }}
-                  className={`p-3 rounded-lg border text-center transition-all ${
-                    sourceType === s.key
-                      ? `border-${s.color}-500 bg-${s.color}-50 ring-1 ring-${s.color}-500`
-                      : 'border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <p className="text-sm font-medium text-gray-900">{s.label}</p>
-                  {s.count !== null && <p className="text-xs text-gray-500 mt-0.5">{s.count} disponível(eis)</p>}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => { setSourceType('analysis'); setSelectedContract(''); setSelectedAnalysis(''); setAnalysisInfo(null); }}
+                className={`p-3 rounded-lg border text-center transition-all ${
+                  sourceType === 'analysis' ? 'border-green-500 bg-green-50 ring-1 ring-green-500' : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <p className="text-sm font-medium text-gray-900">Análise com Crédito</p>
+                <p className="text-xs text-gray-500 mt-0.5">{analyses.length} disponível(eis)</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSourceType('contract'); setSelectedContract(''); setSelectedAnalysis(''); setAnalysisInfo(null); }}
+                className={`p-3 rounded-lg border text-center transition-all ${
+                  sourceType === 'contract' ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500' : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <p className="text-sm font-medium text-gray-900">Contrato Existente</p>
+                <p className="text-xs text-gray-500 mt-0.5">{contracts.length} disponível(eis)</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setSourceType('manual'); setSelectedContract(''); setSelectedAnalysis(''); setAnalysisInfo(null); }}
+                className={`p-3 rounded-lg border text-center transition-all ${
+                  sourceType === 'manual' ? 'border-gray-500 bg-gray-50 ring-1 ring-gray-500' : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <p className="text-sm font-medium text-gray-900">Selecionar Manual</p>
+              </button>
             </div>
           </div>
 
