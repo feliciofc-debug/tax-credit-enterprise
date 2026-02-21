@@ -387,18 +387,27 @@ function GenerateForm({
       const a = analyses.find(an => an.id === selectedAnalysis);
       if (a) {
         setAnalysisInfo(a);
+        setSelectedClient(`analysis_${a.id}`);
         if (a.partner) {
           setLawyerScenario('partner_lawyer');
           setAdvNome(a.partner.name || '');
           setAdvOab(`${a.partner.oabNumber || ''}/${a.partner.oabState || ''}`);
         }
-        const matchingClient = clients?.find(c => c.cnpj === a.cnpj || c.company === a.companyName);
-        if (matchingClient) {
-          setSelectedClient(matchingClient.id);
-        }
       }
     }
-  }, [selectedAnalysis, analyses, clients, sourceType]);
+  }, [selectedAnalysis, analyses, sourceType]);
+
+  useEffect(() => {
+    if (sourceType !== 'analysis' && selectedClient?.startsWith('analysis_')) {
+      const aId = selectedClient.replace('analysis_', '');
+      const a = analyses.find(an => an.id === aId);
+      if (a?.partner) {
+        setLawyerScenario('partner_lawyer');
+        setAdvNome(a.partner.name || '');
+        setAdvOab(`${a.partner.oabNumber || ''}/${a.partner.oabState || ''}`);
+      }
+    }
+  }, [selectedClient, analyses, sourceType]);
 
   const handleGenerate = async () => {
     setSaving(true);
@@ -444,8 +453,6 @@ function GenerateForm({
       setSaving(false);
     }
   };
-
-  const selectedClientData = clients?.find(c => c.id === selectedClient);
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto">
@@ -570,44 +577,32 @@ function GenerateForm({
             </div>
           )}
 
-          {/* Client selection — SEMPRE visível para o admin */}
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Cliente / Empresa *</label>
-            <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" required>
-              <option value="">Selecione o cliente ou empresa...</option>
-              {(clients || []).filter((c: any) => !c._source).length > 0 && (
-                <optgroup label="Clientes cadastrados">
-                  {(clients || []).filter((c: any) => !c._source).map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.company || c.name} — {c.cnpj || c.email}</option>
-                  ))}
-                </optgroup>
-              )}
-              {(clients || []).filter((c: any) => c._source === 'analysis').length > 0 && (
-                <optgroup label="Empresas analisadas (com crédito)">
-                  {(clients || []).filter((c: any) => c._source === 'analysis').map((c: any) => (
-                    <option key={c.id} value={c.id}>
-                      {c.company || c.name} — {c.cnpj || 'S/CNPJ'} — R$ {Number(c.estimatedCredit || 0).toLocaleString('pt-BR')}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-            {sourceType === 'analysis' && analysisInfo && !selectedClient && (
-              <p className="text-xs text-amber-600 mt-1">
-                Selecione o cliente correspondente à análise de &quot;{analysisInfo.companyName}&quot;
+          {/* Seleção de empresa — no modo analysis a análise já É o cliente */}
+          {sourceType === 'analysis' && analysisInfo && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+              <p className="font-medium text-green-800">{analysisInfo.companyName}</p>
+              <p className="text-xs text-green-600">
+                CNPJ: {analysisInfo.cnpj || '—'} | Crédito: {analysisInfo.estimatedCredit ? formatCurrency(analysisInfo.estimatedCredit) : '—'}
+                {analysisInfo.partner && <span> | Parceiro: {analysisInfo.partner.name}</span>}
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Selected client info */}
-          {selectedClientData && (
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
-              <p className="font-medium text-gray-800">{selectedClientData.company || selectedClientData.name}</p>
-              <p>CNPJ: {selectedClientData.cnpj || '—'} | Rep. Legal: {selectedClientData.legalRepName || '—'} | CPF: {selectedClientData.legalRepCpf || '—'}</p>
-              {selectedClientData.endereco && <p>Endereço: {[selectedClientData.endereco, selectedClientData.cidade, selectedClientData.estado].filter(Boolean).join(', ')}</p>}
-              {(selectedClientData as any)._source === 'analysis' && (
-                <p className="text-green-700 mt-1 font-medium">Crédito estimado: R$ {Number((selectedClientData as any).estimatedCredit || 0).toLocaleString('pt-BR')}</p>
-              )}
+          {/* No modo manual ou contrato: dropdown com TODAS as empresas analisadas */}
+          {sourceType !== 'analysis' && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Cliente / Empresa *</label>
+              <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" required>
+                <option value="">Selecione a empresa...</option>
+                {analyses.map(a => (
+                  <option key={a.id} value={`analysis_${a.id}`}>
+                    {a.companyName} — {a.cnpj || 'S/CNPJ'} — {a.estimatedCredit ? formatCurrency(a.estimatedCredit) : '—'}
+                  </option>
+                ))}
+                {(clients || []).filter((c: any) => !c._source).map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.company || c.name} — {c.cnpj || c.email}</option>
+                ))}
+              </select>
             </div>
           )}
 
