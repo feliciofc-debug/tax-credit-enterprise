@@ -38,7 +38,7 @@ router.get('/clients/list', authenticateToken, requireAdmin, async (_req: Reques
   }
 });
 
-// GET /api/procuration/contracts/list
+// GET /api/procuration/contracts/list — contratos + análises com crédito
 router.get('/contracts/list', authenticateToken, requireAdmin, async (_req: Request, res: Response) => {
   try {
     const contracts = await prisma.contract.findMany({
@@ -52,10 +52,60 @@ router.get('/contracts/list', authenticateToken, requireAdmin, async (_req: Requ
       },
       orderBy: { createdAt: 'desc' },
     });
-    res.json({ success: true, data: contracts });
+
+    const analyses = await prisma.viabilityAnalysis.findMany({
+      where: {
+        status: 'completed',
+        estimatedCredit: { gt: 0 },
+      },
+      select: {
+        id: true,
+        companyName: true,
+        cnpj: true,
+        estimatedCredit: true,
+        viabilityScore: true,
+        scoreLabel: true,
+        partnerId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    const partnerIds = [...new Set(analyses.filter(a => a.partnerId).map(a => a.partnerId))];
+    let partnerMap: Record<string, any> = {};
+    if (partnerIds.length > 0) {
+      const partners = await prisma.partner.findMany({
+        where: { id: { in: partnerIds as string[] } },
+        select: { id: true, name: true, company: true, oabNumber: true, oabState: true },
+      });
+      partnerMap = Object.fromEntries(partners.map(p => [p.id, p]));
+    }
+
+    const analysisItems = analyses.map(a => ({
+      id: `analysis_${a.id}`,
+      analysisId: a.id,
+      source: 'analysis' as const,
+      companyName: a.companyName,
+      cnpj: a.cnpj,
+      estimatedCredit: a.estimatedCredit,
+      viabilityScore: a.viabilityScore,
+      scoreLabel: a.scoreLabel,
+      partnerId: a.partnerId,
+      partner: a.partnerId ? partnerMap[a.partnerId] || null : null,
+      createdAt: a.createdAt,
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        contracts,
+        analyses: analysisItems,
+      },
+    });
   } catch (err: any) {
-    logger.error('Erro ao listar contratos:', err);
-    res.status(500).json({ success: false, error: 'Erro ao listar contratos' });
+    logger.error('Erro ao listar contratos/análises:', err);
+    res.status(500).json({ success: false, error: 'Erro ao listar contratos e análises' });
   }
 });
 

@@ -55,6 +55,25 @@ interface ContractOption {
   partner: { id: string; name: string; company: string; oabNumber: string; oabState: string } | null;
 }
 
+interface AnalysisOption {
+  id: string;
+  analysisId: string;
+  source: 'analysis';
+  companyName: string;
+  cnpj: string | null;
+  estimatedCredit: number | null;
+  viabilityScore: number | null;
+  scoreLabel: string | null;
+  partnerId: string | null;
+  partner: { id: string; name: string; company: string; oabNumber: string; oabState: string } | null;
+  createdAt: string;
+}
+
+interface ContractsListData {
+  contracts: ContractOption[];
+  analyses: AnalysisOption[];
+}
+
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   generated: { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Gerada' },
   sent: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Enviada' },
@@ -292,11 +311,12 @@ function GenerateForm({
   onSuccess: () => void;
   apiCall: (path: string, method: string, body?: any) => Promise<any>;
 }) {
-  const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const [sourceType, setSourceType] = useState<'manual' | 'contract' | 'analysis'>('manual');
   const [selectedContract, setSelectedContract] = useState('');
+  const [selectedAnalysis, setSelectedAnalysis] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [lawyerScenario, setLawyerScenario] = useState('atom_lawyer');
   const [types, setTypes] = useState({ particular: true, ecac_guide: true, sefaz: false });
@@ -306,20 +326,39 @@ function GenerateForm({
   const [advEndereco, setAdvEndereco] = useState('');
   const [uf, setUf] = useState('');
   const [prazo, setPrazo] = useState(2);
+  const [analysisInfo, setAnalysisInfo] = useState<AnalysisOption | null>(null);
 
   const { data: clients } = useSWR<Client[]>(
     '/api/procuration/clients/list',
     authedFetcher,
     { revalidateOnFocus: false },
   );
-  const { data: contracts } = useSWR<ContractOption[]>(
+
+  const contractsFetcher = async (url: string) => {
+    const base = getApiUrl();
+    const token = getToken();
+    const r = await fetch(`${base}${url}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const json = await r.json();
+    return json.data ?? json;
+  };
+
+  const { data: sourceData } = useSWR<ContractsListData>(
     '/api/procuration/contracts/list',
-    authedFetcher,
+    contractsFetcher,
     { revalidateOnFocus: false },
   );
 
+  const contracts = sourceData?.contracts || [];
+  const analyses = sourceData?.analyses || [];
+
+  const formatCurrency = (v: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
   useEffect(() => {
-    if (selectedContract && contracts) {
+    if (sourceType === 'contract' && selectedContract && contracts.length) {
       const c = contracts.find(ct => ct.id === selectedContract);
       if (c) {
         setSelectedClient(c.clientId);
@@ -334,7 +373,25 @@ function GenerateForm({
         }
       }
     }
-  }, [selectedContract, contracts]);
+  }, [selectedContract, contracts, sourceType]);
+
+  useEffect(() => {
+    if (sourceType === 'analysis' && selectedAnalysis && analyses.length) {
+      const a = analyses.find(an => an.id === selectedAnalysis);
+      if (a) {
+        setAnalysisInfo(a);
+        if (a.partner) {
+          setLawyerScenario('partner_lawyer');
+          setAdvNome(a.partner.name || '');
+          setAdvOab(`${a.partner.oabNumber || ''}/${a.partner.oabState || ''}`);
+        }
+        const matchingClient = clients?.find(c => c.cnpj === a.cnpj || c.company === a.companyName);
+        if (matchingClient) {
+          setSelectedClient(matchingClient.id);
+        }
+      }
+    }
+  }, [selectedAnalysis, analyses, clients, sourceType]);
 
   const handleGenerate = async () => {
     setSaving(true);
@@ -352,10 +409,12 @@ function GenerateForm({
         return;
       }
 
+      const realContractId = sourceType === 'contract' ? selectedContract : undefined;
+
       for (const type of selectedTypes) {
         const result = await apiCall('/api/procuration/generate', 'POST', {
           clientId: selectedClient,
-          contractId: selectedContract || undefined,
+          contractId: realContractId || undefined,
           type,
           lawyerScenario,
           advogadoNome: advNome || undefined,
@@ -391,21 +450,111 @@ function GenerateForm({
           </button>
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="p-5 space-y-5 max-h-[80vh] overflow-y-auto">
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3">{error}</div>}
 
-          {/* Step 1: Source */}
+          {/* Source selection */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Vincular a um Contrato (opcional)</label>
-            <select value={selectedContract} onChange={e => setSelectedContract(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm">
-              <option value="">Selecionar manualmente...</option>
-              {contracts?.map(c => (
-                <option key={c.id} value={c.id}>{c.contractNumber} — {c.client?.company || c.client?.name || '?'} ({c.contractType})</option>
+            <label className="block text-xs font-medium text-gray-700 mb-2">Selecionar fonte dos dados</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { key: 'analysis' as const, label: 'Análise com Crédito', count: analyses.length, color: 'green' },
+                { key: 'contract' as const, label: 'Contrato Existente', count: contracts.length, color: 'blue' },
+                { key: 'manual' as const, label: 'Selecionar Manual', count: null, color: 'gray' },
+              ].map(s => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => { setSourceType(s.key); setSelectedContract(''); setSelectedAnalysis(''); setAnalysisInfo(null); }}
+                  className={`p-3 rounded-lg border text-center transition-all ${
+                    sourceType === s.key
+                      ? `border-${s.color}-500 bg-${s.color}-50 ring-1 ring-${s.color}-500`
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <p className="text-sm font-medium text-gray-900">{s.label}</p>
+                  {s.count !== null && <p className="text-xs text-gray-500 mt-0.5">{s.count} disponível(eis)</p>}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
-          {!selectedContract && (
+          {/* Analysis selection */}
+          {sourceType === 'analysis' && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Análise com crédito identificado *</label>
+              {analyses.length === 0 ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700">
+                  Nenhuma análise com crédito encontrada. Gere uma análise de viabilidade primeiro.
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {analyses.map(a => (
+                    <label
+                      key={a.id}
+                      className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer ${
+                        selectedAnalysis === a.id ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="analysis"
+                          checked={selectedAnalysis === a.id}
+                          onChange={() => setSelectedAnalysis(a.id)}
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{a.companyName}</p>
+                          <p className="text-xs text-gray-500">
+                            CNPJ: {a.cnpj || '—'}
+                            {a.partner && <span className="ml-2">| Parceiro: {a.partner.name}</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-green-700">
+                          {a.estimatedCredit ? formatCurrency(a.estimatedCredit) : '—'}
+                        </p>
+                        {a.viabilityScore && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                            a.viabilityScore >= 70 ? 'bg-green-100 text-green-700'
+                            : a.viabilityScore >= 40 ? 'bg-yellow-100 text-yellow-700'
+                            : 'bg-red-100 text-red-700'
+                          }`}>
+                            Score {a.viabilityScore}
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contract selection */}
+          {sourceType === 'contract' && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Contrato *</label>
+              {contracts.length === 0 ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700">
+                  Nenhum contrato encontrado. Gere um contrato na aba de Formalização primeiro.
+                </div>
+              ) : (
+                <select value={selectedContract} onChange={e => setSelectedContract(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm">
+                  <option value="">Selecionar contrato...</option>
+                  {contracts.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.contractNumber} — {c.client?.company || c.client?.name || '?'} ({c.contractType})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
+          {/* Manual client selection */}
+          {sourceType === 'manual' && (
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Cliente *</label>
               <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" required>
@@ -417,10 +566,29 @@ function GenerateForm({
             </div>
           )}
 
+          {/* Analysis client matching */}
+          {sourceType === 'analysis' && analysisInfo && !selectedClient && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm text-amber-800 font-medium mb-1">Cliente não cadastrado na plataforma</p>
+              <p className="text-xs text-amber-700">
+                A empresa "{analysisInfo.companyName}" ({analysisInfo.cnpj}) não tem cadastro de cliente.
+                Selecione manualmente:
+              </p>
+              <select value={selectedClient} onChange={e => setSelectedClient(e.target.value)} className="mt-2 w-full px-3 py-2 border rounded-lg text-sm">
+                <option value="">Selecione o cliente...</option>
+                {clients?.map(c => (
+                  <option key={c.id} value={c.id}>{c.company || c.name} — {c.cnpj || c.email}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Selected client info */}
           {selectedClientData && (
             <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
               <p className="font-medium text-gray-800">{selectedClientData.company || selectedClientData.name}</p>
               <p>CNPJ: {selectedClientData.cnpj || '—'} | Rep. Legal: {selectedClientData.legalRepName || '—'} | CPF: {selectedClientData.legalRepCpf || '—'}</p>
+              {selectedClientData.endereco && <p>Endereço: {[selectedClientData.endereco, selectedClientData.cidade, selectedClientData.estado].filter(Boolean).join(', ')}</p>}
             </div>
           )}
 
