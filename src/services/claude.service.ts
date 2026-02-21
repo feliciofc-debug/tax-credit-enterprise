@@ -4,6 +4,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger';
+import { prisma } from '../utils/prisma';
 
 // ============================================================
 // CONFIGURAÇÃO DE MODELOS
@@ -79,12 +80,98 @@ export interface DocumentationResult {
 // Baseado na revisão da Claude Opus — cobre 20+ teses com fundamentação legal
 // ============================================================
 
-function buildFullAnalysisPrompt(companyInfo: CompanyInfo, documentType: string): string {
+interface DBThesis {
+  code: string;
+  name: string;
+  description: string;
+  tributo: string;
+  fundamentacao: string;
+  tribunal: string | null;
+  tema: string | null;
+  risco: string;
+  probabilidade: number;
+  setoresAplicaveis: string | null;
+  regimesAplicaveis: string | null;
+  formulaCalculo: string | null;
+}
+
+async function fetchThesesFromDB(sector?: string, regime?: string): Promise<DBThesis[] | null> {
+  try {
+    const theses = await prisma.taxThesis.findMany({
+      where: { ativo: true, status: 'active' },
+      orderBy: { code: 'asc' },
+    });
+    if (!theses || theses.length === 0) return null;
+
+    return theses.filter(t => {
+      if (sector) {
+        const setores = t.setoresAplicaveis ? JSON.parse(t.setoresAplicaveis) : ['todos'];
+        if (!setores.includes('todos') && !setores.some((s: string) => s.toLowerCase().includes(sector.toLowerCase()))) {
+          return false;
+        }
+      }
+      if (regime) {
+        const regimes = t.regimesAplicaveis ? JSON.parse(t.regimesAplicaveis) : [];
+        if (regimes.length > 0 && !regimes.includes(regime)) {
+          return false;
+        }
+      }
+      return true;
+    }) as DBThesis[];
+  } catch (err) {
+    logger.warn('Falha ao buscar teses do banco — usando fallback hardcoded', err);
+    return null;
+  }
+}
+
+function formatDBThesesForPrompt(theses: DBThesis[]): string {
+  const grouped: Record<string, DBThesis[]> = {};
+  for (const t of theses) {
+    const key = t.tributo.split('/')[0].trim();
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(t);
+  }
+
+  let text = '## TESES OBRIGATÓRIAS — ANALISE TODAS\n\n';
+  for (const [tributo, items] of Object.entries(grouped)) {
+    text += `### ${tributo}\n\n`;
+    for (const t of items) {
+      text += `**${t.code} — ${t.name}**\n`;
+      text += `- Fundamento: ${t.fundamentacao}\n`;
+      if (t.tribunal) text += `- Tribunal: ${t.tribunal}`;
+      if (t.tema) text += ` — ${t.tema}`;
+      if (t.tribunal) text += '\n';
+      text += `- Risco: ${t.risco} | Probabilidade: ${t.probabilidade}%\n`;
+      if (t.formulaCalculo) text += `- Cálculo: ${t.formulaCalculo}\n`;
+      text += `- ${t.description}\n\n`;
+    }
+  }
+  return text;
+}
+
+const HARDCODED_THESES_MARKER_START = '## TESES OBRIGATÓRIAS — ANALISE TODAS';
+const HARDCODED_THESES_MARKER_END = '## OBSERVAÇÕES PARA ESTIMATIVAS';
+
+function buildFullAnalysisPrompt(companyInfo: CompanyInfo, documentType: string, dbThesesText?: string): string {
   const docTypeName = documentType === 'dre' ? 'DRE (Demonstração do Resultado do Exercício)'
     : documentType === 'balanco' ? 'Balanço Patrimonial'
     : documentType === 'balancete' ? 'Balancete de Verificação'
     : 'Documento Contábil';
 
+  const fullPrompt = buildHardcodedPrompt(companyInfo, docTypeName);
+
+  if (dbThesesText) {
+    const startIdx = fullPrompt.indexOf(HARDCODED_THESES_MARKER_START);
+    const endIdx = fullPrompt.indexOf(HARDCODED_THESES_MARKER_END);
+    if (startIdx !== -1 && endIdx !== -1) {
+      return fullPrompt.substring(0, startIdx) + dbThesesText + '\n\n' + fullPrompt.substring(endIdx);
+    }
+  }
+
+  return fullPrompt;
+}
+
+function buildHardcodedPrompt(companyInfo: CompanyInfo, docTypeName: string): string {
   return `Você é um especialista sênior em recuperação de créditos tributários brasileiros, com 20 anos de experiência em contencioso administrativo e judicial tributário. Você está analisando um ${docTypeName}.
 
 ## CONTEXTO DA EMPRESA
@@ -629,8 +716,17 @@ class ClaudeService {
       );
     }
 
-    // Prompt unificado — cobre todas as teses tributárias independente do tipo de documento
-    const systemPrompt = buildFullAnalysisPrompt(companyInfo, documentType);
+    // Buscar teses do banco (fallback: hardcoded)
+    let dbThesesText: string | undefined;
+    const dbTheses = await fetchThesesFromDB(companyInfo.sector, companyInfo.regime);
+    if (dbTheses && dbTheses.length > 0) {
+      dbThesesText = formatDBThesesForPrompt(dbTheses);
+      logger.info(`Usando ${dbTheses.length} teses do banco de dados`);
+    } else {
+      logger.info('Usando teses hardcoded (fallback)');
+    }
+
+    const systemPrompt = buildFullAnalysisPrompt(companyInfo, documentType, dbThesesText);
 
     // Truncar texto respeitando limite do tipo de documento
     const limit = TEXT_LIMITS[documentType] || TEXT_LIMITS.default;

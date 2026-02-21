@@ -395,3 +395,51 @@ model SystemConfig {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
+
+// ============================================
+// TESES TRIBUTARIAS (atualizaveis sem deploy)
+// ============================================
+model TaxThesis {
+  id                String    @id @default(cuid())
+  code              String    @unique
+  name              String
+  description       String    @db.Text
+  tributo           String
+  fundamentacao     String    @db.Text
+  tribunal          String?
+  tema              String?
+  status            String    @default("active")
+  risco             String    @default("medio")
+  probabilidade     Int       @default(70)
+  setoresAplicaveis String?   @db.Text
+  regimesAplicaveis String?   @db.Text
+  formulaCalculo    String?   @db.Text
+  fonte             String?
+  dataDecisao       DateTime?
+  ativo             Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([tributo])
+  @@index([status])
+  @@index([ativo])
+}
+
+model ThesisUpdate {
+  id          String    @id @default(cuid())
+  type        String
+  title       String
+  description String    @db.Text
+  source      String?
+  tribunal    String?
+  relevance   String    @default("medium")
+  thesisCode  String?
+  reviewed    Boolean   @default(false)
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  approved    Boolean?
+  createdAt   DateTime  @default(now())
+
+  @@index([reviewed])
+  @@index([relevance])
+}
