@@ -443,3 +443,35 @@ model ThesisUpdate {
   @@index([reviewed])
   @@index([relevance])
 }
+
+// ============================================
+// PROCURACOES
+// ============================================
+model Procuration {
+  id               String    @id @default(cuid())
+  contractId       String?
+  clientId         String
+  partnerId        String?
+  type             String    // particular, ecac_guide, sefaz
+  lawyerScenario   String    // atom_lawyer, partner_lawyer, client_lawyer
+  status           String    @default("generated")
+  outorgadoAtom    Boolean   @default(true)
+  outorgadoAdv     Boolean   @default(false)
+  advogadoNome     String?
+  advogadoOab      String?
+  advogadoCpf      String?
+  advogadoEndereco String?
+  uf               String?
+  prazoAnos        Int       @default(2)
+  poderes          Json?
+  documentText     String?   @db.Text
+  dataAssinatura   DateTime?
+  dataValidade     DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([clientId])
+  @@index([contractId])
+  @@index([partnerId])
+  @@index([status])
+}
