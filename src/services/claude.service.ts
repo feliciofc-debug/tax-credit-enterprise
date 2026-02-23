@@ -701,25 +701,29 @@ Exemplo correto:
 "RE 574.706 — Tema 69 STF (15/03/2017) — Rel. Min. Cármen Lúcia: 'O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS' | Lei 10.637/2002 art. 3°"
 
 ## FORMATO DE RESPOSTA
-Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários:
+Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários.
+
+ATENÇÃO: O campo "descricao" deve ter NO MÍNIMO 10-15 LINHAS (800-1500 caracteres). É um PARECER COMPLETO, não um resumo.
+O campo "fundamentacaoLegal" deve ter NO MÍNIMO 200 caracteres, citando lei + artigo + tema + trecho da ementa.
+O campo "risco" deve ter NO MÍNIMO 3 linhas com riscos específicos desta empresa.
 
 {
   "oportunidades": [
     {
-      "tipo": "Nome descritivo (ex: Exclusão do ICMS da base do PIS - Tema 69)",
+      "tipo": "Nome descritivo (ex: Exclusão do ICMS da base do PIS — Tese do Século (Tema 69 STF))",
       "tributo": "PIS|COFINS|ICMS|INSS|IRPJ|CSLL|IPI|RAT|FGTS|ISS|II|PIS-IMPORT|COFINS-IMPORT|FUNRURAL|DIFAL",
-      "descricao": "Descrição detalhada com memória de cálculo resumida",
+      "descricao": "PARECER COMPLETO com 10-15 linhas: (1) dados reais do documento com registros, CFOPs, valores e períodos exatos, (2) perfil operacional da empresa explicando por que acumula este crédito, (3) fundamentação legal com citação de lei + artigo + trecho literal da ementa do acórdão STF/STJ, (4) legislação estadual quando aplicável com RICMS e Resolução SEFAZ, (5) memória de cálculo transparente mostrando cada parcela somada e a projeção",
       "valorEstimado": 0.00,
-      "fundamentacaoLegal": "Lei X art. Y | RE/REsp número — Tema Z STF/STJ",
+      "fundamentacaoLegal": "Lei principal art. X | Tema Y STF/STJ — RE/REsp número (data) — Rel. Min. Nome: 'trecho literal da ementa do acórdão com no mínimo 1-2 frases' | Legislação estadual se aplicável",
       "prazoRecuperacao": "Últimos 5 anos (60 meses)",
       "complexidade": "baixa|media|alta",
       "probabilidadeRecuperacao": 85,
-      "risco": "Principais riscos desta recuperação",
-      "documentacaoNecessaria": ["doc1", "doc2"],
-      "passosPraticos": ["passo1", "passo2"]
+      "risco": "Riscos ESPECÍFICOS desta empresa: citar órgão fiscalizador, registros com inconsistência, prazo estimado do processo, principal risco de glosa, e recomendação (via administrativa ou judicial)",
+      "documentacaoNecessaria": ["SPED EFD Fiscal completo de todos os períodos", "Declarações de Importação (DI)", "Notas Fiscais de entrada e saída", "doc4", "doc5"],
+      "passosPraticos": ["Passo detalhado 1 com portal/sistema nomeado (ex: e-CAC, SEFAZ-RJ, PER/DCOMP)", "Passo 2", "Passo 3", "Passo 4", "Passo 5"]
     }
   ],
-  "resumoExecutivo": "Resumo executivo com visão geral, valor total e recomendações principais",
+  "resumoExecutivo": "Resumo executivo COMPLETO com: perfil da empresa (setor + regime + característica que gera créditos), período analisado e limitações dos dados disponíveis, top 3 oportunidades por valor com justificativa, sequência recomendada de execução, e ressalva sobre documentos adicionais necessários. Mínimo 8 linhas.",
   "valorTotalEstimado": 0.00,
   "score": 75,
   "recomendacoes": ["Priorizar tese X por ter maior valor e probabilidade", "..."],
@@ -729,6 +733,23 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários:
   "regimeTributario": "Regime tributário identificado ou inferido",
   "riscoGeral": "baixo|medio|alto"
 }
+
+## EXEMPLO DE QUALIDADE — REFERÊNCIA OBRIGATÓRIA
+Este é o nível de qualidade MÍNIMO esperado para CADA oportunidade:
+
+EXEMPLO de "descricao" BEM escrita (10-15 linhas — ESTE É O PADRÃO):
+"A empresa possui saldo credor acumulado de ICMS de R$ 238.883,01 (conforme demonstrativo de agosto/2024), originado de operações de importação (CFOP 3102) com alíquota de 16-18% e saídas com alíquota reduzida de 4% (operações interestaduais com mercadorias importadas — Resolução SF 13/2012) ou saídas sem débito (remessas em comodato/locação CFOP 6908). O acúmulo é estrutural: créditos de importação superiores aos débitos de saída. Valor confirmado nos demonstrativos: saldo credor transportado crescente de R$ 504,90 (mai/2021) até R$ 238.883,01 (ago/2024). Conforme Livro III do RICMS-RJ e Resolução SEFAZ nº 644/2024, é possível solicitar ressarcimento ou transferência deste saldo. A tese possui amparo no art. 25, §1° da LC 87/96, que garante o direito ao crédito, e no RE 574.706 (Tema 69 STF, Rel. Min. Cármen Lúcia): 'O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS, porquanto o ICMS não se incorpora ao patrimônio do contribuinte, constituindo mero ingresso de caixa, cujo destino final são os cofres públicos'. A empresa, sendo importadora com vendas interestaduais a 4% para mercadorias importadas, gera acúmulo irreversível sem mecanismo de compensação natural, tornando o ressarcimento administrativo a única via de recuperação deste crédito."
+
+EXEMPLO de "fundamentacaoLegal" BEM escrita:
+"LC 87/1996 art. 25, §1° e §2° | RICMS-RJ Livro III | Resolução SEFAZ nº 644/2024 | Art. 150, §7° CF/88 | RE 574.706 — Tema 69 STF (15/03/2017) — Rel. Min. Cármen Lúcia: 'O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS, porquanto o ICMS não se incorpora ao patrimônio do contribuinte, constituindo mero ingresso de caixa'"
+
+EXEMPLO de "risco" BEM escrito:
+"SEFAZ-RJ pode glosar parte dos créditos se houver inconsistências na escrituração fiscal ou documentação de importação. Processo administrativo pode ser demorado (6-18 meses). Necessário comprovar que o acúmulo é estrutural e que os créditos foram corretamente escriturados. Principal risco: glosa de créditos sem DI comprobatória ou sem escrituração no CIAP quando aplicável."
+
+EXEMPLO de "passosPraticos" BEM escrito:
+["Validar integridade dos créditos escriturados nos SPEDs EFD Fiscal", "Conciliar créditos de importação com DIs e NF-es de entrada", "Protocolar pedido de ressarcimento/transferência junto à SEFAZ-RJ conforme Resolução SEFAZ 644/2024", "Acompanhar análise fiscal e responder eventuais intimações em até 30 dias", "Após deferimento, solicitar creditamento em conta bancária ou transferência a terceiros"]
+
+SE UMA OPORTUNIDADE NÃO ATINGIR ESTE NÍVEL DE DETALHE, O RELATÓRIO SERÁ RECUSADO PELO CLIENTE.
 
 ## REGRAS DE QUALIDADE E CONSISTÊNCIA — SEGUIR RIGOROSAMENTE
 
@@ -740,8 +761,8 @@ Mesmos dados de entrada DEVEM gerar os MESMOS valores de saída. Para garantir i
 - Quando faltam dados (ex: só tem 7 meses de SPED), declare CLARAMENTE que o valor é baseado nos meses disponíveis e NÃO extrapole agressivamente.
 - NUNCA use valores redondos (R$ 175.000, R$ 350.000, R$ 130.000) — eles revelam que você está chutando. Use o valor exato calculado.
 
-### CAMPO "descricao" — CADA DESCRIÇÃO DEVE SER UM PARECER COMPLETO:
-Cada descrição deve ser escrita em texto corrido profissional (sem subtítulos internos), com MÍNIMO 5 linhas, contendo OBRIGATORIAMENTE:
+### CAMPO "descricao" — CADA DESCRIÇÃO DEVE SER UM PARECER COMPLETO DE 10-15 LINHAS:
+Cada descrição deve ser escrita em texto corrido profissional (sem subtítulos internos), com MÍNIMO 10 LINHAS (800-1500 caracteres), contendo OBRIGATORIAMENTE:
 
 1. DADOS REAIS do documento com período, registro e valor exato (ex: "conforme registro C100 de abr/2022, ICMS-Importação R$ 2.810,95 + R$ 20.108,39 = R$ 22.919,34")
 2. PERFIL OPERACIONAL: por que ESTA empresa acumula ESTE crédito (ex: "empresa importadora com saídas interestaduais a 4% — Resolução SF 13/2012 — gera acúmulo estrutural")
@@ -786,7 +807,7 @@ Se a fundamentação não citar a ementa do acórdão, está INCOMPLETA.
     - Um TRECHO LITERAL da ementa do acórdão (copiar das ementas fornecidas acima na seção JURISPRUDÊNCIA VINCULANTE)
     - Legislação estadual quando aplicável (RICMS, Resolução SEFAZ, convênio)
     Se o campo "fundamentacaoLegal" tiver menos de 100 caracteres, está INCOMPLETO.
-12. PROFUNDIDADE NARRATIVA: cada "descricao" deve ter NO MÍNIMO 5 linhas. Descrições curtas ou genéricas são INACEITÁVEIS. O relatório é um produto pago pelo cliente — nível de escritório tributário de ponta.`;
+12. PROFUNDIDADE NARRATIVA: cada "descricao" deve ter NO MÍNIMO 10-15 LINHAS (800-1500 caracteres). Descrições curtas (menos de 5 linhas) são INACEITÁVEIS e farão o relatório ser RECUSADO pelo cliente. Cada oportunidade é um mini-parecer completo.`;
 }
 
 // ============================================================
@@ -916,24 +937,24 @@ class ClaudeService {
         messages: [
           {
             role: 'user',
-            content: `REGRAS CRÍTICAS PARA ESTA ANÁLISE:
+            content: `INSTRUÇÕES CRÍTICAS — LEIA TUDO ANTES DE COMEÇAR:
 
-1. UNIDADES: Verifique se os valores estão em "R$" (reais cheios) ou "R$ mil". NÃO multiplique por 1.000 se já está em milhares. Reporte SEMPRE em reais cheios.
+REGRA 1 — PROFUNDIDADE É OBRIGATÓRIA (MAIS IMPORTANTE):
+Este relatório é um PRODUTO PAGO pelo cliente. Cada oportunidade DEVE ser um PARECER COMPLETO:
+- Campo "descricao": MÍNIMO 10-15 LINHAS (800-1500 caracteres). Deve conter: dados reais do documento (registros, CFOPs, valores, períodos), perfil operacional da empresa, fundamentação legal com TRECHO DA EMENTA do acórdão STF/STJ (copiar das ementas da seção JURISPRUDÊNCIA VINCULANTE), legislação estadual quando aplicável, e memória de cálculo completa.
+- Campo "fundamentacaoLegal": MÍNIMO 200 caracteres. Citar lei + artigo + tema STF/STJ + TRECHO LITERAL da ementa do acórdão. NUNCA deixar apenas "RE 574.706 — Tema 69 STF" sem citar a ementa.
+- Campo "risco": MÍNIMO 3 linhas. Citar órgão fiscalizador, prazo do processo, riscos específicos desta empresa, registros com inconsistência.
+- Campo "passosPraticos": MÍNIMO 4-5 passos detalhados nomeando portais (e-CAC, PER/DCOMP, SEFAZ-UF).
+- Campo "documentacaoNecessaria": MÍNIMO 4-5 documentos específicos.
+SE UMA OPORTUNIDADE NÃO ATINGIR ESTE NÍVEL, O RELATÓRIO SERÁ RECUSADO.
 
-2. CONSISTÊNCIA: Use APENAS valores que aparecem no documento. Cada valor estimado deve ter a conta explícita. NUNCA apresente valores redondos sem justificativa matemática.
+REGRA 2 — CONSISTÊNCIA: Use APENAS valores do documento. Cada estimativa deve ter a conta explícita.
 
-3. CONSERVADORISMO: Arredonde para BAIXO. Se só tem poucos meses de dados, projete proporcionalmente e aplique desconto de 25%.
+REGRA 3 — CONSERVADORISMO: Arredonde para BAIXO. Aplique desconto de 25% em projeções.
 
-4. SEM DADOS = SEM ESTIMATIVA: Se não tem folha de pagamento, NÃO estime INSS. Apenas mencione nos alertas.
+REGRA 4 — UNIDADES: Verifique R$ vs R$ mil. Reporte em reais cheios.
 
-5. FUNDAMENTAÇÃO JURÍDICA OBRIGATÓRIA — ESTA É A REGRA MAIS IMPORTANTE:
-Cada oportunidade DEVE ter fundamentação jurídica COMPLETA e PROFUNDA. O cliente PAGA por este relatório. Para CADA oportunidade:
-a) No campo "descricao": escreva MÍNIMO 5 linhas em texto corrido. Cite registros SPED com valores exatos, explique o perfil operacional da empresa, cite a legislação federal E estadual aplicável, e mostre a memória de cálculo.
-b) No campo "fundamentacaoLegal": cite a lei + artigo + tema STF/STJ + TRECHO DA EMENTA do acórdão (copiar das ementas fornecidas na seção JURISPRUDÊNCIA VINCULANTE do system prompt). NUNCA deixe com apenas "RE 574.706 — Tema 69 STF".
-c) No campo "risco": cite riscos CONCRETOS desta empresa (registros, prazos, órgãos). NUNCA escreva apenas "risco de contestação pelo fisco".
-d) No campo "passosPraticos": cada passo deve nomear o portal/sistema exato (e-CAC, PER/DCOMP, SEFAZ-RJ, nfe.fazenda.gov.br).
-
-O nível de profundidade deve ser de escritório tributário de ponta. Cada descrição deve ser um mini-parecer completo.
+REGRA 5 — SEM DADOS = SEM ESTIMATIVA: Sem folha de pagamento, NÃO estime INSS.
 
 Analise o seguinte ${this.getDocumentTypeName(documentType)} e identifique TODAS as oportunidades de recuperação:
 
