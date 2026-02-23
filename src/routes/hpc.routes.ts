@@ -252,6 +252,14 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
     }
 
     // -----------------------------------------------
+    // DEBUG: Mostrar texto que vai para o Claude
+    // -----------------------------------------------
+    logger.info(`[HPC-DEBUG] ===== TEXTO PARA CLAUDE (primeiros 3000 chars) =====`);
+    logger.info(`[HPC-DEBUG] Pipeline: ${pipeline} | Total chars: ${textoParaClaude.length}`);
+    logger.info(`[HPC-DEBUG] CONTEUDO:\n${textoParaClaude.substring(0, 3000)}`);
+    logger.info(`[HPC-DEBUG] ===== FIM DO PREVIEW =====`);
+
+    // -----------------------------------------------
     // PASSO 3: Enviar texto para Claude Opus (cerebro juridico)
     // -----------------------------------------------
     const claudeStart = Date.now();
