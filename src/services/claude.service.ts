@@ -730,53 +730,46 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários:
   "riscoGeral": "baixo|medio|alto"
 }
 
-## REGRAS DE QUALIDADE NARRATIVA — TÃO IMPORTANTE QUANTO OS VALORES
+## REGRAS DE QUALIDADE E CONSISTÊNCIA — SEGUIR RIGOROSAMENTE
 
-### CAMPO "descricao" — ESTRUTURA OBRIGATÓRIA:
-Cada descrição deve ter 3 partes:
+### CONSISTÊNCIA DE VALORES — REGRA MAIS IMPORTANTE:
+Mesmos dados de entrada DEVEM gerar os MESMOS valores de saída. Para garantir isso:
+- Use APENAS valores que aparecem EXPLICITAMENTE no documento. NÃO invente valores.
+- Se um saldo credor aparece como R$ 97.174,49, use R$ 97.174,49 — não arredonde para R$ 175.000 ou R$ 350.000.
+- Para projeções de 5 anos: use SOMENTE dados confirmados no documento × fator temporal. Exemplo: se 7 meses mostram R$ 97k de saldo credor, a projeção NÃO pode ser R$ 350k sem justificativa matemática explícita.
+- Quando faltam dados (ex: só tem 7 meses de SPED), declare CLARAMENTE que o valor é baseado nos meses disponíveis e NÃO extrapole agressivamente.
+- NUNCA use valores redondos (R$ 175.000, R$ 350.000, R$ 130.000) — eles revelam que você está chutando. Use o valor exato calculado.
 
-PARTE 1 — ÂNCORA NOS DADOS REAIS:
-Cite os números exatos encontrados no documento com período e fonte.
-BOM: "Registros C100 de importação: abr/2022 ICMS R$ 2.810,95 + R$ 20.108,39; mai/2022 R$ 21.394,00. Saldo credor crescente: mar/2022 R$ 52.464 → abr/2022 R$ 76.702 → mai/2022 R$ 97.174."
-RUIM: "A empresa recolhe ICMS-Importação significativo."
+### CAMPO "descricao" — COMO ESCREVER:
+Cada descrição deve fluir naturalmente em texto corrido (sem subtítulos, sem marcadores). Deve conter:
+1. Os valores REAIS do documento com período e registro de origem (ex: "C100 de abr/2022", "E110 de mai/2022")
+2. Uma explicação de por que ESTA empresa tem ESTE crédito (perfil operacional + legislação)
+3. A conta que chega ao valor estimado, mostrando cada parcela somada
 
-PARTE 2 — PERFIL ESTRUTURAL DA EMPRESA:
-Por que esta empresa acumula este crédito (negócio + operação + legislação).
-BOM: "Empresa importadora com vendas interestaduais a 4% (Resolução SF 13/2012 para mercadorias importadas) — créditos de entrada a 16-18% sistematicamente superiores aos débitos de saída, gerando acúmulo estrutural irreversível sem mecanismo de transferência."
-RUIM: "A empresa pode ter direito a créditos de ICMS."
+NÃO use títulos como "ÂNCORA NOS DADOS", "PERFIL ESTRUTURAL" ou "MEMÓRIA DE CÁLCULO" dentro da descrição.
+Escreva em texto corrido profissional, como um parecer de escritório tributário.
 
-PARTE 3 — MEMÓRIA DE CÁLCULO:
-Mostre a conta de forma transparente.
-BOM: "Saldo credor confirmado: R$ 97.174 (mai/2022). Projetando crescimento histórico (~R$ 22k/mês) para 5 anos conservadoramente: R$ 175.000."
-RUIM: "Estimativa conservadora: R$ 175.000."
+Exemplo de descrição BEM escrita:
+"A empresa possui saldo credor acumulado de ICMS de R$ 238.883,01 (conforme demonstrativo de agosto/2024), originado de operações de importação (CFOP 3102) com alíquota de 16-18% e saídas com alíquota reduzida de 4% (operações interestaduais com mercadorias importadas — Res. SF 13/2012) ou saídas sem débito (remessas em comodato/locação CFOP 6908). O acúmulo é estrutural: créditos de importação superiores aos débitos de saída. Valor confirmado nos demonstrativos: saldo credor transportado crescente de R$ 504,90 (mai/2021) até R$ 238.883,01 (ago/2024). Conforme Livro III do RICMS-RJ e Resolução SEFAZ nº 644/2024, é possível solicitar ressarcimento ou transferência deste saldo."
 
-### CAMPO "risco" — DEVE SER ESPECÍFICO PARA ESTA EMPRESA:
-BOM: "SEFAZ-RJ pode questionar créditos de períodos com inconsistência no C197 (código RJ70000001). Processo pode levar 12-18 meses. Principal risco: glosa de créditos sem DI comprobatória."
-RUIM: "Risco de contestação pelo fisco."
+### CAMPO "risco" — específico para ESTA empresa, citando registros e prazos reais.
+### CAMPO "passosPraticos" — nomear portais: e-CAC, PER/DCOMP, SEFAZ-UF, nfe.fazenda.gov.br.
+### CAMPO "resumoExecutivo" — perfil da empresa, período analisado, limitações, top 3, sequência e ressalvas.
 
-### CAMPO "passosPraticos" — NOMEAR SISTEMAS E PORTAIS:
-BOM: ["Verificar saldo credor atual no e-CAC SEFAZ-RJ", "Protocolar pedido de transferência via SEFAZ-RJ conforme Resolução 644/2024", "Acompanhar análise e responder intimações em até 30 dias", "Após deferimento, solicitar creditamento em conta corrente"]
-RUIM: ["Verificar créditos", "Protocolar pedido", "Acompanhar"]
+### REGRA DE OURO:
+Se você escrever uma frase que poderia se aplicar a QUALQUER empresa do Brasil, REESCREVA com dados específicos desta empresa. Toda descrição deve ser única e intransferível.
 
-### CAMPO "resumoExecutivo" — ESTRUTURA OBRIGATÓRIA:
-1. Perfil da empresa (setor + regime + característica que gera créditos)
-2. Período analisado e limitações dos dados disponíveis
-3. Top 3 oportunidades por valor com justificativa de prioridade
-4. Sequência recomendada de execução
-5. Ressalva sobre documentos adicionais necessários para cálculo preciso
-
-### REGRA DE OURO DE ESPECIFICIDADE:
-Se você escrever uma frase que poderia se aplicar a QUALQUER empresa do Brasil, REESCREVA com dados específicos desta empresa. Toda descrição deve ser única e intransferível para esta empresa neste período.
-
-## REGRAS FINAIS
-1. CONSERVADORISMO É LEI — arredonde para baixo, use margem de segurança de 20-30%, descarte oportunidades com probabilidade < 60%
-2. CADA oportunidade DEVE ter fundamentação legal com número de lei/artigo E tema STF/STJ
-3. PIS e COFINS devem ser linhas SEPARADAS (alíquotas diferentes)
-4. Se não houver dados suficientes, use estimativa CONSERVADORA e INFORME nos alertas
-5. O score (0-100) reflete quantidade e qualidade das oportunidades
-6. valorTotalEstimado DEVE ser a SOMA exata dos valorEstimado de cada oportunidade
-7. Se empresa não for Lucro Real, várias teses de PIS/COFINS não se aplicam — INDICAR nos alertas
-8. LEMBRE-SE: o cliente prefere uma surpresa positiva na execução a uma promessa não cumprida`;
+## REGRAS FINAIS — CONSERVADORISMO ESTRITO
+1. CONSERVADORISMO É LEI — arredonde para BAIXO, use margem de segurança de 20-30%, descarte oportunidades com probabilidade < 60%
+2. Use APENAS valores confirmados no documento. Se só tem 7 meses de dados, estime para 5 anos proporcionalmente (valor_7meses / 7 × 60) e aplique desconto de 25% como margem de segurança
+3. CADA oportunidade DEVE ter fundamentação legal com número de lei/artigo E tema STF/STJ
+4. PIS e COFINS devem ser linhas SEPARADAS (alíquotas diferentes: PIS 1,65%, COFINS 7,6%)
+5. Se não houver dados suficientes, use estimativa CONSERVADORA e INFORME nos alertas
+6. O score (0-100) reflete quantidade e qualidade das oportunidades
+7. valorTotalEstimado DEVE ser a SOMA exata dos valorEstimado de cada oportunidade — VERIFIQUE a soma antes de responder
+8. Se empresa não for Lucro Real, várias teses de PIS/COFINS não se aplicam — INDICAR nos alertas
+9. O cliente prefere uma surpresa positiva na execução a uma promessa não cumprida
+10. NUNCA invente dados que não estão no documento. Se não tem folha de pagamento, NÃO estime INSS — apenas mencione como potencial e coloque nos alertas`;
 }
 
 // ============================================================
@@ -906,22 +899,17 @@ class ClaudeService {
         messages: [
           {
             role: 'user',
-            content: `ATENÇÃO SOBRE UNIDADES: Verifique CUIDADOSAMENTE se os valores estão em "R$" (reais cheios) ou "R$ mil". NÃO MULTIPLIQUE por 1.000 se já está em milhares. Reporte sempre em REAIS CHEIOS.
+            content: `REGRAS CRÍTICAS PARA ESTA ANÁLISE:
 
-ATENÇÃO — QUALIDADE NARRATIVA OBRIGATÓRIA:
-Este relatório é o produto final entregue ao cliente. Cada oportunidade DEVE:
+1. UNIDADES: Verifique se os valores estão em "R$" (reais cheios) ou "R$ mil". NÃO multiplique por 1.000 se já está em milhares. Reporte SEMPRE em reais cheios.
 
-1. CITAR DADOS REAIS DO DOCUMENTO: Use os números, CFOPs, períodos e valores específicos encontrados no SPED/DRE. Ex: "conforme C100 de abr/2022, ICMS-Importação R$ 22.919,34" ou "saldo credor crescente: R$ 52.464 (mar/2022) → R$ 76.702 (abr/2022) → R$ 97.174 (mai/2022)". NUNCA escreva "valores significativos" sem citar o número real.
+2. CONSISTÊNCIA: Use APENAS valores que aparecem no documento. Cada valor estimado deve ter a conta explícita (ex: "R$ 888,37 + R$ 8.145,90 + R$ 8.345,51 = R$ 17.379,78 em 3 meses → projeção 60 meses: R$ 17.379 / 3 × 60 × 0,75 = R$ 260.697"). NUNCA apresente valores redondos sem justificativa matemática.
 
-2. EXPLICAR O PERFIL DA EMPRESA: Por que ESTA empresa especificamente acumula ESTE crédito. Ex: "empresa importadora com saídas interestaduais a 4% (Res. SF 13/2012) gera acúmulo estrutural — créditos de importação a 16-18% superam débitos de saída a 4%".
+3. DESCRIÇÕES: Escreva em texto corrido profissional, sem subtítulos internos. Cite registros SPED (C100, E110, C197), CFOPs, valores exatos e períodos. Explique por que esta empresa acumula este crédito.
 
-3. CITAR LEGISLAÇÃO ESTADUAL ESPECÍFICA: Para teses de ICMS, citar RICMS do estado da empresa, resoluções da SEFAZ local, e convênios aplicáveis. Ex RJ: "RICMS-RJ Livro III, Resolução SEFAZ nº 644/2024". Ex SP: "RICMS/SP Arts. 71-81, e-CredAc".
+4. CONSERVADORISMO ESTRITO: Arredonde para BAIXO. Se só tem 7 meses de dados, projete proporcionalmente E aplique desconto de 25%. O cliente prefere surpresa positiva na execução.
 
-4. MOSTRAR MEMÓRIA DE CÁLCULO: Nunca apresentar valor sem a conta. Ex: "COFINS-Importação: abr/2022 R$ 888,37 + R$ 8.145,90 + mai/2022 R$ 8.345,51 + jul/2021 R$ 493,18 = R$ 17.872,96 identificados. Projetando 5 anos conservadoramente: R$ 37.000".
-
-5. ALERTAS ESPECÍFICOS: Citar inconsistências reais encontradas nos dados. Ex: "registro C100 mai/2022 sem fornecedor identificado (NF 42) — pode indicar nota não escriturada".
-
-REFERÊNCIA DE QUALIDADE: O extrato deve ter nível de relatório de escritório tributário de ponta. Descritivo, fundamentado, com dados reais, legislação específica e passos acionáveis com portais nomeados.
+5. SEM DADOS = SEM ESTIMATIVA: Se o documento não contém folha de pagamento, NÃO estime INSS — apenas mencione como potencial nos alertas com "valor a calcular após recebimento de folha de pagamento e GFIP".
 
 Analise o seguinte ${this.getDocumentTypeName(documentType)} e identifique TODAS as oportunidades de recuperação:
 
