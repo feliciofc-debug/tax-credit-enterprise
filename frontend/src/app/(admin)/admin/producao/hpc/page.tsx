@@ -270,16 +270,22 @@ td{padding:8px 10px;border-bottom:1px solid #f1f5f9;font-size:11px}
 .overflow-x-auto{overflow-x:auto}
 .list-disc{list-style:disc}.list-decimal{list-style:decimal}.list-inside{list-style-position:inside}
 .leading-relaxed{line-height:1.625}
+.whitespace-pre-line{white-space:pre-line}
 details{border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;page-break-inside:avoid}
 summary{padding:12px 16px;cursor:pointer;font-size:12px}
 details>div{padding:16px;border-top:1px solid #e5e7eb;font-size:11px}
 details[open]{background:white}
+.border-blue-200{border:1px solid #bfdbfe}.border-yellow-200{border:1px solid #fde68a}
+.text-blue-800{color:#1e40af}.text-blue-700{color:#1d4ed8}
+.text-yellow-800{color:#854d0e}
+.capitalize{text-transform:capitalize}
 @media print{
   body{padding:0!important}
   .extrato-print>div:first-child{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   details{break-inside:avoid}
   table{break-inside:auto}
   tr{break-inside:avoid}
+  .bg-blue-50,.bg-yellow-50,.bg-green-50,.bg-gray-50,.bg-gray-100,.bg-indigo-100{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 }
 </style>
 </head>
@@ -751,7 +757,7 @@ details[open]{background:white}
                           <td className="px-3 py-3 text-gray-400 font-mono">{String(i + 1).padStart(2, '0')}</td>
                           <td className="px-3 py-3">
                             <p className="font-medium text-gray-900">{op.tipo || ''}</p>
-                            <p className="text-gray-500 text-xs mt-0.5 line-clamp-2">{op.descricao || ''}</p>
+                            <p className="text-gray-500 text-xs mt-0.5">{op.descricao || ''}</p>
                           </td>
                           <td className="px-3 py-3">
                             <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded">{op.tributo || ''}</span>
@@ -794,46 +800,49 @@ details[open]{background:white}
                 <p className="text-sm font-bold text-gray-900 mb-3">DETALHAMENTO POR OPORTUNIDADE</p>
                 <div className="space-y-3">
                   {fullResult.analysis.oportunidades.map((op, i) => (
-                    <details key={i} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                      <summary className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
+                    <div key={i} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                      <div className="px-4 py-3 bg-gray-100 flex items-center justify-between border-b border-gray-200">
                         <div className="flex items-center gap-3">
-                          <span className="text-gray-400 font-mono text-xs">{String(i + 1).padStart(2, '0')}</span>
-                          <span className="font-medium text-gray-900 text-sm">{op.tipo || ''}</span>
+                          <span className="text-gray-400 font-mono text-xs font-bold">{String(i + 1).padStart(2, '0')}.</span>
+                          <span className="font-bold text-gray-900 text-sm">{op.tipo || ''}</span>
                           <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded">{op.tributo || ''}</span>
                         </div>
                         <span className="font-bold text-green-700 text-sm">{formatCurrency(op.valorEstimado)}</span>
-                      </summary>
-                      <div className="px-4 py-4 bg-white border-t border-gray-200 space-y-3 text-sm">
+                      </div>
+                      <div className="px-4 py-4 bg-white space-y-3 text-sm">
                         {op.descricao && (
                           <div>
-                            <p className="font-semibold text-gray-700">Descricao</p>
-                            <p className="text-gray-600">{op.descricao}</p>
+                            <p className="text-gray-700 leading-relaxed whitespace-pre-line">{op.descricao}</p>
+                          </div>
+                        )}
+                        {op.fundamentacaoLegal && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="font-semibold text-blue-800 text-xs mb-1">Fundamentacao Legal</p>
+                            <p className="text-blue-700 text-xs leading-relaxed">{op.fundamentacaoLegal}</p>
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-4">
-                          {op.fundamentacaoLegal && (
-                            <div>
-                              <p className="font-semibold text-gray-700">Fundamentacao Legal</p>
-                              <p className="text-gray-600">{op.fundamentacaoLegal}</p>
-                            </div>
-                          )}
                           {op.prazoRecuperacao && (
                             <div>
-                              <p className="font-semibold text-gray-700">Prazo de Recuperacao</p>
-                              <p className="text-gray-600">{op.prazoRecuperacao}</p>
+                              <p className="font-semibold text-gray-700 text-xs">Prazo de Recuperacao</p>
+                              <p className="text-gray-600 text-xs">{op.prazoRecuperacao}</p>
                             </div>
                           )}
+                          <div>
+                            <p className="font-semibold text-gray-700 text-xs">Complexidade</p>
+                            <p className="text-gray-600 text-xs capitalize">{op.complexidade || '-'}</p>
+                          </div>
                         </div>
                         {op.risco && (
-                          <div>
-                            <p className="font-semibold text-gray-700">Risco</p>
-                            <p className="text-yellow-700">{op.risco}</p>
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                            <p className="font-semibold text-yellow-800 text-xs mb-1">Risco</p>
+                            <p className="text-yellow-700 text-xs leading-relaxed">{op.risco}</p>
                           </div>
                         )}
                         {(op.documentacaoNecessaria || []).length > 0 && (
                           <div>
-                            <p className="font-semibold text-gray-700">Documentacao Necessaria</p>
-                            <ul className="list-disc list-inside text-gray-600">
+                            <p className="font-semibold text-gray-700 text-xs mb-1">Documentacao Necessaria</p>
+                            <ul className="list-disc list-inside text-gray-600 text-xs space-y-0.5">
                               {(op.documentacaoNecessaria || []).map((d: string, j: number) => (
                                 <li key={j}>{d}</li>
                               ))}
@@ -842,8 +851,8 @@ details[open]{background:white}
                         )}
                         {(op.passosPraticos || []).length > 0 && (
                           <div>
-                            <p className="font-semibold text-gray-700">Passos Praticos</p>
-                            <ol className="list-decimal list-inside text-gray-600">
+                            <p className="font-semibold text-gray-700 text-xs mb-1">Passos Praticos</p>
+                            <ol className="list-decimal list-inside text-gray-600 text-xs space-y-0.5">
                               {(op.passosPraticos || []).map((p: string, j: number) => (
                                 <li key={j}>{p}</li>
                               ))}
@@ -851,7 +860,7 @@ details[open]{background:white}
                           </div>
                         )}
                       </div>
-                    </details>
+                    </div>
                   ))}
                 </div>
               </div>
