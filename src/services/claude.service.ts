@@ -584,6 +584,122 @@ Seja CONSERVADOR nas estimativas de valores. É preferível que o cliente tenha 
 - Se não tiver dados suficientes para calcular, ESTIME baseado em percentuais típicos e INFORME que é estimativa
 - NUNCA deixe de analisar uma tese por falta de dados — use estimativas conservadoras
 
+## JURISPRUDÊNCIA VINCULANTE — CITE ESTAS EMENTAS NA FUNDAMENTAÇÃO
+
+INSTRUÇÃO CRÍTICA: Para cada oportunidade identificada, CITE o julgado correspondente
+abaixo no campo "fundamentacaoLegal". Use o texto real da ementa — não parafraseie.
+Formato: "Tribunal — Número — Data — Relator: '[trecho da ementa]'"
+
+---
+
+### TEMA 69 STF — Exclusão ICMS da base PIS/COFINS (TESES 1.1 e 1.2)
+**STF — RE 574.706 — Plenário — 15/03/2017 — Rel. Min. Cármen Lúcia**
+Tese fixada: "O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS."
+Ementa resumida: "RECURSO EXTRAORDINÁRIO COM REPERCUSSÃO GERAL. EXCLUSÃO DO ICMS NA BASE DE CÁLCULO DO PIS E COFINS. DEFINIÇÃO DE FATURAMENTO. APURAÇÃO ESCRITURAL DO ICMS E REGIME DE NÃO CUMULATIVIDADE. RECURSO PROVIDO. I – Inviável a inclusão do ICMS na base de cálculo das contribuições PIS e COFINS, porquanto o ICMS não se incorpora ao patrimônio do contribuinte, constituindo mero ingresso de caixa, cujo destino final são os cofres públicos."
+Modulação: efeitos a partir de 15/03/2017, ressalvadas as ações ajuizadas anteriormente.
+
+---
+
+### TEMA 779 STJ — Conceito de insumo PIS/COFINS (TESES 1.3 e 1.4)
+**STJ — REsp 1.221.170/PR — 1ª Seção — 22/02/2018 — Rel. Min. Napoleão Nunes Maia Filho**
+Tese fixada: "O conceito de insumo deve ser aferido à luz dos critérios de essencialidade ou relevância, ou seja, considerando-se a imprescindibilidade ou a importância de determinado item — bem ou serviço — para o desenvolvimento da atividade econômica desempenhada pelo contribuinte."
+Ementa resumida: "TRIBUTÁRIO. PIS E COFINS NÃO CUMULATIVOS. CONCEITO DE INSUMOS. INTERPRETAÇÃO DO ART. 3º, II, DAS LEIS 10.637/02 E 10.833/03. Os critérios norteadores do que seja insumo para fins de creditamento de PIS e COFINS são: a essencialidade (o item é indispensável à atividade-fim da empresa) e a relevância (o item, embora não indispensável, integra o processo produtivo de forma relevante)."
+
+---
+
+### TEMA 986 STF — ICMS sobre energia elétrica TUSD/TUST (TESE 2.1)
+**STF — RE 714.139 — Plenário — 27/03/2024 — Rel. Min. Dias Toffoli**
+Tese fixada: "É inconstitucional a incidência do ICMS sobre as tarifas de uso dos sistemas de transmissão (TUST) e de distribuição (TUSD) de energia elétrica."
+Ementa resumida: "DIREITO TRIBUTÁRIO. ICMS. ENERGIA ELÉTRICA. TUST. TUSD. INCONSTITUCIONALIDADE. A TUST e a TUSD não integram a base de cálculo do ICMS incidente sobre operações com energia elétrica, pois representam apenas o custo de disponibilização da infraestrutura de transmissão e distribuição, não correspondendo a circulação de mercadoria."
+Modulação: para contribuintes sem ação judicial ou pedido administrativo anterior a 27/03/2024, efeitos prospectivos.
+
+---
+
+### TEMA 201 STF — ICMS-ST Ressarcimento (TESE 2.2)
+**STF — RE 593.849 — Plenário — 19/10/2016 — Rel. Min. Edson Fachin**
+Tese fixada: "É devida a restituição da diferença do ICMS pago a mais no regime de substituição tributária para a frente se a base de cálculo efetiva da operação for inferior à presumida."
+Ementa resumida: "TRIBUTÁRIO. ICMS. SUBSTITUIÇÃO TRIBUTÁRIA PROGRESSIVA. BASE DE CÁLCULO PRESUMIDA. VALOR REAL DA OPERAÇÃO INFERIOR AO PRESUMIDO. DIREITO À RESTITUIÇÃO. O contribuinte tem direito à restituição do ICMS-ST quando o fato gerador presumido não se realizar ou quando o valor da operação for inferior ao presumido, nos termos do art. 150, §7°, da Constituição Federal."
+
+---
+
+### ADC 49 STF — ICMS em transferências entre filiais (TESE 2.7)
+**STF — ADC 49 — Plenário — 19/04/2021 — Rel. Min. Edson Fachin**
+Tese fixada: "Não incide ICMS no deslocamento de bens de um estabelecimento para outro do mesmo contribuinte localizados em estados distintos, visto não haver a transferência interestadual de titularidade ou a realização de ato mercantil."
+Ementa resumida: "TRIBUTÁRIO. ICMS. TRANSFERÊNCIA DE MERCADORIAS ENTRE ESTABELECIMENTOS DO MESMO CONTRIBUINTE. NÃO INCIDÊNCIA. A transferência de mercadorias entre estabelecimentos do mesmo titular não configura operação de circulação de mercadoria sujeita à incidência do ICMS, pois ausente o elemento essencial da operação mercantil: a mudança de titularidade do bem."
+LC 204/2023 regulamentou: contribuinte pode optar por transferir ou não os créditos.
+
+---
+
+### TEMA 985 STF — INSS sobre terço de férias (TESE 3.1)
+**STF — RE 1.072.485 — Plenário — 31/08/2020 — Rel. Min. Marco Aurélio**
+Tese fixada: "É inconstitucional a incidência de contribuição previdenciária patronal sobre o terço constitucional de férias."
+Ementa resumida: "TRIBUTÁRIO. CONTRIBUIÇÃO PREVIDENCIÁRIA. TERÇO CONSTITUCIONAL DE FÉRIAS. NÃO INCIDÊNCIA. O terço constitucional de férias possui natureza indenizatória, não integrando a base de cálculo das contribuições previdenciárias patronais previstas no art. 22, I, da Lei 8.212/91, por não constituir ganho habitual do empregado."
+
+### TEMA 478 STJ — INSS sobre aviso prévio indenizado (TESE 3.1)
+**STJ — REsp 1.230.957 — 1ª Seção — 26/02/2014 — Rel. Min. Mauro Campbell Marques**
+Tese fixada: "Não incide contribuição previdenciária sobre os valores pagos a título de aviso prévio indenizado."
+Ementa resumida: "TRIBUTÁRIO. CONTRIBUIÇÃO PREVIDENCIÁRIA. AVISO PRÉVIO INDENIZADO. NÃO INCIDÊNCIA. Os valores pagos a título de aviso prévio indenizado têm natureza indenizatória e não constituem base de cálculo da contribuição previdenciária, por ausência de prestação de serviço no período correspondente."
+
+---
+
+### TEMA 1.048 STJ — Exclusão ICMS-ST da base PIS/COFINS (TESE 2.6)
+**STJ — REsp 1.896.678/RS — 1ª Seção — 13/12/2023 — Rel. Min. Gurgel de Faria**
+Tese fixada: "O ICMS-ST recolhido pelo contribuinte substituído não compõe a base de cálculo do PIS e da COFINS devidos pelo substituído."
+Ementa resumida: "TRIBUTÁRIO. PIS. COFINS. ICMS-ST. EXCLUSÃO DA BASE DE CÁLCULO. TEMA 1.048. Aplicando-se a ratio decidendi do Tema 69/STF, o ICMS-ST não integra a base de cálculo das contribuições PIS e COFINS do contribuinte substituído, uma vez que os valores recolhidos a título de ICMS-ST não constituem receita ou faturamento do substituído, mas apenas um repasse ao Estado."
+
+---
+
+### TEMA 1.079 STF — IRPJ/CSLL sobre SELIC em repetição de indébito (TESE 4.5)
+**STF — RE 1.063.187 — Plenário — 24/09/2021 — Rel. Min. Dias Toffoli**
+Tese fixada: "É inconstitucional a incidência do IRPJ e da CSLL sobre os valores atinentes à taxa SELIC recebidos em razão de repetição de indébito tributário."
+Ementa resumida: "TRIBUTÁRIO. IRPJ. CSLL. TAXA SELIC. REPETIÇÃO DE INDÉBITO. NÃO INCIDÊNCIA. Os juros SELIC incidentes na repetição de indébito tributário têm natureza de danos emergentes (recomposição patrimonial), não configurando acréscimo patrimonial tributável pelo IRPJ e pela CSLL, pois destinados apenas a recompor o patrimônio do contribuinte corroído pela mora do Estado."
+
+---
+
+### TEMA 72 STF — INSS sobre salário-maternidade (TESE 3.1)
+**STF — RE 576.967 — Plenário — 01/08/2018 — Rel. Min. Roberto Barroso**
+Tese fixada: "É inconstitucional a incidência de contribuição previdenciária patronal sobre o salário-maternidade."
+Ementa resumida: "TRIBUTÁRIO. CONTRIBUIÇÃO PREVIDENCIÁRIA PATRONAL. SALÁRIO-MATERNIDADE. INCONSTITUCIONALIDADE. O salário-maternidade é benefício previdenciário pago pela Previdência Social, não constituindo contraprestação pelo trabalho e, portanto, não integrando a base de cálculo da contribuição patronal."
+
+---
+
+### EREsp 1.517.492 STJ — Benefícios ICMS fora IRPJ/CSLL (TESE 4.1)
+**STJ — EREsp 1.517.492/PR — 1ª Seção — 08/11/2017 — Rel. Min. Og Fernandes**
+Tese consolidada pela LC 160/2017 e art. 30 da Lei 12.973/2014:
+"Os benefícios fiscais de ICMS (créditos presumidos, reduções de base de cálculo, isenções e diferimentos) concedidos pelos Estados não integram a base de cálculo do IRPJ e da CSLL, desde que registrados em reserva de lucros e utilizados para absorção de prejuízos ou incorporação ao capital social."
+Ementa resumida: "TRIBUTÁRIO. IRPJ. CSLL. CRÉDITO PRESUMIDO DE ICMS. EXCLUSÃO DA BASE DE CÁLCULO. Os créditos presumidos de ICMS concedidos pelos Estados como incentivo fiscal não configuram lucro tributável pelo IRPJ e pela CSLL, pois representam renúncia fiscal do Estado, não acréscimo patrimonial da empresa."
+
+---
+
+### REsp 1.116.399 STJ — Equiparação hospitalar IRPJ (TESE 4.4)
+**STJ — REsp 1.116.399/BA — 1ª Seção — 28/11/2012 — Rel. Min. Napoleão Nunes Maia**
+Tese fixada: "As sociedades empresárias que prestam serviços hospitalares podem aplicar o percentual de presunção de 8% (IRPJ) e 12% (CSLL) sobre a receita bruta, desde que organizadas sob a forma de sociedade empresária e atendam às normas da ANVISA."
+Ementa resumida: "TRIBUTÁRIO. IRPJ. CSLL. LUCRO PRESUMIDO. SERVIÇOS HOSPITALARES. PERCENTUAL REDUZIDO. Para fins de IRPJ e CSLL no lucro presumido, consideram-se serviços hospitalares aqueles que se vinculam às atividades desenvolvidas pelos hospitais, voltados diretamente à promoção da saúde, não se incluindo as simples consultas médicas."
+
+---
+
+### Lei Kandir — ICMS Exportação (TESE 2.4)
+**LC 87/1996 (Lei Kandir) — Art. 3°, II e Art. 25, §1° | CF Art. 155, §2°, X, "a"**
+Fundamento constitucional: "O ICMS não incidirá sobre operações que destinem mercadorias para o exterior."
+STF — RE 753.681 — "A imunidade do ICMS nas exportações abrange os créditos acumulados nas entradas, que podem ser transferidos a terceiros ou ressarcidos em espécie conforme legislação estadual."
+Legislação estadual: SP: e-CredAc (RICMS/SP Arts. 71-81) | RJ: RICMS/RJ Livro III, Resolução SEFAZ nº 644/2024 | MG: DCA-ICMS | ES: RICMS/ES Art. 103 | RS: RICMS/RS Arts. 58-59
+
+---
+
+### TEMA 669 STF — FUNRURAL (TESE 8.2)
+**STF — RE 718.874 — Plenário — 30/03/2016 — Rel. Min. Edson Fachin**
+Tese fixada: "É constitucional a contribuição sobre a receita bruta proveniente da comercialização da produção rural devida pelo empregador, pessoa jurídica, que desenvolve atividade agroindustrial ou agrocomercial."
+Ementa resumida: "TRIBUTÁRIO. CONTRIBUIÇÃO PREVIDENCIÁRIA. PRODUTOR RURAL PJ. FUNRURAL. CONSTITUCIONALIDADE. A contribuição previdenciária incidente sobre a receita bruta da comercialização rural (FUNRURAL) é constitucional para pessoas jurídicas após a Lei 10.256/2001, diferentemente da declaração de inconstitucionalidade da contribuição para PF (RE 363.852)."
+
+---
+
+### INSTRUÇÃO FINAL SOBRE CITAÇÃO:
+Ao citar jurisprudência no campo "fundamentacaoLegal", use o formato:
+"[Lei/Artigo] | [Tribunal] [Número] ([Data]) — [Relator]: '[trecho da ementa]'"
+
+Exemplo correto:
+"RE 574.706 — Tema 69 STF (15/03/2017) — Rel. Min. Cármen Lúcia: 'O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS' | Lei 10.637/2002 art. 3°"
+
 ## FORMATO DE RESPOSTA
 Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários:
 
