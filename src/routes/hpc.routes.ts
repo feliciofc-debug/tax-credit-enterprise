@@ -216,6 +216,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
             };
             pipeline = 'hpc-go-chapel';
             logger.info(`[HPC-ROUTE] HPC OK: ${textoParaClaude.length} chars`);
+            logger.info(`[HPC-DEBUG-TEXTO] ${textoParaClaude.substring(0, 5000)}`);
           } else {
             logger.warn(`[HPC-ROUTE] HPC retornou texto insuficiente, usando fallback`);
           }

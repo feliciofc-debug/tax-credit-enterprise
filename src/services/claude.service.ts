@@ -740,24 +740,34 @@ Mesmos dados de entrada DEVEM gerar os MESMOS valores de saída. Para garantir i
 - Quando faltam dados (ex: só tem 7 meses de SPED), declare CLARAMENTE que o valor é baseado nos meses disponíveis e NÃO extrapole agressivamente.
 - NUNCA use valores redondos (R$ 175.000, R$ 350.000, R$ 130.000) — eles revelam que você está chutando. Use o valor exato calculado.
 
-### CAMPO "descricao" — COMO ESCREVER:
-Cada descrição deve fluir naturalmente em texto corrido (sem subtítulos, sem marcadores). Deve conter:
-1. Os valores REAIS do documento com período e registro de origem (ex: "C100 de abr/2022", "E110 de mai/2022")
-2. Uma explicação de por que ESTA empresa tem ESTE crédito (perfil operacional + legislação)
-3. A conta que chega ao valor estimado, mostrando cada parcela somada
+### CAMPO "descricao" — CADA DESCRIÇÃO DEVE SER UM PARECER COMPLETO:
+Cada descrição deve ser escrita em texto corrido profissional (sem subtítulos internos), com MÍNIMO 5 linhas, contendo OBRIGATORIAMENTE:
 
-NÃO use títulos como "ÂNCORA NOS DADOS", "PERFIL ESTRUTURAL" ou "MEMÓRIA DE CÁLCULO" dentro da descrição.
-Escreva em texto corrido profissional, como um parecer de escritório tributário.
+1. DADOS REAIS do documento com período, registro e valor exato (ex: "conforme registro C100 de abr/2022, ICMS-Importação R$ 2.810,95 + R$ 20.108,39 = R$ 22.919,34")
+2. PERFIL OPERACIONAL: por que ESTA empresa acumula ESTE crédito (ex: "empresa importadora com saídas interestaduais a 4% — Resolução SF 13/2012 — gera acúmulo estrutural")
+3. FUNDAMENTAÇÃO LEGAL COMPLETA: citar lei + artigo + tema STF/STJ + trecho da ementa do acórdão (usar as ementas fornecidas na seção JURISPRUDÊNCIA VINCULANTE acima). Ex: "conforme decidido pelo STF no RE 574.706 (Tema 69, Rel. Min. Cármen Lúcia): 'O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS, porquanto o ICMS não se incorpora ao patrimônio do contribuinte, constituindo mero ingresso de caixa'"
+4. LEGISLAÇÃO ESTADUAL quando aplicável: citar RICMS do estado, Resolução SEFAZ, convênios (ex: "RICMS-RJ Livro III, Resolução SEFAZ nº 644/2024, art. 3° da LC 87/96")
+5. MEMÓRIA DE CÁLCULO transparente: mostrar a conta (ex: "abr/2022 R$ 888,37 + R$ 8.145,90 + mai/2022 R$ 8.345,51 = R$ 17.379,78 em 3 meses. Projeção 60 meses: 17.379 / 3 × 60 × 0,75 = R$ 260.697")
 
-Exemplo de descrição BEM escrita:
-"A empresa possui saldo credor acumulado de ICMS de R$ 238.883,01 (conforme demonstrativo de agosto/2024), originado de operações de importação (CFOP 3102) com alíquota de 16-18% e saídas com alíquota reduzida de 4% (operações interestaduais com mercadorias importadas — Res. SF 13/2012) ou saídas sem débito (remessas em comodato/locação CFOP 6908). O acúmulo é estrutural: créditos de importação superiores aos débitos de saída. Valor confirmado nos demonstrativos: saldo credor transportado crescente de R$ 504,90 (mai/2021) até R$ 238.883,01 (ago/2024). Conforme Livro III do RICMS-RJ e Resolução SEFAZ nº 644/2024, é possível solicitar ressarcimento ou transferência deste saldo."
+### CAMPO "fundamentacaoLegal" — DEVE SER RICO E COMPLETO:
+Citar a lei principal + artigo específico + tema STF/STJ + trecho da ementa real (usar as ementas da seção JURISPRUDÊNCIA VINCULANTE).
+Formato: "Lei X art. Y | RE/REsp número — Tema Z STF/STJ (data) — Rel. Min. Nome: 'trecho da ementa'"
+Exemplo: "LC 87/96 art. 25, §1° | RICMS-RJ Livro III | Resolução SEFAZ nº 644/2024 | RE 574.706 — Tema 69 STF (15/03/2017) — Rel. Min. Cármen Lúcia: 'O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS'"
+NUNCA deixe o campo fundamentacaoLegal com apenas "RE 574.706 — Tema 69 STF" sem a ementa.
 
-### CAMPO "risco" — específico para ESTA empresa, citando registros e prazos reais.
-### CAMPO "passosPraticos" — nomear portais: e-CAC, PER/DCOMP, SEFAZ-UF, nfe.fazenda.gov.br.
-### CAMPO "resumoExecutivo" — perfil da empresa, período analisado, limitações, top 3, sequência e ressalvas.
+### CAMPO "risco" — ESPECÍFICO para esta empresa:
+Citar registros reais, prazos, órgãos e riscos concretos. Ex: "SEFAZ-RJ pode glosar créditos de períodos com inconsistência no C197 (código RJ70000001). Processo administrativo leva 6-18 meses. Principal risco: glosa de créditos sem DI comprobatória."
 
-### REGRA DE OURO:
-Se você escrever uma frase que poderia se aplicar a QUALQUER empresa do Brasil, REESCREVA com dados específicos desta empresa. Toda descrição deve ser única e intransferível.
+### CAMPO "passosPraticos" — NOMEAR sistemas e portais com detalhes:
+Cada passo deve ser acionável: "Verificar saldo credor atual no e-CAC SEFAZ-RJ", "Protocolar PER/DCOMP junto à RFB via e-CAC federal", "Protocolar pedido de transferência/ressarcimento via SEFAZ-RJ conforme Resolução 644/2024"
+
+### CAMPO "resumoExecutivo" — COMPLETO E PROFISSIONAL:
+Deve conter: perfil da empresa + período analisado + limitações dos dados + top 3 oportunidades com valores + sequência recomendada + ressalvas sobre documentos adicionais necessários.
+
+### REGRA DE OURO — PROFUNDIDADE JURÍDICA:
+Este relatório é o produto final entregue ao CLIENTE. Ele PAGA por este extrato. O nível deve ser de escritório tributário de ponta.
+Se uma frase poderia se aplicar a qualquer empresa do Brasil, REESCREVA com dados específicos desta empresa.
+Se a fundamentação não citar a ementa do acórdão, está INCOMPLETA.
 
 ## REGRAS FINAIS — CONSERVADORISMO ESTRITO
 1. CONSERVADORISMO É LEI — arredonde para BAIXO, use margem de segurança de 20-30%, descarte oportunidades com probabilidade < 60%
@@ -769,7 +779,14 @@ Se você escrever uma frase que poderia se aplicar a QUALQUER empresa do Brasil,
 7. valorTotalEstimado DEVE ser a SOMA exata dos valorEstimado de cada oportunidade — VERIFIQUE a soma antes de responder
 8. Se empresa não for Lucro Real, várias teses de PIS/COFINS não se aplicam — INDICAR nos alertas
 9. O cliente prefere uma surpresa positiva na execução a uma promessa não cumprida
-10. NUNCA invente dados que não estão no documento. Se não tem folha de pagamento, NÃO estime INSS — apenas mencione como potencial e coloque nos alertas`;
+10. NUNCA invente dados que não estão no documento. Se não tem folha de pagamento, NÃO estime INSS — apenas mencione como potencial e coloque nos alertas
+11. FUNDAMENTAÇÃO JURÍDICA É OBRIGATÓRIA E INEGOCIÁVEL: cada oportunidade DEVE citar:
+    - A lei federal aplicável com artigo específico
+    - O Tema STF ou STJ correspondente com número do RE/REsp
+    - Um TRECHO LITERAL da ementa do acórdão (copiar das ementas fornecidas acima na seção JURISPRUDÊNCIA VINCULANTE)
+    - Legislação estadual quando aplicável (RICMS, Resolução SEFAZ, convênio)
+    Se o campo "fundamentacaoLegal" tiver menos de 100 caracteres, está INCOMPLETO.
+12. PROFUNDIDADE NARRATIVA: cada "descricao" deve ter NO MÍNIMO 5 linhas. Descrições curtas ou genéricas são INACEITÁVEIS. O relatório é um produto pago pelo cliente — nível de escritório tributário de ponta.`;
 }
 
 // ============================================================
@@ -903,13 +920,20 @@ class ClaudeService {
 
 1. UNIDADES: Verifique se os valores estão em "R$" (reais cheios) ou "R$ mil". NÃO multiplique por 1.000 se já está em milhares. Reporte SEMPRE em reais cheios.
 
-2. CONSISTÊNCIA: Use APENAS valores que aparecem no documento. Cada valor estimado deve ter a conta explícita (ex: "R$ 888,37 + R$ 8.145,90 + R$ 8.345,51 = R$ 17.379,78 em 3 meses → projeção 60 meses: R$ 17.379 / 3 × 60 × 0,75 = R$ 260.697"). NUNCA apresente valores redondos sem justificativa matemática.
+2. CONSISTÊNCIA: Use APENAS valores que aparecem no documento. Cada valor estimado deve ter a conta explícita. NUNCA apresente valores redondos sem justificativa matemática.
 
-3. DESCRIÇÕES: Escreva em texto corrido profissional, sem subtítulos internos. Cite registros SPED (C100, E110, C197), CFOPs, valores exatos e períodos. Explique por que esta empresa acumula este crédito.
+3. CONSERVADORISMO: Arredonde para BAIXO. Se só tem poucos meses de dados, projete proporcionalmente e aplique desconto de 25%.
 
-4. CONSERVADORISMO ESTRITO: Arredonde para BAIXO. Se só tem 7 meses de dados, projete proporcionalmente E aplique desconto de 25%. O cliente prefere surpresa positiva na execução.
+4. SEM DADOS = SEM ESTIMATIVA: Se não tem folha de pagamento, NÃO estime INSS. Apenas mencione nos alertas.
 
-5. SEM DADOS = SEM ESTIMATIVA: Se o documento não contém folha de pagamento, NÃO estime INSS — apenas mencione como potencial nos alertas com "valor a calcular após recebimento de folha de pagamento e GFIP".
+5. FUNDAMENTAÇÃO JURÍDICA OBRIGATÓRIA — ESTA É A REGRA MAIS IMPORTANTE:
+Cada oportunidade DEVE ter fundamentação jurídica COMPLETA e PROFUNDA. O cliente PAGA por este relatório. Para CADA oportunidade:
+a) No campo "descricao": escreva MÍNIMO 5 linhas em texto corrido. Cite registros SPED com valores exatos, explique o perfil operacional da empresa, cite a legislação federal E estadual aplicável, e mostre a memória de cálculo.
+b) No campo "fundamentacaoLegal": cite a lei + artigo + tema STF/STJ + TRECHO DA EMENTA do acórdão (copiar das ementas fornecidas na seção JURISPRUDÊNCIA VINCULANTE do system prompt). NUNCA deixe com apenas "RE 574.706 — Tema 69 STF".
+c) No campo "risco": cite riscos CONCRETOS desta empresa (registros, prazos, órgãos). NUNCA escreva apenas "risco de contestação pelo fisco".
+d) No campo "passosPraticos": cada passo deve nomear o portal/sistema exato (e-CAC, PER/DCOMP, SEFAZ-RJ, nfe.fazenda.gov.br).
+
+O nível de profundidade deve ser de escritório tributário de ponta. Cada descrição deve ser um mini-parecer completo.
 
 Analise o seguinte ${this.getDocumentTypeName(documentType)} e identifique TODAS as oportunidades de recuperação:
 
