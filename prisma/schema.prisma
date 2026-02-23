@@ -115,8 +115,8 @@ model Partner {
 // ============================================
 model ViabilityAnalysis {
   id            String   @id @default(uuid())
-  partnerId     String
-  partner       Partner  @relation(fields: [partnerId], references: [id])
+  partnerId     String?
+  partner       Partner?  @relation(fields: [partnerId], references: [id])
   
   // Dados da empresa alvo
   companyName   String

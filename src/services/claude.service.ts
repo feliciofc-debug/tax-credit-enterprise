@@ -156,6 +156,7 @@ function buildFullAnalysisPrompt(companyInfo: CompanyInfo, documentType: string,
   const docTypeName = documentType === 'dre' ? 'DRE (Demonstração do Resultado do Exercício)'
     : documentType === 'balanco' ? 'Balanço Patrimonial'
     : documentType === 'balancete' ? 'Balancete de Verificação'
+    : documentType === 'sped' ? 'SPED EFD Fiscal (escrituração fiscal digital)'
     : 'Documento Contábil';
 
   const fullPrompt = buildHardcodedPrompt(companyInfo, docTypeName);
@@ -611,6 +612,44 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários:
   "riscoGeral": "baixo|medio|alto"
 }
 
+## REGRAS DE QUALIDADE NARRATIVA — TÃO IMPORTANTE QUANTO OS VALORES
+
+### CAMPO "descricao" — ESTRUTURA OBRIGATÓRIA:
+Cada descrição deve ter 3 partes:
+
+PARTE 1 — ÂNCORA NOS DADOS REAIS:
+Cite os números exatos encontrados no documento com período e fonte.
+BOM: "Registros C100 de importação: abr/2022 ICMS R$ 2.810,95 + R$ 20.108,39; mai/2022 R$ 21.394,00. Saldo credor crescente: mar/2022 R$ 52.464 → abr/2022 R$ 76.702 → mai/2022 R$ 97.174."
+RUIM: "A empresa recolhe ICMS-Importação significativo."
+
+PARTE 2 — PERFIL ESTRUTURAL DA EMPRESA:
+Por que esta empresa acumula este crédito (negócio + operação + legislação).
+BOM: "Empresa importadora com vendas interestaduais a 4% (Resolução SF 13/2012 para mercadorias importadas) — créditos de entrada a 16-18% sistematicamente superiores aos débitos de saída, gerando acúmulo estrutural irreversível sem mecanismo de transferência."
+RUIM: "A empresa pode ter direito a créditos de ICMS."
+
+PARTE 3 — MEMÓRIA DE CÁLCULO:
+Mostre a conta de forma transparente.
+BOM: "Saldo credor confirmado: R$ 97.174 (mai/2022). Projetando crescimento histórico (~R$ 22k/mês) para 5 anos conservadoramente: R$ 175.000."
+RUIM: "Estimativa conservadora: R$ 175.000."
+
+### CAMPO "risco" — DEVE SER ESPECÍFICO PARA ESTA EMPRESA:
+BOM: "SEFAZ-RJ pode questionar créditos de períodos com inconsistência no C197 (código RJ70000001). Processo pode levar 12-18 meses. Principal risco: glosa de créditos sem DI comprobatória."
+RUIM: "Risco de contestação pelo fisco."
+
+### CAMPO "passosPraticos" — NOMEAR SISTEMAS E PORTAIS:
+BOM: ["Verificar saldo credor atual no e-CAC SEFAZ-RJ", "Protocolar pedido de transferência via SEFAZ-RJ conforme Resolução 644/2024", "Acompanhar análise e responder intimações em até 30 dias", "Após deferimento, solicitar creditamento em conta corrente"]
+RUIM: ["Verificar créditos", "Protocolar pedido", "Acompanhar"]
+
+### CAMPO "resumoExecutivo" — ESTRUTURA OBRIGATÓRIA:
+1. Perfil da empresa (setor + regime + característica que gera créditos)
+2. Período analisado e limitações dos dados disponíveis
+3. Top 3 oportunidades por valor com justificativa de prioridade
+4. Sequência recomendada de execução
+5. Ressalva sobre documentos adicionais necessários para cálculo preciso
+
+### REGRA DE OURO DE ESPECIFICIDADE:
+Se você escrever uma frase que poderia se aplicar a QUALQUER empresa do Brasil, REESCREVA com dados específicos desta empresa. Toda descrição deve ser única e intransferível para esta empresa neste período.
+
 ## REGRAS FINAIS
 1. CONSERVADORISMO É LEI — arredonde para baixo, use margem de segurança de 20-30%, descarte oportunidades com probabilidade < 60%
 2. CADA oportunidade DEVE ter fundamentação legal com número de lei/artigo E tema STF/STJ
@@ -743,13 +782,32 @@ class ClaudeService {
     try {
       const response = await this.client.messages.create({
         model: MODELS.ANALYSIS,
-        max_tokens: 16384,
-        temperature: 0, // Determinístico: mesmos dados = mesmos resultados
+        max_tokens: 32768,
+        temperature: 0,
         system: systemPrompt,
         messages: [
           {
             role: 'user',
-            content: `ATENÇÃO SOBRE UNIDADES: Verifique CUIDADOSAMENTE se os valores do documento estão em "R$" (reais cheios) ou "R$ mil" / "em milhares de Reais". Muitos documentos contábeis usam valores em milhares — NÃO multiplique por 1.000 novamente. Se o documento diz "100.470" e está "em milhares", o valor real é R$ 100.470.000.\n\nAnalise o seguinte ${this.getDocumentTypeName(documentType)} e identifique TODAS as oportunidades de recuperação de créditos tributários:\n\n${truncatedText}`,
+            content: `ATENÇÃO SOBRE UNIDADES: Verifique CUIDADOSAMENTE se os valores estão em "R$" (reais cheios) ou "R$ mil". NÃO MULTIPLIQUE por 1.000 se já está em milhares. Reporte sempre em REAIS CHEIOS.
+
+ATENÇÃO — QUALIDADE NARRATIVA OBRIGATÓRIA:
+Este relatório é o produto final entregue ao cliente. Cada oportunidade DEVE:
+
+1. CITAR DADOS REAIS DO DOCUMENTO: Use os números, CFOPs, períodos e valores específicos encontrados no SPED/DRE. Ex: "conforme C100 de abr/2022, ICMS-Importação R$ 22.919,34" ou "saldo credor crescente: R$ 52.464 (mar/2022) → R$ 76.702 (abr/2022) → R$ 97.174 (mai/2022)". NUNCA escreva "valores significativos" sem citar o número real.
+
+2. EXPLICAR O PERFIL DA EMPRESA: Por que ESTA empresa especificamente acumula ESTE crédito. Ex: "empresa importadora com saídas interestaduais a 4% (Res. SF 13/2012) gera acúmulo estrutural — créditos de importação a 16-18% superam débitos de saída a 4%".
+
+3. CITAR LEGISLAÇÃO ESTADUAL ESPECÍFICA: Para teses de ICMS, citar RICMS do estado da empresa, resoluções da SEFAZ local, e convênios aplicáveis. Ex RJ: "RICMS-RJ Livro III, Resolução SEFAZ nº 644/2024". Ex SP: "RICMS/SP Arts. 71-81, e-CredAc".
+
+4. MOSTRAR MEMÓRIA DE CÁLCULO: Nunca apresentar valor sem a conta. Ex: "COFINS-Importação: abr/2022 R$ 888,37 + R$ 8.145,90 + mai/2022 R$ 8.345,51 + jul/2021 R$ 493,18 = R$ 17.872,96 identificados. Projetando 5 anos conservadoramente: R$ 37.000".
+
+5. ALERTAS ESPECÍFICOS: Citar inconsistências reais encontradas nos dados. Ex: "registro C100 mai/2022 sem fornecedor identificado (NF 42) — pode indicar nota não escriturada".
+
+REFERÊNCIA DE QUALIDADE: O extrato deve ter nível de relatório de escritório tributário de ponta. Descritivo, fundamentado, com dados reais, legislação específica e passos acionáveis com portais nomeados.
+
+Analise o seguinte ${this.getDocumentTypeName(documentType)} e identifique TODAS as oportunidades de recuperação:
+
+${truncatedText}`,
           },
         ],
       });
@@ -1322,6 +1380,7 @@ Os valores definitivos devem ser apurados por profissional contábil qualificado
       dre: 'Demonstração do Resultado do Exercício (DRE)',
       balanco: 'Balanço Patrimonial',
       balancete: 'Balancete de Verificação',
+      sped: 'SPED EFD Fiscal (escrituração fiscal digital)',
     };
     return names[type] || type;
   }
