@@ -350,7 +350,7 @@ router.post('/generate', authenticateToken, requireAdmin, async (req: Request, r
       },
     });
 
-    logger.info(`Procuração gerada: ${procuration.id} tipo=${type} cenario=${lawyerScenario} cliente=${client.company || client.name}`);
+    logger.info(`Procuração gerada: ${procuration.id} tipo=${type} cenario=${lawyerScenario} cliente=${clienteNome}`);
 
     res.json({ success: true, data: procuration });
   } catch (err: any) {

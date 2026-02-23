@@ -5,6 +5,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { logger } from '../utils/logger';
 import { prisma } from '../utils/prisma';
+import { jurisprudenceService } from './jurisprudence.service';
+import { mapearTesesDasOportunidades } from '../utils/tese-mapper';
 
 // ============================================================
 // CONFIGURAÇÃO DE MODELOS
@@ -837,6 +839,32 @@ ${truncatedText}`,
         tokensInput: response.usage?.input_tokens,
         tokensOutput: response.usage?.output_tokens,
       });
+
+      // ENRIQUECIMENTO: Buscar jurisprudência real para as teses identificadas
+      if (jurisprudenceService.isEnabled() && result.oportunidades.length > 0) {
+        try {
+          const teseCodes = mapearTesesDasOportunidades(result.oportunidades);
+          logger.info(`[JURIS] Buscando jurisprudência para ${teseCodes.length} teses...`);
+
+          const jurisprudencias = await jurisprudenceService.buscarParaAnalise(teseCodes);
+
+          for (const op of result.oportunidades) {
+            const codes = mapearTesesDasOportunidades([op]);
+            for (const code of codes) {
+              const julgados = jurisprudencias.get(code);
+              if (julgados && julgados.length > 0) {
+                const melhor = julgados[0];
+                op.fundamentacaoLegal +=
+                  ` | ${melhor.tribunal} ${melhor.numero} (${melhor.data}): "${melhor.ementa.substring(0, 300)}..."`;
+              }
+            }
+          }
+
+          logger.info(`[JURIS] Enriquecimento concluído — ${jurisprudencias.size} teses com julgados`);
+        } catch (jurisErr: any) {
+          logger.warn(`[JURIS] Enriquecimento falhou (não bloqueante): ${jurisErr.message}`);
+        }
+      }
 
       return result;
     } catch (error: any) {
