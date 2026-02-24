@@ -416,17 +416,33 @@ a seguinte distribuicao:
    CLIENTE:    ${pctCliente}% (${numberToWordsPercent(pctCliente)} por cento)
    TAXCREDIT:  ${pctPlataforma}% (${numberToWordsPercent(pctPlataforma)} por cento)
 
-3.2. "Valor efetivamente recuperado ou compensado" significa:
+3.2. "Valor efetivamente recuperado ou compensado" significa, sem qualquer
+distincao quanto a modalidade de realizacao do credito:
 a) Valor creditado em conta corrente (restituicao em especie);
 b) Valor compensado com tributos devidos (PER/DCOMP ou equivalente estadual);
-c) Valor de credito utilizado, transferido ou habilitado (ICMS acumulado,
-   precatorios).
+c) Valor de credito utilizado, transferido, habilitado ou cedido (ICMS
+   acumulado, precatorios, cessao a terceiros);
+d) Valor obtido mediante compensacao determinada ou autorizada pelo Estado,
+   Municipio ou orgao publico, inclusive quando o ente publico optar por
+   compensar os creditos tributarios identificados com debitos do CLIENTE
+   ou com futuros tributos, em vez de efetuar restituicao em especie.
 
-3.3. Os percentuais acima incidem sobre o valor BRUTO recuperado, sem
-deducao de custos processuais, administrativos ou honorarios advocaticios,
-que ja estao incluidos na parte da TAXCREDIT.
+3.3. CLAUSULA HIBRIDA — COMPENSACAO PELO ESTADO: Na hipotese de o Estado,
+Municipio ou qualquer ente publico optar por compensar os creditos
+tributarios objeto deste contrato com quaisquer debitos, obrigacoes ou
+tributos futuros do CLIENTE, em vez de realizar o pagamento em especie ou
+a restituicao direta, o CLIENTE tera a MESMA OBRIGACAO de repassar a
+TAXCREDIT os ${pctPlataforma}% (${numberToWordsPercent(pctPlataforma)} por cento) sobre o valor
+da compensacao, calculado pelo valor do credito compensado. O CLIENTE
+devera notificar a TAXCREDIT em ate 5 (cinco) dias uteis da ciencia da
+decisao administrativa ou judicial que determinar a compensacao,
+fornecendo todos os documentos comprobatorios.
 
-3.4. Estimativa de creditos identificados: R$ ${formatNumber(params.valorEstimado || 0)} conforme
+3.4. Os percentuais incidem sobre o valor BRUTO recuperado/compensado,
+sem deducao de custos processuais, administrativos ou honorarios
+advocaticios, que ja estao incluidos na parte da TAXCREDIT.
+
+3.5. Estimativa de creditos identificados: R$ ${formatNumber(params.valorEstimado || 0)} conforme
 relatorio de analise anexo, sujeito a confirmacao documental.
 
 CLAUSULA QUARTA — DA CONTA ESCROW (BANCO FIBRA)
@@ -435,36 +451,30 @@ CLAUSULA QUARTA — DA CONTA ESCROW (BANCO FIBRA)
 recuperados serao recebidos exclusivamente por meio de CONTA ESCROW
 mantida junto ao ${BANCO_FIBRA.nome} (CNPJ ${BANCO_FIBRA.cnpj}).
 
-4.2. Estrutura da conta escrow:
-a) Modalidade: Conta escrow com split automatico de pagamentos;
-b) Administracao: ${BANCO_FIBRA.nome}, instituicao financeira regulada
-   pelo Banco Central do Brasil;
-c) Finalidade: EXCLUSIVA para recebimento de creditos tributarios
-   objeto deste contrato.
+4.2. Na hipotese de compensacao pelo Estado (Clausula 3.3), o CLIENTE
+devera depositar na conta escrow o valor equivalente a ${pctPlataforma}% do
+credito compensado no prazo de ate 10 (dez) dias uteis contados da
+efetivacao da compensacao, para que o Banco Fibra realize o split
+automatico.
 
-4.3. Dados da conta escrow:
-   Banco: ${BANCO_FIBRA.nome}
-   CNPJ: ${BANCO_FIBRA.cnpj}
-   Agencia: ${params.escrowAgencia || '[AGENCIA]'}
-   Conta: ${params.escrowConta || '[CONTA]'}
-
-4.4. SPLIT AUTOMATICO: Ao receber os valores na conta escrow, o Banco
-Fibra realizara automaticamente a distribuicao conforme percentuais
-da Clausula Terceira:
+4.3. SPLIT AUTOMATICO: Ao receber os valores na conta escrow, o Banco
+Fibra realizara automaticamente a distribuicao:
    - ${pctCliente}% -> conta corrente do CLIENTE
    - ${pctPlataforma}% -> conta corrente da TAXCREDIT
 
-4.5. O split sera realizado em ate 48 (quarenta e oito) horas uteis
+4.4. O split sera realizado em ate 48 (quarenta e oito) horas uteis
 do efetivo recebimento na conta escrow.
 
-4.6. VEDACOES AO CLIENTE: E expressamente vedado ao CLIENTE:
+4.5. VEDACOES AO CLIENTE: E expressamente vedado ao CLIENTE:
 a) Solicitar alteracao dos dados bancarios de restituicao perante
    Receita Federal, SEFAZ ou outros orgaos sem autorizacao previa
    e escrita da TAXCREDIT;
 b) Solicitar restituicao em conta diversa da conta escrow;
-c) Compensar creditos unilateralmente sem autorizacao da TAXCREDIT.
+c) Compensar creditos unilateralmente sem autorizacao da TAXCREDIT;
+d) Aceitar compensacao pelo Estado sem comunicar a TAXCREDIT no prazo
+   de 5 dias uteis.
 
-4.7. O descumprimento das vedacoes acima configura inadimplemento grave,
+4.6. O descumprimento das vedacoes acima configura inadimplemento grave,
 sujeitando o CLIENTE as penalidades da Clausula Oitava.
 
 CLAUSULA QUINTA — DA PROCURACAO E ACESSO A SISTEMAS
@@ -500,7 +510,8 @@ b) Garantir veracidade e integridade dos documentos fornecidos;
 c) Outorgar procuracao conforme Clausula Quinta;
 d) Efetuar pagamentos nos termos e prazos contratados;
 e) Informar a TAXCREDIT em ate 5 dias uteis sobre qualquer evento
-   de recuperacao ou compensacao de creditos;
+   de recuperacao ou compensacao de creditos, incluindo compensacoes
+   determinadas pelo Estado;
 f) Nao contratar terceiros para recuperacao dos mesmos creditos
    durante a vigencia deste contrato;
 g) Manter dados cadastrais atualizados.
@@ -509,7 +520,8 @@ CLAUSULA OITAVA — DAS PENALIDADES
 
 8.1. Em caso de descumprimento grave (alteracao de dados bancarios
 sem autorizacao, revogacao de procuracao sem justa causa, recebimento
-de creditos sem repasse, contratacao de terceiros para mesmos creditos):
+de creditos sem repasse, aceitacao de compensacao estatal sem
+notificacao, contratacao de terceiros para mesmos creditos):
 a) Multa compensatoria de 30% sobre o valor total dos creditos
    identificados;
 b) Rescisao imediata do contrato;
@@ -701,21 +713,38 @@ a seguinte distribuicao:
    TAXCREDIT:  ${pctPlataforma}% (${numberToWordsPercent(pctPlataforma)} por cento)
    PARCEIRO:   ${pctParceiro}% (${numberToWordsPercent(pctParceiro)} por cento)
 
-3.2. "Valor efetivamente recuperado ou compensado" significa:
+3.2. "Valor efetivamente recuperado ou compensado" significa, sem qualquer
+distincao quanto a modalidade de realizacao do credito:
 a) Valor creditado em conta corrente (restituicao em especie);
 b) Valor compensado com tributos devidos (PER/DCOMP ou equivalente estadual);
-c) Valor de credito utilizado, transferido ou habilitado (ICMS acumulado,
-   precatorios).
+c) Valor de credito utilizado, transferido, habilitado ou cedido (ICMS
+   acumulado, precatorios, cessao a terceiros);
+d) Valor obtido mediante compensacao determinada ou autorizada pelo Estado,
+   Municipio ou orgao publico, inclusive quando o ente publico optar por
+   compensar os creditos tributarios identificados com debitos do CLIENTE
+   ou com futuros tributos, em vez de efetuar restituicao em especie.
 
-3.3. Os percentuais acima incidem sobre o valor BRUTO recuperado, sem
-deducao de custos processuais, administrativos ou honorarios advocaticios,
-que ja estao incluidos na parte da TAXCREDIT.
+3.3. CLAUSULA HIBRIDA — COMPENSACAO PELO ESTADO: Na hipotese de o Estado,
+Municipio ou qualquer ente publico optar por compensar os creditos
+tributarios objeto deste contrato com quaisquer debitos, obrigacoes ou
+tributos futuros do CLIENTE, em vez de realizar o pagamento em especie ou
+a restituicao direta, o CLIENTE tera a MESMA OBRIGACAO de repassar a
+TAXCREDIT os ${pctPlataforma + pctParceiro}% (${numberToWordsPercent(pctPlataforma + pctParceiro)} por cento — sendo
+${pctPlataforma}% TAXCREDIT + ${pctParceiro}% PARCEIRO) sobre o valor da compensacao,
+calculado pelo valor do credito compensado. O CLIENTE devera notificar a
+TAXCREDIT em ate 5 (cinco) dias uteis da ciencia da decisao administrativa
+ou judicial que determinar a compensacao, fornecendo todos os documentos
+comprobatorios.
 
 3.4. O PARCEIRO e remunerado pela indicacao e/ou acompanhamento da
 operacao. Seu percentual e oriundo da parte da TAXCREDIT, nao
 onerando o CLIENTE.
 
-3.5. Estimativa de creditos identificados: R$ ${formatNumber(params.valorEstimado || 0)} conforme
+3.5. Os percentuais incidem sobre o valor BRUTO recuperado/compensado,
+sem deducao de custos processuais, administrativos ou honorarios
+advocaticios, que ja estao incluidos na parte da TAXCREDIT.
+
+3.6. Estimativa de creditos identificados: R$ ${formatNumber(params.valorEstimado || 0)} conforme
 relatorio de analise anexo, sujeito a confirmacao documental.
 
 CLAUSULA QUARTA — DA CONTA ESCROW (BANCO FIBRA)
@@ -724,22 +753,14 @@ CLAUSULA QUARTA — DA CONTA ESCROW (BANCO FIBRA)
 recuperados serao recebidos exclusivamente por meio de CONTA ESCROW
 mantida junto ao ${BANCO_FIBRA.nome} (CNPJ ${BANCO_FIBRA.cnpj}).
 
-4.2. Estrutura da conta escrow:
-a) Modalidade: Conta escrow com split automatico de pagamentos;
-b) Administracao: ${BANCO_FIBRA.nome}, instituicao financeira regulada
-   pelo Banco Central do Brasil;
-c) Finalidade: EXCLUSIVA para recebimento de creditos tributarios
-   objeto deste contrato.
+4.2. Na hipotese de compensacao pelo Estado (Clausula 3.3), o CLIENTE
+devera depositar na conta escrow o valor equivalente a ${pctPlataforma + pctParceiro}% do
+credito compensado no prazo de ate 10 (dez) dias uteis contados da
+efetivacao da compensacao, para que o Banco Fibra realize o split
+automatico.
 
-4.3. Dados da conta escrow:
-   Banco: ${BANCO_FIBRA.nome}
-   CNPJ: ${BANCO_FIBRA.cnpj}
-   Agencia: ${params.escrowAgencia || '[AGENCIA]'}
-   Conta: ${params.escrowConta || '[CONTA]'}
-
-4.4. SPLIT AUTOMATICO em 3 vias: Ao receber os valores na conta escrow,
-o Banco Fibra realizara automaticamente a distribuicao conforme
-percentuais da Clausula Terceira:
+4.3. SPLIT AUTOMATICO em 3 vias: Ao receber os valores na conta escrow,
+o Banco Fibra realizara automaticamente a distribuicao:
    - ${pctCliente}% -> conta corrente do CLIENTE
    - ${pctPlataforma}% -> conta corrente da TAXCREDIT
    - ${pctParceiro}% -> conta corrente do PARCEIRO
@@ -751,17 +772,19 @@ Dados bancarios do PARCEIRO para split:
    Titular: ${params.parceiroTitular || '[TITULAR]'}
    CPF/CNPJ: ${params.parceiroDocBanco || '[DOC]'}
 
-4.5. O split sera realizado em ate 48 (quarenta e oito) horas uteis
+4.4. O split sera realizado em ate 48 (quarenta e oito) horas uteis
 do efetivo recebimento na conta escrow.
 
-4.6. VEDACOES AO CLIENTE: E expressamente vedado ao CLIENTE:
+4.5. VEDACOES AO CLIENTE: E expressamente vedado ao CLIENTE:
 a) Solicitar alteracao dos dados bancarios de restituicao perante
    Receita Federal, SEFAZ ou outros orgaos sem autorizacao previa
    e escrita da TAXCREDIT;
 b) Solicitar restituicao em conta diversa da conta escrow;
-c) Compensar creditos unilateralmente sem autorizacao da TAXCREDIT.
+c) Compensar creditos unilateralmente sem autorizacao da TAXCREDIT;
+d) Aceitar compensacao pelo Estado sem comunicar a TAXCREDIT no prazo
+   de 5 dias uteis.
 
-4.7. O descumprimento das vedacoes acima configura inadimplemento grave,
+4.6. O descumprimento das vedacoes acima configura inadimplemento grave,
 sujeitando o CLIENTE as penalidades da Clausula Nona.
 
 CLAUSULA QUINTA — DA PROCURACAO E ACESSO A SISTEMAS
@@ -797,7 +820,8 @@ b) Garantir veracidade e integridade dos documentos fornecidos;
 c) Outorgar procuracao conforme Clausula Quinta;
 d) Efetuar pagamentos nos termos e prazos contratados;
 e) Informar a TAXCREDIT em ate 5 dias uteis sobre qualquer evento
-   de recuperacao ou compensacao de creditos;
+   de recuperacao ou compensacao de creditos, incluindo compensacoes
+   determinadas pelo Estado;
 f) Nao contratar terceiros para recuperacao dos mesmos creditos
    durante a vigencia deste contrato;
 g) Manter dados cadastrais atualizados.
@@ -817,14 +841,14 @@ CLAUSULA NONA — DAS PENALIDADES
 
 9.1. Em caso de descumprimento grave (alteracao de dados bancarios
 sem autorizacao, revogacao de procuracao sem justa causa, recebimento
-de creditos sem repasse, contratacao de terceiros para mesmos creditos):
+de creditos sem repasse, aceitacao de compensacao estatal sem
+notificacao, contratacao de terceiros para mesmos creditos):
 a) Multa compensatoria de 30% sobre o valor total dos creditos
    identificados;
 b) Rescisao imediata do contrato;
 c) Execucao das garantias, se houver.
 
-9.2. Em caso de descumprimento leve (atraso em documentos, nao
-atualizacao cadastral): prazo de 15 dias para regularizacao.
+9.2. Em caso de descumprimento leve: prazo de 15 dias para regularizacao.
 
 9.3. Atraso no repasse de valores: multa de 2% + juros de 1% ao mes
 + correcao pelo IPCA.
