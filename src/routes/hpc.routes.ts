@@ -307,6 +307,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
         logger.info(`[HPC-ROUTE] Admin sem partnerId — usando partner: ${partnerId || 'nenhum (salvar sem partner)'}`);
       }
 
+      logger.info(`[HPC-SAVE] Tentando salvar análise — partnerId: ${partnerId}, userId: ${(user as any).id}, empresa: ${companyName}`);
       const saved = await prisma.viabilityAnalysis.create({
         data: {
           partnerId: partnerId || undefined,
@@ -326,7 +327,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
         },
       });
       savedId = saved.id;
-      logger.info(`[HPC-ROUTE] Análise salva: ${saved.id} | empresa: ${companyName} | score: ${analysis.score}`);
+      logger.info(`[HPC-SAVE] Análise salva com sucesso — id: ${saved.id}, empresa: ${companyName}, score: ${analysis.score}`);
     } catch (saveErr: any) {
       logger.error(`[HPC-ROUTE] Erro ao salvar: ${saveErr.message}`, saveErr.stack);
     }
