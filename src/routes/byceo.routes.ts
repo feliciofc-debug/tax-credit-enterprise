@@ -16,6 +16,19 @@ function authenticateByCEO(req: Request, res: Response, next: NextFunction) {
 
 router.use(authenticateByCEO);
 
+function cnpjVariants(cnpj: string): string[] {
+  const digits = cnpj.replace(/[^\d]/g, '');
+  const formatted = digits.length === 14
+    ? `${digits.slice(0,2)}.${digits.slice(2,5)}.${digits.slice(5,8)}/${digits.slice(8,12)}-${digits.slice(12)}`
+    : digits;
+  return [digits, formatted];
+}
+
+function cnpjWhereClause(cnpj: string) {
+  const variants = cnpjVariants(cnpj);
+  return { OR: variants.map(v => ({ cnpj: { contains: v } })) };
+}
+
 // ============================================================
 // GET /api/v1/byceo/contratos
 // Lista todos os contratos ativos
@@ -75,7 +88,7 @@ router.get('/contratos/:cnpj', async (req: Request, res: Response) => {
 
     const contracts = await prisma.contract.findMany({
       where: {
-        client: { cnpj: { contains: cnpjClean } },
+        client: { ...cnpjWhereClause(cnpjClean) },
         status: { not: 'cancelled' },
       },
       include: {
@@ -92,7 +105,7 @@ router.get('/contratos/:cnpj', async (req: Request, res: Response) => {
     const contract = contracts[0] as any;
 
     let analysis = await prisma.viabilityAnalysis.findFirst({
-      where: { cnpj: { contains: cnpjClean }, status: 'completed' },
+      where: { ...cnpjWhereClause(cnpjClean), status: 'completed' },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -171,7 +184,7 @@ router.get('/extratos/:cnpj', async (req: Request, res: Response) => {
     const cnpjClean = cnpj.replace(/[^\d]/g, '');
 
     const analysis = await prisma.viabilityAnalysis.findFirst({
-      where: { cnpj: { contains: cnpjClean }, status: 'completed' },
+      where: { ...cnpjWhereClause(cnpjClean), status: 'completed' },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -232,11 +245,11 @@ router.get('/status/:cnpj', async (req: Request, res: Response) => {
 
     const [analysis, contract] = await Promise.all([
       prisma.viabilityAnalysis.findFirst({
-        where: { cnpj: { contains: cnpjClean } },
+        where: { ...cnpjWhereClause(cnpjClean) },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.contract.findFirst({
-        where: { client: { cnpj: { contains: cnpjClean } }, status: { not: 'cancelled' } },
+        where: { client: { ...cnpjWhereClause(cnpjClean) }, status: { not: 'cancelled' } },
         orderBy: { createdAt: 'desc' },
         include: { client: { select: { company: true, name: true } } },
       }),
