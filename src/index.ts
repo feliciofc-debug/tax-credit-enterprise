@@ -23,6 +23,7 @@ import formalizationRoutes from './routes/formalization.routes';
 import hpcRoutes from './routes/hpc.routes';
 import thesisRoutes from './routes/thesis.routes';
 import procurationRoutes from './routes/procuration.routes';
+import byceoRoutes from './routes/byceo.routes';
 
 dotenv.config();
 
@@ -141,6 +142,7 @@ app.use('/api/formalization', formalizationRoutes);
 app.use('/api/hpc', hpcRoutes);
 app.use('/api/thesis', thesisRoutes);
 app.use('/api/procuration', procurationRoutes);
+app.use('/api/v1/byceo', byceoRoutes);
 
 // Error handling
 app.use(errorHandler);
