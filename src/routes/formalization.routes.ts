@@ -7,10 +7,13 @@ import {
   generatePerdcompDocument,
   generateBipartiteContract,
   generateTripartiteContract,
+  generateFormalizationKit,
+  classifyAllOpportunities,
   type SefazDocumentParams,
   type PerdcompDocumentParams,
   type BipartiteContractParams,
   type TripartiteContractParams,
+  type FormalizationKitParams,
 } from '../services/formalization.service';
 import crypto from 'crypto';
 
@@ -61,14 +64,25 @@ router.post('/generate-sefaz', authenticateToken, async (req: Request, res: Resp
       opportunities = JSON.parse(analysis.opportunities || '[]');
     } catch {}
 
-    // Montar teses a partir das oportunidades
-    const teses = opportunities.map((op: any) => ({
-      descricao: op.tese || op.titulo || op.description || 'Oportunidade identificada',
-      valor: op.valorEstimado || op.valor || op.estimated_value || 0,
-      fundamentacao: op.fundamentacaoLegal || op.base_legal || op.fundamentacao || 'Legislacao vigente',
-      periodo: op.periodo || op.period || 'Conforme documentacao anexa',
+    // Classificar oportunidades e filtrar apenas ICMS (competencia estadual)
+    const classified = classifyAllOpportunities(opportunities);
+    const estaduais = classified.filter(c => c.competencia === 'estadual');
+
+    if (estaduais.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nenhuma oportunidade de ICMS encontrada. Tributos federais (PIS, COFINS, IRPJ, CSLL) devem ser formalizados via PER/DCOMP na Receita Federal, nao na SEFAZ.',
+      });
+    }
+
+    const teses = estaduais.map(c => ({
+      descricao: c.original.tese || c.original.titulo || c.original.description || 'Oportunidade ICMS',
+      valor: c.original.valorEstimado || c.original.valor || c.original.estimated_value || 0,
+      fundamentacao: c.original.fundamentacaoLegal || c.original.base_legal || c.original.fundamentacao || 'Legislacao estadual vigente',
+      periodo: c.original.periodo || c.original.period || 'Conforme documentacao anexa',
     }));
 
+    const valorEstadual = teses.reduce((sum, t) => sum + t.valor, 0);
     const protocoloPlataforma = `TCE-${new Date().getFullYear()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
     const params: SefazDocumentParams = {
@@ -92,7 +106,7 @@ router.post('/generate-sefaz', authenticateToken, async (req: Request, res: Resp
       representanteRg: '[RG]',
       uf,
       tipoPedido: tipoPedido || 'COMPENSACAO',
-      valorTotalCredito: analysis.estimatedCredit || 0,
+      valorTotalCredito: valorEstadual,
       periodoInicio: '[Data inicio]',
       periodoFim: '[Data fim]',
       teses,
@@ -101,7 +115,12 @@ router.post('/generate-sefaz', authenticateToken, async (req: Request, res: Resp
 
     const document = generateSefazDocument(params);
 
-    logger.info(`SEFAZ document generated for analysis ${analysisId}, UF: ${uf}`);
+    const federais = classified.filter(c => c.competencia === 'federal');
+    const avisoFederais = federais.length > 0
+      ? `ATENCAO: ${federais.length} oportunidade(s) federal(is) (${[...new Set(federais.map(f => f.grupoTributo))].join(', ')}) nao foram incluidas neste requerimento. Use "Gerar Kit Completo" ou "Gerar PER/DCOMP" para formaliza-las junto a Receita Federal.`
+      : undefined;
+
+    logger.info(`SEFAZ document generated for analysis ${analysisId}, UF: ${uf} — ${estaduais.length} ICMS, ${federais.length} federais excluidas`);
 
     return res.json({
       success: true,
@@ -110,6 +129,10 @@ router.post('/generate-sefaz', authenticateToken, async (req: Request, res: Resp
         protocoloPlataforma,
         uf,
         tipoPedido: tipoPedido || 'COMPENSACAO',
+        valorEstadual,
+        oportunidadesIncluidas: estaduais.length,
+        oportunidadesFederaisExcluidas: federais.length,
+        avisoFederais,
       },
     });
   } catch (error: any) {
@@ -152,62 +175,161 @@ router.post('/generate-perdcomp', authenticateToken, async (req: Request, res: R
       return res.status(404).json({ success: false, error: 'Analise nao encontrada' });
     }
 
-    // Parse oportunidades federais
+    // Parse e classificar oportunidades
     let opportunities: any[] = [];
     try {
       opportunities = JSON.parse(analysis.opportunities || '[]');
     } catch {}
 
-    // Filtrar oportunidades federais (PIS, COFINS, IRPJ, CSLL, IPI)
-    const federalKeywords = ['PIS', 'COFINS', 'IRPJ', 'CSLL', 'IPI', 'federal', 'receita'];
-    const federalOpps = opportunities.filter((op: any) => {
-      const text = JSON.stringify(op).toUpperCase();
-      return federalKeywords.some(k => text.includes(k.toUpperCase()));
-    });
+    const classified = classifyAllOpportunities(opportunities);
+    const federais = classified.filter(c => c.competencia === 'federal');
 
-    const creditos = (federalOpps.length > 0 ? federalOpps : opportunities).map((op: any) => ({
-      tributo: op.tese || op.titulo || tipoCredito || 'Credito Tributario Federal',
-      tipoCredito: tipoCredito || 'Saldo Negativo',
-      periodo: op.periodo || periodoCredito || '[Periodo]',
-      valorOriginal: op.valorEstimado || op.valor || 0,
-      valorAtualizado: (op.valorEstimado || op.valor || 0) * 1.08, // Estimativa SELIC
-      baseLegal: op.fundamentacaoLegal || op.base_legal || 'Legislacao vigente',
-      descricaoTese: op.tese || op.titulo || op.description || 'Oportunidade identificada',
-    }));
+    if (federais.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nenhuma oportunidade federal encontrada. Creditos de ICMS devem ser formalizados via Requerimento SEFAZ, nao via PER/DCOMP.',
+      });
+    }
+
+    // Gerar PER/DCOMPs separados por grupo de tributo
+    const gruposFederais = new Map<string, typeof federais>();
+    for (const f of federais) {
+      const grupo = f.grupoTributo;
+      if (!gruposFederais.has(grupo)) gruposFederais.set(grupo, []);
+      gruposFederais.get(grupo)!.push(f);
+    }
 
     const protocoloPlataforma = `TCE-${new Date().getFullYear()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const documents: Array<{ tributo: string; naturezaCredito: string; valorTotal: number; document: string }> = [];
 
-    const params: PerdcompDocumentParams = {
-      empresaNome: analysis.companyName,
-      cnpj: analysis.cnpj || '[CNPJ]',
-      protocoloPlataforma,
-      advogadoNome: advogadoNome || '[Advogado]',
-      advogadoOab: advogadoOab || '[OAB]',
-      advogadoUf: advogadoUf || 'SP',
-      cidade: 'Sao Paulo',
-      creditos,
-      valorTotal: analysis.estimatedCredit || 0,
-      tipoDocumento: 'Declaracao de Compensacao',
-      tipoCreditoPerdcomp: tipoCredito || 'Saldo Negativo de IRPJ',
-      periodoCredito: periodoCredito || '[Periodo]',
-      codigoReceitaDebito: codigoReceitaDebito || '[Codigo]',
-      periodoDebito: periodoDebito || '[Periodo]',
-    };
+    for (const [grupo, items] of gruposFederais) {
+      const config = items[0];
+      const creditos = items.map(c => ({
+        tributo: `${c.grupoTributo} — ${c.original.tese || c.original.titulo || 'Credito identificado'}`,
+        tipoCredito: c.naturezaCredito,
+        periodo: c.original.periodo || periodoCredito || '[Periodo de apuracao]',
+        valorOriginal: c.original.valorEstimado || c.original.valor || 0,
+        valorAtualizado: (c.original.valorEstimado || c.original.valor || 0) * 1.08,
+        baseLegal: c.fundamentacaoFederal + (c.original.fundamentacaoLegal ? ` | ${c.original.fundamentacaoLegal}` : ''),
+        descricaoTese: c.original.tese || c.original.titulo || c.original.description || 'Oportunidade identificada',
+      }));
+      const valorGrupo = creditos.reduce((sum, c) => sum + c.valorOriginal, 0);
 
-    const document = generatePerdcompDocument(params);
+      const doc = generatePerdcompDocument({
+        empresaNome: analysis.companyName,
+        cnpj: analysis.cnpj || '[CNPJ]',
+        protocoloPlataforma,
+        advogadoNome: advogadoNome || '[Advogado]',
+        advogadoOab: advogadoOab || '[OAB]',
+        advogadoUf: advogadoUf || 'RJ',
+        cidade: '[Cidade]',
+        creditos,
+        valorTotal: valorGrupo,
+        tipoDocumento: 'Declaracao de Compensacao',
+        tipoCreditoPerdcomp: config.naturezaCredito,
+        periodoCredito: periodoCredito || items[0]?.original.periodo || '[Periodo]',
+        codigoReceitaDebito: config.codigoReceita,
+        periodoDebito: periodoDebito || '[Periodo do debito]',
+      });
 
-    logger.info(`PER/DCOMP document generated for analysis ${analysisId}`);
+      documents.push({
+        tributo: grupo,
+        naturezaCredito: config.naturezaCredito,
+        valorTotal: valorGrupo,
+        document: doc,
+      });
+    }
+
+    const estaduais = classified.filter(c => c.competencia === 'estadual');
+    const avisoEstaduais = estaduais.length > 0
+      ? `ATENCAO: ${estaduais.length} oportunidade(s) de ICMS nao foram incluidas. Use "Gerar Requerimento SEFAZ" para formaliza-las junto a SEFAZ-${analysis.cnpj ? '' : 'UF'}.`
+      : undefined;
+
+    logger.info(`PER/DCOMP documents generated for analysis ${analysisId}: ${documents.length} documento(s) por tributo`);
 
     return res.json({
       success: true,
       data: {
-        document,
+        documents,
         protocoloPlataforma,
+        totalDocumentos: documents.length,
+        oportunidadesFederais: federais.length,
+        oportunidadesEstaduaisExcluidas: estaduais.length,
+        avisoEstaduais,
       },
     });
   } catch (error: any) {
     logger.error('Error generating PER/DCOMP document:', error);
     return res.status(500).json({ success: false, error: 'Erro ao gerar parecer PER/DCOMP' });
+  }
+});
+
+/**
+ * POST /api/formalization/generate-kit
+ * Gera kit completo de formalizacao separado por competencia tributaria
+ * Retorna: Requerimento SEFAZ (ICMS) + PER/DCOMPs separados por tributo federal
+ */
+router.post('/generate-kit', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
+    }
+
+    const {
+      analysisId, uf,
+      advogadoNome, advogadoOab, advogadoUf, advogadoEmail, advogadoEndereco,
+      inscricaoEstadual, atividadeEmpresa, cnaePrincipal, tipoPedido,
+    } = req.body;
+
+    if (!analysisId || !uf) {
+      return res.status(400).json({ success: false, error: 'analysisId e uf sao obrigatorios' });
+    }
+
+    const analysis = await prisma.viabilityAnalysis.findUnique({
+      where: { id: analysisId },
+    });
+
+    if (!analysis) {
+      return res.status(404).json({ success: false, error: 'Analise nao encontrada' });
+    }
+
+    let opportunities: any[] = [];
+    try {
+      opportunities = JSON.parse(analysis.opportunities || '[]');
+    } catch {}
+
+    if (opportunities.length === 0) {
+      return res.status(400).json({ success: false, error: 'Nenhuma oportunidade encontrada na analise' });
+    }
+
+    const kitParams: FormalizationKitParams = {
+      opportunities,
+      empresaNome: analysis.companyName,
+      cnpj: analysis.cnpj || '[CNPJ]',
+      uf,
+      inscricaoEstadual: inscricaoEstadual || '[IE]',
+      atividadeEmpresa,
+      cnaePrincipal,
+      advogadoNome,
+      advogadoOab,
+      advogadoUf: advogadoUf || uf,
+      advogadoEmail,
+      advogadoEndereco,
+      tipoPedido: tipoPedido || 'COMPENSACAO',
+    };
+
+    const kit = generateFormalizationKit(kitParams);
+
+    logger.info(`Formalization kit generated for analysis ${analysisId}: ${kit.resumo.qtdDocumentos} docs, estadual R$ ${kit.resumo.totalEstadual}, federal R$ ${kit.resumo.totalFederal}`);
+
+    return res.json({
+      success: true,
+      data: kit,
+    });
+  } catch (error: any) {
+    logger.error('Error generating formalization kit:', error);
+    return res.status(500).json({ success: false, error: 'Erro ao gerar kit de formalizacao' });
   }
 });
 

@@ -933,6 +933,310 @@ TESTEMUNHAS:
 }
 
 // ============================================================
+// CLASSIFICADOR DE TRIBUTOS POR COMPETENCIA
+// Separa oportunidades em estaduais (SEFAZ) e federais (RFB)
+// ============================================================
+
+type Competencia = 'estadual' | 'federal';
+type GrupoTributo = 'ICMS' | 'PIS' | 'COFINS' | 'IRPJ' | 'CSLL' | 'IPI' | 'INSS' | 'FGTS' | 'OUTROS';
+
+interface ClassifiedOpportunity {
+  original: any;
+  competencia: Competencia;
+  grupoTributo: GrupoTributo;
+  naturezaCredito: string;
+  codigoReceita: string;
+  fundamentacaoFederal: string;
+}
+
+const TRIBUTO_CONFIG: Record<GrupoTributo, {
+  competencia: Competencia;
+  naturezaCredito: string;
+  codigoReceita: string;
+  fundamentacao: string;
+}> = {
+  ICMS: {
+    competencia: 'estadual',
+    naturezaCredito: 'N/A — Competencia Estadual',
+    codigoReceita: 'N/A',
+    fundamentacao: 'Legislacao estadual (RICMS do respectivo estado)',
+  },
+  PIS: {
+    competencia: 'federal',
+    naturezaCredito: 'Pagamento Indevido ou a Maior de PIS',
+    codigoReceita: '8109',
+    fundamentacao: 'Lei 10.637/2002 | Lei 10.865/2004 (importacao) | IN RFB 2.055/2021',
+  },
+  COFINS: {
+    competencia: 'federal',
+    naturezaCredito: 'Pagamento Indevido ou a Maior de COFINS',
+    codigoReceita: '2172',
+    fundamentacao: 'Lei 10.833/2003 | Lei 10.865/2004 (importacao) | IN RFB 2.055/2021',
+  },
+  IRPJ: {
+    competencia: 'federal',
+    naturezaCredito: 'Pagamento Indevido ou a Maior de IRPJ',
+    codigoReceita: '2362',
+    fundamentacao: 'Lei 9.249/1995 | Lei 12.973/2014 | LC 160/2017 | IN RFB 2.055/2021',
+  },
+  CSLL: {
+    competencia: 'federal',
+    naturezaCredito: 'Pagamento Indevido ou a Maior de CSLL',
+    codigoReceita: '2372',
+    fundamentacao: 'Lei 7.689/1988 | Lei 12.973/2014 | LC 160/2017 | IN RFB 2.055/2021',
+  },
+  IPI: {
+    competencia: 'federal',
+    naturezaCredito: 'Ressarcimento de IPI',
+    codigoReceita: '0676',
+    fundamentacao: 'RIPI (Decreto 7.212/2010) | IN RFB 2.055/2021',
+  },
+  INSS: {
+    competencia: 'federal',
+    naturezaCredito: 'Pagamento Indevido ou a Maior de Contribuicao Previdenciaria',
+    codigoReceita: '2100',
+    fundamentacao: 'Lei 8.212/1991 | IN RFB 2.055/2021',
+  },
+  FGTS: {
+    competencia: 'federal',
+    naturezaCredito: 'Pagamento Indevido ou a Maior de FGTS',
+    codigoReceita: 'N/A — Via GRRF/Caixa',
+    fundamentacao: 'Lei 8.036/1990',
+  },
+  OUTROS: {
+    competencia: 'federal',
+    naturezaCredito: 'Pagamento Indevido ou a Maior',
+    codigoReceita: '[A DEFINIR]',
+    fundamentacao: 'Legislacao federal vigente',
+  },
+};
+
+const ICMS_KEYWORDS = [
+  'ICMS', 'ICMS-ST', 'ICMS-IMPORTACAO', 'ICMS IMPORTACAO',
+  'SALDO CREDOR', 'SUBSTITUICAO TRIBUTARIA', 'TUSD', 'TUST',
+  'ENERGIA ELETRICA', 'CREDITO ACUMULADO', 'TRANSFERENCIA ENTRE FILIAIS',
+  'ADC 49', 'LEI KANDIR', 'DIFAL',
+];
+
+export function classifyOpportunity(op: any): ClassifiedOpportunity {
+  const text = JSON.stringify(op).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const tributo = (op.tributo || '').toUpperCase();
+  const tipo = (op.tipo || op.tese || op.titulo || '').toUpperCase();
+
+  let grupo: GrupoTributo = 'OUTROS';
+
+  if (ICMS_KEYWORDS.some(k => text.includes(k)) || tributo.includes('ICMS')) {
+    grupo = 'ICMS';
+  } else if (tributo === 'PIS' || tributo.includes('PIS-IMPORT') || (tipo.includes('PIS') && !tipo.includes('COFINS'))) {
+    grupo = 'PIS';
+  } else if (tributo === 'COFINS' || tributo.includes('COFINS-IMPORT') || (tipo.includes('COFINS') && !tipo.includes('PIS'))) {
+    grupo = 'COFINS';
+  } else if (tipo.includes('PIS') && tipo.includes('COFINS')) {
+    grupo = text.includes('COFINS') ? 'COFINS' : 'PIS';
+  } else if (tributo === 'IRPJ' || tipo.includes('IRPJ') || tipo.includes('IMPOSTO DE RENDA')) {
+    grupo = 'IRPJ';
+  } else if (tributo === 'CSLL' || tipo.includes('CSLL') || tipo.includes('CONTRIBUICAO SOCIAL')) {
+    grupo = 'CSLL';
+  } else if (tributo === 'IPI' || tipo.includes('IPI')) {
+    grupo = 'IPI';
+  } else if (tributo === 'INSS' || tipo.includes('INSS') || tipo.includes('PREVIDENCIARIA') || tipo.includes('PATRONAL')) {
+    grupo = 'INSS';
+  } else if (tributo === 'FGTS' || tipo.includes('FGTS')) {
+    grupo = 'FGTS';
+  } else if (text.includes('ICMS') || text.includes('SALDO CREDOR')) {
+    grupo = 'ICMS';
+  } else if (text.includes('PIS')) {
+    grupo = 'PIS';
+  } else if (text.includes('COFINS')) {
+    grupo = 'COFINS';
+  }
+
+  const config = TRIBUTO_CONFIG[grupo];
+  return {
+    original: op,
+    competencia: config.competencia,
+    grupoTributo: grupo,
+    naturezaCredito: config.naturezaCredito,
+    codigoReceita: config.codigoReceita,
+    fundamentacaoFederal: config.fundamentacao,
+  };
+}
+
+export function classifyAllOpportunities(opportunities: any[]): ClassifiedOpportunity[] {
+  return opportunities.map(classifyOpportunity);
+}
+
+// ============================================================
+// KIT DE FORMALIZACAO — Gera documentos separados por competencia
+// ============================================================
+
+export interface FormalizationKitParams {
+  opportunities: any[];
+  empresaNome: string;
+  cnpj: string;
+  uf: string;
+  inscricaoEstadual?: string;
+  empresaEndereco?: string;
+  empresaCidade?: string;
+  empresaCep?: string;
+  atividadeEmpresa?: string;
+  cnaePrincipal?: string;
+  advogadoNome?: string;
+  advogadoOab?: string;
+  advogadoUf?: string;
+  advogadoEmail?: string;
+  advogadoEndereco?: string;
+  representanteNome?: string;
+  representanteCargo?: string;
+  representanteCpf?: string;
+  representanteRg?: string;
+  tipoPedido?: string;
+  periodoInicio?: string;
+  periodoFim?: string;
+}
+
+export interface FormalizationKitDocument {
+  tipo: 'sefaz' | 'perdcomp';
+  tributo: string;
+  destinatario: string;
+  naturezaCredito: string;
+  valorTotal: number;
+  documento: string;
+}
+
+export interface FormalizationKitResult {
+  protocolo: string;
+  documentos: FormalizationKitDocument[];
+  resumo: {
+    totalEstadual: number;
+    totalFederal: number;
+    totalGeral: number;
+    qtdDocumentos: number;
+  };
+}
+
+export function generateFormalizationKit(params: FormalizationKitParams): FormalizationKitResult {
+  const protocolo = `TCE-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  const classified = classifyAllOpportunities(params.opportunities);
+  const documentos: FormalizationKitDocument[] = [];
+
+  const estaduais = classified.filter(c => c.competencia === 'estadual');
+  const federais = classified.filter(c => c.competencia === 'federal');
+
+  // 1. Gerar Requerimento SEFAZ (apenas ICMS)
+  if (estaduais.length > 0) {
+    const teses = estaduais.map(c => ({
+      descricao: c.original.tese || c.original.titulo || c.original.description || 'Oportunidade ICMS',
+      valor: c.original.valorEstimado || c.original.valor || 0,
+      fundamentacao: c.original.fundamentacaoLegal || c.original.base_legal || 'Legislacao estadual vigente',
+      periodo: c.original.periodo || 'Conforme documentacao anexa',
+    }));
+    const valorEstadual = teses.reduce((sum, t) => sum + t.valor, 0);
+
+    const sefazDoc = generateSefazDocument({
+      empresaNome: params.empresaNome,
+      cnpj: params.cnpj,
+      inscricaoEstadual: params.inscricaoEstadual || '[IE]',
+      empresaEndereco: params.empresaEndereco || '[Endereco]',
+      empresaCidade: params.empresaCidade || '[Cidade]',
+      empresaUf: params.uf,
+      empresaCep: params.empresaCep || '[CEP]',
+      atividadeEmpresa: params.atividadeEmpresa || '[Atividade]',
+      cnaePrincipal: params.cnaePrincipal || '[CNAE]',
+      advogadoNome: params.advogadoNome || '[Advogado]',
+      advogadoOab: params.advogadoOab || '[OAB]',
+      advogadoUf: params.advogadoUf || params.uf,
+      advogadoEmail: params.advogadoEmail || '[email]',
+      advogadoEndereco: params.advogadoEndereco || '[Endereco]',
+      representanteNome: params.representanteNome || '[Representante]',
+      representanteCargo: params.representanteCargo || '[Cargo]',
+      representanteCpf: params.representanteCpf || '[CPF]',
+      representanteRg: params.representanteRg || '[RG]',
+      uf: params.uf,
+      tipoPedido: params.tipoPedido || 'COMPENSACAO',
+      valorTotalCredito: valorEstadual,
+      periodoInicio: params.periodoInicio || '[Data inicio]',
+      periodoFim: params.periodoFim || '[Data fim]',
+      teses,
+      protocoloPlataforma: protocolo,
+    });
+
+    documentos.push({
+      tipo: 'sefaz',
+      tributo: 'ICMS',
+      destinatario: `SEFAZ-${params.uf}`,
+      naturezaCredito: 'Credito Acumulado de ICMS',
+      valorTotal: valorEstadual,
+      documento: sefazDoc,
+    });
+  }
+
+  // 2. Gerar PER/DCOMP separado por grupo de tributo federal
+  const gruposFederais = new Map<GrupoTributo, ClassifiedOpportunity[]>();
+  for (const f of federais) {
+    const grupo = f.grupoTributo;
+    if (!gruposFederais.has(grupo)) gruposFederais.set(grupo, []);
+    gruposFederais.get(grupo)!.push(f);
+  }
+
+  // Agrupar PIS+COFINS juntos quando fazem parte da mesma tese (ex: Tese do Seculo)
+  // mas manter separados quando sao teses diferentes
+  for (const [grupo, items] of gruposFederais) {
+    const creditos = items.map(c => ({
+      tributo: `${grupo} — ${c.original.tese || c.original.titulo || 'Credito identificado'}`,
+      tipoCredito: c.naturezaCredito,
+      periodo: c.original.periodo || '[Periodo de apuracao]',
+      valorOriginal: c.original.valorEstimado || c.original.valor || 0,
+      valorAtualizado: (c.original.valorEstimado || c.original.valor || 0) * 1.08,
+      baseLegal: c.fundamentacaoFederal + (c.original.fundamentacaoLegal ? ` | ${c.original.fundamentacaoLegal}` : ''),
+      descricaoTese: c.original.tese || c.original.titulo || c.original.description || 'Oportunidade identificada',
+    }));
+    const valorGrupo = creditos.reduce((sum, c) => sum + c.valorOriginal, 0);
+    const config = TRIBUTO_CONFIG[grupo];
+
+    const perdcompDoc = generatePerdcompDocument({
+      empresaNome: params.empresaNome,
+      cnpj: params.cnpj,
+      protocoloPlataforma: protocolo,
+      advogadoNome: params.advogadoNome || '[Advogado]',
+      advogadoOab: params.advogadoOab || '[OAB]',
+      advogadoUf: params.advogadoUf || params.uf,
+      cidade: params.empresaCidade || '[Cidade]',
+      creditos,
+      valorTotal: valorGrupo,
+      tipoDocumento: 'Declaracao de Compensacao',
+      tipoCreditoPerdcomp: config.naturezaCredito,
+      periodoCredito: items[0]?.original.periodo || '[Periodo]',
+      codigoReceitaDebito: config.codigoReceita,
+      periodoDebito: '[Periodo do debito a compensar]',
+    });
+
+    documentos.push({
+      tipo: 'perdcomp',
+      tributo: grupo,
+      destinatario: 'Receita Federal do Brasil',
+      naturezaCredito: config.naturezaCredito,
+      valorTotal: valorGrupo,
+      documento: perdcompDoc,
+    });
+  }
+
+  const totalEstadual = estaduais.reduce((s, c) => s + (c.original.valorEstimado || c.original.valor || 0), 0);
+  const totalFederal = federais.reduce((s, c) => s + (c.original.valorEstimado || c.original.valor || 0), 0);
+
+  return {
+    protocolo,
+    documentos,
+    resumo: {
+      totalEstadual,
+      totalFederal,
+      totalGeral: totalEstadual + totalFederal,
+      qtdDocumentos: documentos.length,
+    },
+  };
+}
+
+// ============================================================
 // HELPER FUNCTIONS
 // ============================================================
 
