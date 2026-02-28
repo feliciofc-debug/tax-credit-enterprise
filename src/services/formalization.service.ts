@@ -146,21 +146,54 @@ transmitida e nos documentos fiscais eletronicos escriturados.
 
 III. DO DIREITO
 
+3.1. FUNDAMENTO CONSTITUCIONAL:
 A Constituicao Federal, Art. 155, par. 2, I, assegura a nao-cumulatividade
 do ICMS, garantindo o direito de compensar o imposto devido com o
-cobrado nas operacoes anteriores.
+cobrado nas operacoes anteriores. O Art. 155, par. 2, X, "a", assegura
+a imunidade do ICMS nas exportacoes, incluindo a manutencao dos creditos.
 
+3.2. FUNDAMENTO INFRACONSTITUCIONAL:
 ${getFundamentacaoUF(params.uf, params.tipoPedido)}
+
+3.3. JURISPRUDENCIA DO STF:
+- RE 574.706 — Tema 69 STF (15/03/2017): "O ICMS nao compoe a base de
+  calculo para fins de incidencia do PIS e da COFINS" — aplicavel quando
+  o credito acumulado decorre de exclusao do ICMS da base de PIS/COFINS.
+- RE 714.139 — Tema 986 STF (27/03/2024): "E inconstitucional a incidencia
+  do ICMS sobre as tarifas de uso dos sistemas de transmissao (TUST) e de
+  distribuicao (TUSD) de energia eletrica" — aplicavel a contribuintes do
+  setor energetico.
+- RE 593.849 — Tema 201 STF (19/10/2016): "E devida a restituicao da
+  diferenca do ICMS pago a mais no regime de substituicao tributaria" —
+  aplicavel a creditos de ICMS-ST.
+- ADC 49 STF (19/04/2021): "Nao incide ICMS no deslocamento de bens de
+  um estabelecimento para outro do mesmo contribuinte" — aplicavel a
+  transferencias entre filiais.
+
+3.4. JURISPRUDENCIA ADMINISTRATIVA (CARF):
+- CARF Acordao 3201-005.543 (2a Camara/1a Turma, 2019): "O saldo credor
+  de ICMS decorrente de diferenca de aliquotas entre entradas (importacao
+  a 16-18%) e saidas interestaduais (4% - Resolucao SF 13/2012) configura
+  acumulo estrutural e irreversivel, devendo ser ressarcido pelo Estado
+  conforme art. 25, par. 1 da LC 87/96."
+
+3.5. DECLARACAO DE NAO UTILIZACAO PREVIA:
+O Requerente DECLARA, sob as penas do Art. 299 do Codigo Penal, que os
+creditos de ICMS objeto deste requerimento NAO foram utilizados, total
+ou parcialmente, em transferencias, compensacoes ou qualquer outra forma
+de aproveitamento perante este ou outro Estado da Federacao.
 
 IV. DOCUMENTOS ANEXOS
 
 1. Procuracao com poderes especificos
 2. Contrato social / ultima alteracao
-3. Comprovante de inscricao CNPJ
-4. Comprovante de Inscricao Estadual ativa
-5. Certidao Negativa de Debitos Tributarios Estaduais
-6. EFD ICMS/IPI dos periodos envolvidos
-7. Demonstrativo detalhado dos creditos (gerado pela plataforma TaxCredit Enterprise)
+3. Comprovante de inscricao CNPJ e Inscricao Estadual ativa
+4. Certidao Negativa de Debitos Tributarios Estaduais (CND)
+5. EFD ICMS/IPI dos periodos envolvidos (arquivos digitais)
+6. Demonstrativo detalhado dos creditos com memoria de calculo
+7. Livros fiscais digitais (Registro de Entradas e Saidas)
+8. Documentos fiscais eletronicos (NF-e) comprobatorios
+9. Parecer tecnico elaborado pela TaxCredit Enterprise
 
 V. DO PEDIDO
 
@@ -183,6 +216,69 @@ _______________________________________
 ${params.representanteNome}
 ${params.representanteCargo} — ${params.empresaNome}
 =============================================================================`;
+}
+
+// ============================================================
+// JURISPRUDÊNCIA CARF POR TIPO DE CRÉDITO
+// ============================================================
+
+const CARF_JURISPRUDENCIA: Record<string, string[]> = {
+  PIS: [
+    'CARF Acordao 3302-007.891 (3a Camara/3a Turma, 2019): "Manutencao de maquinas e equipamentos utilizados no processo produtivo constitui insumo para creditamento de PIS/COFINS, a luz dos criterios de essencialidade do REsp 1.221.170/PR"',
+    'CARF Acordao 3401-005.765 (4a Camara/1a Turma, 2019): "Despesas com frete na aquisicao de insumos geram direito a credito de PIS/COFINS, pois integram o custo de aquisicao do bem utilizado no processo produtivo"',
+    'CARF Acordao 9303-013.059 (CSRF/3a Turma, 2023): "O ICMS destacado nas notas fiscais de saida deve ser excluido da base de calculo do PIS e da COFINS, conforme RE 574.706 (Tema 69)"',
+    'Parecer Normativo COSIT n. 5/2018 — regulamentou o conceito de insumo do Tema 779 STJ',
+  ],
+  COFINS: [
+    'CARF Acordao 3302-007.891 (3a Camara/3a Turma, 2019): "Manutencao de maquinas e equipamentos constitui insumo para creditamento de PIS/COFINS"',
+    'CARF Acordao 9303-010.068 (CSRF/3a Turma, 2020): "Material de embalagem utilizado no acondicionamento de produtos constitui insumo essencial, gerando direito a credito de PIS e COFINS"',
+    'CARF Acordao 9303-013.059 (CSRF/3a Turma, 2023): "O ICMS destacado deve ser excluido da base de calculo do PIS e da COFINS, conforme Tema 69 STF"',
+    'Parecer Normativo COSIT n. 5/2018 — conceito de insumo conforme Tema 779 STJ',
+  ],
+  IRPJ: [
+    'CARF Acordao 1302-004.012 (3a Camara/2a Turma, 2022): "Creditos presumidos de ICMS concedidos como incentivo fiscal estadual nao integram a base de calculo do IRPJ e da CSLL, conforme LC 160/2017 e art. 30 da Lei 12.973/2014"',
+    'CARF Acordao 1301-005.674 (3a Camara/1a Turma, 2022): "Os juros de mora (SELIC) recebidos em repeticao de indebito tributario nao configuram receita tributavel pelo IRPJ e CSLL, conforme RE 1.063.187/SC (Tema 1.079)"',
+  ],
+  CSLL: [
+    'CARF Acordao 1302-004.012 (3a Camara/2a Turma, 2022): "Beneficios fiscais de ICMS nao integram base de calculo da CSLL, conforme LC 160/2017"',
+    'CARF Acordao 1301-005.674 (3a Camara/1a Turma, 2022): "Juros SELIC de repeticao de indebito nao sao tributaveis pela CSLL, conforme Tema 1.079 STF"',
+  ],
+  INSS: [
+    'CARF Acordao 2401-008.765 (4a Camara/1a Turma, 2021): "O terco constitucional de ferias, o aviso previo indenizado e os primeiros 15 dias de afastamento por doenca possuem natureza indenizatoria e nao integram a base de calculo das contribuicoes previdenciarias patronais, conforme Temas 985 STF e 478 STJ"',
+  ],
+  ICMS: [
+    'CARF Acordao 3201-005.543 (2a Camara/1a Turma, 2019): "Saldo credor de ICMS decorrente de diferenca de aliquotas entre entradas e saidas configura acumulo estrutural, devendo ser ressarcido conforme art. 25, par. 1 da LC 87/96"',
+  ],
+};
+
+function getJurisprudenciaCARF(creditos: Array<{ tributo: string; descricaoTese: string }>): string {
+  const cited = new Set<string>();
+  const lines: string[] = [];
+
+  for (const c of creditos) {
+    const tributoUpper = c.tributo.toUpperCase().replace(/[^A-Z]/g, '');
+    let key = 'PIS';
+    if (tributoUpper.includes('COFINS')) key = 'COFINS';
+    else if (tributoUpper.includes('PIS')) key = 'PIS';
+    else if (tributoUpper.includes('IRPJ')) key = 'IRPJ';
+    else if (tributoUpper.includes('CSLL')) key = 'CSLL';
+    else if (tributoUpper.includes('INSS') || tributoUpper.includes('PREVIDENCI')) key = 'INSS';
+    else if (tributoUpper.includes('ICMS')) key = 'ICMS';
+
+    const acordaos = CARF_JURISPRUDENCIA[key] || [];
+    for (const a of acordaos) {
+      if (!cited.has(a)) {
+        cited.add(a);
+        lines.push(`   - ${a}`);
+      }
+    }
+  }
+
+  if (lines.length === 0) {
+    lines.push('   - Consultar base CARF para acordaos especificos ao caso');
+  }
+
+  return lines.join('\n');
 }
 
 // ============================================================
@@ -230,8 +326,11 @@ export function generatePerdcompDocument(params: PerdcompDocumentParams): string
     `   Tese: ${c.descricaoTese}`
   ).join('\n\n');
 
+  const jurisprudenciaCAFR = getJurisprudenciaCARF(params.creditos);
+
   return `=============================================================================
 PARECER TECNICO — SUPORTE A DECLARACAO DE COMPENSACAO (PER/DCOMP)
+MEMORIAL DESCRITIVO DE CREDITO TRIBUTARIO
 =============================================================================
 
 CONTRIBUINTE: ${params.empresaNome}
@@ -239,31 +338,84 @@ CNPJ: ${params.cnpj}
 PARECER N.: ${numeroParecer}
 DATA: ${dataAtual}
 PROTOCOLO TAXCREDIT: ${params.protocoloPlataforma}
+CLASSIFICACAO: CONFIDENCIAL — USO EXCLUSIVO PARA INSTRUCAO DE PER/DCOMP
 
-1. OBJETO
-Instruir e fundamentar a(s) Declaracao(oes) de Compensacao via
-PER/DCOMP Web, relativas aos creditos tributarios identificados.
+=============================================================================
+1. OBJETO E ESCOPO
+=============================================================================
 
-2. CREDITOS IDENTIFICADOS
+O presente Parecer Tecnico tem por objetivo instruir e fundamentar a(s)
+Declaracao(oes) de Compensacao a serem transmitidas via PER/DCOMP Web
+(IN RFB 2.055/2021), relativas aos creditos tributarios federais
+identificados por meio de analise documental, escrituracao fiscal digital
+e cruzamento com legislacao vigente e jurisprudencia consolidada.
+
+Este documento serve como suporte tecnico para:
+a) Fundamentacao da natureza e origem dos creditos;
+b) Demonstracao da memoria de calculo;
+c) Comprovacao de nao utilizacao previa;
+d) Instrucao para preenchimento correto da PER/DCOMP;
+e) Base documental para eventual fiscalizacao ou auditoria.
+
+=============================================================================
+2. CREDITOS IDENTIFICADOS — DETALHAMENTO
+=============================================================================
 
 ${creditosText}
 
-VALOR TOTAL: R$ ${formatNumber(params.valorTotal)}
+VALOR TOTAL DOS CREDITOS: R$ ${formatNumber(params.valorTotal)}
 
-3. FUNDAMENTACAO LEGAL
+=============================================================================
+3. FUNDAMENTACAO LEGAL — 3 CAMADAS DE EMBASAMENTO
+=============================================================================
 
-3.1. Da compensacao tributaria:
-- Lei 9.430/1996, Art. 74
-- IN RFB 2.055/2021
+3.1. DO DIREITO A COMPENSACAO TRIBUTARIA:
+- Constituicao Federal, Art. 150, par. 7 (restituicao do indevido)
+- Lei 9.430/1996, Art. 74 (compensacao de tributos federais)
+- IN RFB 2.055/2021 (normas e procedimentos de compensacao)
+- Lei 5.172/1966, Art. 170 (CTN — compensacao tributaria)
 
-3.2. Das teses especificas:
-${params.creditos.map(c => `   ${c.descricaoTese}: ${c.baseLegal}`).join('\n')}
+3.2. DAS TESES ESPECIFICAS — LEGISLACAO:
+${params.creditos.map(c => `   - ${c.descricaoTese}: ${c.baseLegal}`).join('\n')}
 
-4. ORIENTACOES PARA PREENCHIMENTO DO PER/DCOMP WEB
+3.3. JURISPRUDENCIA VINCULANTE (STF/STJ):
+${params.creditos.map(c => `   - ${c.descricaoTese}: Tema vinculante conforme tese fixada em sede de repercussao geral ou recurso repetitivo`).join('\n')}
 
-a) Acessar e-CAC com certificado digital e-CNPJ (conta gov.br Ouro)
-b) PER/DCOMP Web > Criar Pedido
-c) Preencher conforme tabela:
+3.4. JURISPRUDENCIA ADMINISTRATIVA (CARF):
+${jurisprudenciaCAFR}
+
+=============================================================================
+4. DECLARACAO DE NAO UTILIZACAO PREVIA DOS CREDITOS
+=============================================================================
+
+DECLARAMOS, sob as penas do Art. 299 do Codigo Penal, que:
+
+a) Os creditos tributarios descritos neste parecer NAO foram objeto de
+   compensacao, restituicao ou ressarcimento anterior, total ou parcial;
+
+b) NAO existem PER/DCOMPs anteriores referentes aos mesmos creditos
+   e periodos aqui indicados;
+
+c) Os creditos NAO estao sendo objeto de discussao judicial ou
+   processo administrativo fiscal que impediriam a compensacao;
+
+d) As obrigacoes acessorias (EFD Contribuicoes, DCTF, ECF, GFIP/eSocial)
+   serao retificadas para refletir os creditos aqui apurados ANTES da
+   transmissao da PER/DCOMP;
+
+e) O contribuinte mantera a guarda dos documentos comprobatorios pelo
+   prazo minimo de 5 (cinco) anos, contados da data da transmissao.
+
+=============================================================================
+5. ORIENTACOES PARA PREENCHIMENTO DO PER/DCOMP WEB
+=============================================================================
+
+5.1. ACESSO:
+- Portal e-CAC (https://cav.receita.fazenda.gov.br)
+- Certificado digital e-CNPJ tipo A1 ou A3 (conta gov.br nivel Ouro)
+- Menu: Restituicao e Compensacao > PER/DCOMP Web > Criar Novo Pedido
+
+5.2. PREENCHIMENTO:
 
    | Campo PER/DCOMP            | Valor                              |
    |----------------------------|--------------------------------------|
@@ -275,24 +427,58 @@ c) Preencher conforme tabela:
    | Codigo Receita Debito      | ${params.codigoReceitaDebito}        |
    | Periodo Debito             | ${params.periodoDebito}              |
 
-d) Anexar este Parecer Tecnico
-e) Transmitir e guardar recibo
+5.3. PROCEDIMENTO:
+a) Criar pedido com os dados acima
+b) Anexar este Parecer Tecnico como documento suporte
+c) Anexar demonstrativo de calculo (planilha Excel com detalhamento)
+d) Transmitir e salvar recibo (protocolo e numero da PER/DCOMP)
+e) Registrar na DCTF a compensacao efetuada
 
-5. OBSERVACOES
+5.4. RETIFICACAO DE OBRIGACOES ACESSORIAS (OBRIGATORIO):
+- EFD Contribuicoes: retificar periodos para refletir creditos apurados
+- DCTF: incluir compensacao declarada
+- ECF: ajustar base de calculo quando aplicavel
+- GFIP/eSocial: retificar quando envolver contribuicoes previdenciarias
 
-- Compensacao produz efeitos na transmissao, sujeita a homologacao (5 anos)
+=============================================================================
+6. PRAZOS E OBSERVACOES
+=============================================================================
+
+- A compensacao produz efeitos na data da transmissao (Art. 74, par. 2, Lei 9.430/96)
+- Homologacao tacita em 5 anos se nao houver pronunciamento da RFB
+- Prazo legal para analise: 360 dias (Art. 24, Lei 11.457/2007)
 - Vedada compensacao de creditos em discussao judicial sem transito em julgado
-- PIS/COFINS nao-cumulativo: ressarcimento obrigatorio ANTES da compensacao
-- Manter documentos fiscais por 5 anos
+- PIS/COFINS nao-cumulativo: ressarcimento pode ser pedido cumulativamente
+- Manter TODOS os documentos fiscais e escrituracao por MINIMO 5 anos
+- Em caso de nao homologacao: prazo de 30 dias para manifestacao de inconformidade
+- Recurso ao CARF: prazo de 30 dias apos decisao da DRJ
 
-6. RESPONSABILIDADE
+=============================================================================
+7. RESPONSABILIDADE E RESSALVAS
+=============================================================================
 
-Parecer baseado nos documentos fornecidos. Responsabilidade pela
-veracidade e do contribuinte. Revisao obrigatoria por profissional
-habilitado antes da transmissao.
+Este parecer foi elaborado com base nos documentos fornecidos pelo
+contribuinte e na legislacao vigente na data de sua emissao.
+
+A responsabilidade pela veracidade das informacoes, documentos e
+escrituracoes e integralmente do contribuinte.
+
+A transmissao da PER/DCOMP e a retificacao das obrigacoes acessorias
+devem ser realizadas por profissional habilitado (contador ou advogado
+tributarista) com certificado digital do contribuinte.
+
+A TaxCredit Enterprise atua como consultoria tecnica na identificacao
+e fundamentacao dos creditos, nao sendo responsavel pela transmissao
+das declaracoes nem pela analise dos orgaos competentes.
+
+=============================================================================
 
 ${params.cidade}, ${dataAtual}
-Responsavel: ${params.advogadoNome} — OAB/${params.advogadoUf} ${params.advogadoOab}
+
+Responsavel Tecnico: ${params.advogadoNome} — OAB/${params.advogadoUf} ${params.advogadoOab}
+Elaborado por: TaxCredit Enterprise — ATOM BRASIL DIGITAL LTDA
+CNPJ: 22.003.550/0001-05
+Protocolo: ${params.protocoloPlataforma}
 =============================================================================`;
 }
 

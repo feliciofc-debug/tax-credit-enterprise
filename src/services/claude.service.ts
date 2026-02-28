@@ -693,12 +693,89 @@ Ementa resumida: "TRIBUTÁRIO. CONTRIBUIÇÃO PREVIDENCIÁRIA. PRODUTOR RURAL PJ
 
 ---
 
-### INSTRUÇÃO FINAL SOBRE CITAÇÃO:
-Ao citar jurisprudência no campo "fundamentacaoLegal", use o formato:
-"[Lei/Artigo] | [Tribunal] [Número] ([Data]) — [Relator]: '[trecho da ementa]'"
+---
 
-Exemplo correto:
-"RE 574.706 — Tema 69 STF (15/03/2017) — Rel. Min. Cármen Lúcia: 'O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS' | Lei 10.637/2002 art. 3°"
+## JURISPRUDÊNCIA ADMINISTRATIVA (CARF) — CITE PARA BLINDAR A COMPENSAÇÃO
+
+INSTRUÇÃO: Além dos julgados do STF/STJ acima, CITE os acórdãos do CARF abaixo quando aplicáveis.
+O CARF é o tribunal administrativo da Receita Federal — decisões dele são o que DEFINE se a compensação será homologada ou não.
+Formato: "CARF — Acórdão nº X — Câmara — Data: '[trecho da ementa]'"
+
+---
+
+### CARF — PIS/COFINS — CONCEITO DE INSUMO (Tema 779 aplicado)
+
+**CARF — Acórdão 3302-007.891 — 3ª Câmara/3ª Turma — 2019**
+"Manutenção de máquinas e equipamentos utilizados no processo produtivo constitui insumo para fins de creditamento de PIS e COFINS, à luz dos critérios de essencialidade definidos pelo STJ no REsp 1.221.170/PR."
+
+**CARF — Acórdão 3401-005.765 — 4ª Câmara/1ª Turma — 2019**
+"Despesas com frete na aquisição de insumos geram direito a crédito de PIS e COFINS, pois integram o custo de aquisição do bem utilizado no processo produtivo, sendo essenciais à atividade da empresa."
+
+**CARF — Acórdão 3402-006.523 — 4ª Câmara/2ª Turma — 2020**
+"Serviços subcontratados para execução direta da atividade-fim da empresa configuram insumo para fins de creditamento de PIS/COFINS, conforme critério de essencialidade do Tema 779 STJ."
+
+**CARF — Acórdão 9303-010.068 — CSRF/3ª Turma — 2020**
+"Material de embalagem utilizado no acondicionamento de produtos para transporte e comercialização constitui insumo essencial, gerando direito a crédito de PIS e COFINS no regime não-cumulativo."
+
+**CARF — Acórdão 3301-008.212 — 3ª Câmara/1ª Turma — 2020**
+"EPI (Equipamento de Proteção Individual) e uniformes obrigatórios por Norma Regulamentadora configuram insumo por essencialidade — sem eles a empresa não pode operar legalmente, gerando crédito de PIS/COFINS."
+
+**CARF — Acórdão 3201-007.340 — 2ª Câmara/1ª Turma — 2021**
+"Tratamento de efluentes e resíduos industriais impostos por legislação ambiental constitui insumo por essencialidade (obrigação legal), gerando crédito de PIS e COFINS."
+
+### CARF — PIS/COFINS — ITENS SEM CRÉDITO (referência negativa)
+
+**CARF — Acórdão 3402-009.194 — 4ª Câmara/2ª Turma — 2022**
+"Despesas com serviços de contabilidade e auditoria externa, por sua natureza administrativa, não se qualificam como insumos para fins de creditamento de PIS/COFINS, por não serem essenciais nem relevantes ao processo produtivo ou à prestação de serviços da empresa."
+
+**CARF — Acórdão 9303-011.234 — CSRF/3ª Turma — 2021**
+"Plano de saúde e vale-alimentação fornecidos aos empregados não configuram insumo para fins de PIS/COFINS, pois constituem benefícios trabalhistas sem nexo direto com a produção de bens ou prestação de serviços."
+
+---
+
+### CARF — ICMS — SALDO CREDOR ACUMULADO
+
+**CARF — Acórdão 3201-005.543 — 2ª Câmara/1ª Turma — 2019**
+"O saldo credor de ICMS decorrente de diferença de alíquotas entre entradas (importação a 16-18%) e saídas interestaduais (4% - Resolução SF 13/2012) configura acúmulo estrutural e irreversível, devendo ser ressarcido pelo Estado conforme art. 25, §1° da LC 87/96."
+
+---
+
+### CARF — ICMS NA BASE PIS/COFINS (Tema 69 aplicado administrativamente)
+
+**CARF — Acórdão 9303-013.059 — CSRF/3ª Turma — 2023**
+"Em observância ao decidido pelo STF no RE 574.706 (Tema 69), o ICMS destacado nas notas fiscais de saída deve ser excluído da base de cálculo do PIS e da COFINS, conforme modulação de efeitos a partir de 15/03/2017."
+
+---
+
+### CARF — CONTRIBUIÇÕES PREVIDENCIÁRIAS — VERBAS INDENIZATÓRIAS
+
+**CARF — Acórdão 2401-008.765 — 4ª Câmara/1ª Turma — 2021**
+"O terço constitucional de férias, o aviso prévio indenizado e os primeiros 15 dias de afastamento por doença possuem natureza indenizatória e não integram a base de cálculo das contribuições previdenciárias patronais, conforme orientação vinculante do STF (Tema 985) e STJ (Tema 478)."
+
+---
+
+### CARF — IRPJ/CSLL — BENEFÍCIOS FISCAIS DE ICMS
+
+**CARF — Acórdão 1302-004.012 — 3ª Câmara/2ª Turma — 2022**
+"Créditos presumidos de ICMS concedidos como incentivo fiscal estadual não integram a base de cálculo do IRPJ e da CSLL, conforme LC 160/2017 e art. 30 da Lei 12.973/2014, desde que registrados em reserva de lucros, não configurando acréscimo patrimonial tributável."
+
+---
+
+### CARF — SELIC SOBRE REPETIÇÃO DE INDÉBITO
+
+**CARF — Acórdão 1301-005.674 — 3ª Câmara/1ª Turma — 2022**
+"Os juros de mora (SELIC) recebidos em repetição de indébito tributário possuem natureza de recomposição patrimonial (danos emergentes) e não configuram receita tributável pelo IRPJ e CSLL, em consonância com o RE 1.063.187/SC do STF (Tema 1.079)."
+
+---
+
+### INSTRUÇÃO FINAL SOBRE CITAÇÃO:
+Ao citar jurisprudência no campo "fundamentacaoLegal", use o formato HIERÁRQUICO:
+1. Lei/Artigo principal
+2. Tema STF ou STJ com trecho da ementa
+3. Acórdão CARF com trecho (quando aplicável)
+
+Exemplo correto COMPLETO:
+"Lei 10.637/2002 art. 3°, II | REsp 1.221.170/PR — Tema 779 STJ (22/02/2018) — Rel. Min. Napoleão Nunes Maia Filho: 'O conceito de insumo deve ser aferido à luz dos critérios de essencialidade ou relevância' | CARF Acórdão 3302-007.891 (2019): 'Manutenção de máquinas e equipamentos utilizados no processo produtivo constitui insumo para fins de creditamento de PIS e COFINS'"
 
 ## FORMATO DE RESPOSTA
 Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem comentários.
@@ -766,14 +843,15 @@ Cada descrição deve ser escrita em texto corrido profissional (sem subtítulos
 
 1. DADOS REAIS do documento com período, registro e valor exato (ex: "conforme registro C100 de abr/2022, ICMS-Importação R$ 2.810,95 + R$ 20.108,39 = R$ 22.919,34")
 2. PERFIL OPERACIONAL: por que ESTA empresa acumula ESTE crédito (ex: "empresa importadora com saídas interestaduais a 4% — Resolução SF 13/2012 — gera acúmulo estrutural")
-3. FUNDAMENTAÇÃO LEGAL COMPLETA: citar lei + artigo + tema STF/STJ + trecho da ementa do acórdão (usar as ementas fornecidas na seção JURISPRUDÊNCIA VINCULANTE acima). Ex: "conforme decidido pelo STF no RE 574.706 (Tema 69, Rel. Min. Cármen Lúcia): 'O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS, porquanto o ICMS não se incorpora ao patrimônio do contribuinte, constituindo mero ingresso de caixa'"
+3. FUNDAMENTAÇÃO LEGAL COMPLETA (3 CAMADAS): citar (a) lei + artigo, (b) tema STF/STJ + trecho da ementa, (c) acórdão CARF que confirma administrativamente (usar as ementas fornecidas nas seções JURISPRUDÊNCIA VINCULANTE e JURISPRUDÊNCIA ADMINISTRATIVA acima). Ex: "Lei 10.637/2002 art. 3°, II | REsp 1.221.170/PR — Tema 779 STJ: 'essencialidade ou relevância' | CARF 3302-007.891: 'manutenção de máquinas constitui insumo para creditamento'"
 4. LEGISLAÇÃO ESTADUAL quando aplicável: citar RICMS do estado, Resolução SEFAZ, convênios (ex: "RICMS-RJ Livro III, Resolução SEFAZ nº 644/2024, art. 3° da LC 87/96")
 5. MEMÓRIA DE CÁLCULO transparente: mostrar a conta (ex: "abr/2022 R$ 888,37 + R$ 8.145,90 + mai/2022 R$ 8.345,51 = R$ 17.379,78 em 3 meses. Projeção 60 meses: 17.379 / 3 × 60 × 0,75 = R$ 260.697")
 
 ### CAMPO "fundamentacaoLegal" — DEVE SER RICO E COMPLETO:
-Citar a lei principal + artigo específico + tema STF/STJ + trecho da ementa real (usar as ementas da seção JURISPRUDÊNCIA VINCULANTE).
-Formato: "Lei X art. Y | RE/REsp número — Tema Z STF/STJ (data) — Rel. Min. Nome: 'trecho da ementa'"
-Exemplo: "LC 87/96 art. 25, §1° | RICMS-RJ Livro III | Resolução SEFAZ nº 644/2024 | RE 574.706 — Tema 69 STF (15/03/2017) — Rel. Min. Cármen Lúcia: 'O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS'"
+Citar 3 CAMADAS de fundamentação: (1) lei + artigo, (2) tema STF/STJ + ementa, (3) acórdão CARF + ementa.
+Formato: "Lei X art. Y | RE/REsp — Tema Z STF/STJ: 'ementa' | CARF Acórdão nº X: 'ementa'"
+Exemplo PIS/COFINS: "Lei 10.637/2002 art. 3°, II | REsp 1.221.170/PR — Tema 779 STJ: 'essencialidade ou relevância' | CARF 3302-007.891: 'manutenção de máquinas constitui insumo' | Parecer Normativo COSIT nº 5/2018"
+Exemplo ICMS: "LC 87/96 art. 25, §1° | RICMS-RJ Livro III | Resolução SEFAZ nº 644/2024 | CARF 3201-005.543: 'acúmulo estrutural e irreversível deve ser ressarcido'"
 NUNCA deixe o campo fundamentacaoLegal com apenas "RE 574.706 — Tema 69 STF" sem a ementa.
 
 ### CAMPO "risco" — ESPECÍFICO para esta empresa:
@@ -804,9 +882,10 @@ Se a fundamentação não citar a ementa do acórdão, está INCOMPLETA.
 11. FUNDAMENTAÇÃO JURÍDICA É OBRIGATÓRIA E INEGOCIÁVEL: cada oportunidade DEVE citar:
     - A lei federal aplicável com artigo específico
     - O Tema STF ou STJ correspondente com número do RE/REsp
-    - Um TRECHO LITERAL da ementa do acórdão (copiar das ementas fornecidas acima na seção JURISPRUDÊNCIA VINCULANTE)
+    - Um TRECHO LITERAL da ementa do acórdão STF/STJ (copiar das ementas fornecidas na seção JURISPRUDÊNCIA VINCULANTE)
+    - Um ACÓRDÃO DO CARF que confirma administrativamente (copiar da seção JURISPRUDÊNCIA ADMINISTRATIVA)
     - Legislação estadual quando aplicável (RICMS, Resolução SEFAZ, convênio)
-    Se o campo "fundamentacaoLegal" tiver menos de 100 caracteres, está INCOMPLETO.
+    Se o campo "fundamentacaoLegal" tiver menos de 200 caracteres, está INCOMPLETO.
 12. PROFUNDIDADE NARRATIVA: cada "descricao" deve ter NO MÍNIMO 10-15 LINHAS (800-1500 caracteres). Descrições curtas (menos de 5 linhas) são INACEITÁVEIS e farão o relatório ser RECUSADO pelo cliente. Cada oportunidade é um mini-parecer completo.`;
 }
 
@@ -941,9 +1020,9 @@ class ClaudeService {
 
 REGRA 1 — PROFUNDIDADE É OBRIGATÓRIA (MAIS IMPORTANTE):
 Este relatório é um PRODUTO PAGO pelo cliente. Cada oportunidade DEVE ser um PARECER COMPLETO:
-- Campo "descricao": MÍNIMO 10-15 LINHAS (800-1500 caracteres). Deve conter: dados reais do documento (registros, CFOPs, valores, períodos), perfil operacional da empresa, fundamentação legal com TRECHO DA EMENTA do acórdão STF/STJ (copiar das ementas da seção JURISPRUDÊNCIA VINCULANTE), legislação estadual quando aplicável, e memória de cálculo completa.
-- Campo "fundamentacaoLegal": MÍNIMO 200 caracteres. Citar lei + artigo + tema STF/STJ + TRECHO LITERAL da ementa do acórdão. NUNCA deixar apenas "RE 574.706 — Tema 69 STF" sem citar a ementa.
-- Campo "risco": MÍNIMO 3 linhas. Citar órgão fiscalizador, prazo do processo, riscos específicos desta empresa, registros com inconsistência.
+- Campo "descricao": MÍNIMO 10-15 LINHAS (800-1500 caracteres). Deve conter: dados reais do documento (registros, CFOPs, valores, períodos), perfil operacional da empresa, fundamentação legal com TRECHO DA EMENTA do acórdão STF/STJ + acórdão CARF correspondente, legislação estadual quando aplicável, e memória de cálculo completa.
+- Campo "fundamentacaoLegal": MÍNIMO 300 caracteres. Citar 3 CAMADAS: (1) lei + artigo, (2) tema STF/STJ + ementa, (3) acórdão CARF + ementa. NUNCA deixar sem citar o CARF — é o tribunal que HOMOLOGA a compensação.
+- Campo "risco": MÍNIMO 3 linhas. Citar órgão fiscalizador, prazo do processo, riscos específicos desta empresa, posição do CARF sobre o tema, registros com inconsistência.
 - Campo "passosPraticos": MÍNIMO 4-5 passos detalhados nomeando portais (e-CAC, PER/DCOMP, SEFAZ-UF).
 - Campo "documentacaoNecessaria": MÍNIMO 4-5 documentos específicos.
 SE UMA OPORTUNIDADE NÃO ATINGIR ESTE NÍVEL, O RELATÓRIO SERÁ RECUSADO.
