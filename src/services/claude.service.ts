@@ -236,9 +236,47 @@ ANTES de iniciar qualquer análise de teses, você DEVE identificar o regime tri
 - NÃO MULTIPLIQUE por 1.000 se o valor já está em milhares!
 - Quando reportar valorEstimado nos resultados, SEMPRE use o valor em REAIS CHEIOS (não em milhares).
 
-## REGRA DE OURO — CONSERVADORISMO OBRIGATÓRIO
+## REGRA DE OURO — FÓRMULA FIXA DE PROJEÇÃO (OBRIGATÓRIA)
 
-Seja CONSERVADOR nas estimativas de valores. É preferível que o cliente tenha uma surpresa positiva na execução do que uma decepção. Aplique TODAS as regras abaixo:
+Para GARANTIR CONSISTÊNCIA entre análises da mesma empresa, você DEVE usar EXATAMENTE esta fórmula:
+
+### FÓRMULA DE PROJEÇÃO PADRÃO:
+valor_estimado = (valor_confirmado_nos_SPEDs / meses_com_dados) × 60 × 0.50
+
+Onde:
+- valor_confirmado_nos_SPEDs = SOMA dos valores EXATOS encontrados nos registros do SPED (E110, C100, C120, C190, C197)
+- meses_com_dados = número de meses de SPED fornecidos que têm dados relevantes para aquela tese
+- 60 = período de 5 anos (60 meses)
+- 0.50 = fator de desconto fixo de 50% (conservadorismo obrigatório)
+
+### EXEMPLOS DE APLICAÇÃO:
+- Saldo credor ICMS confirmado R$ 97.174,49 em 5 meses → R$ 97.174,49 / 5 × 60 × 0.50 = R$ 583.046 × 0.50 = R$ 291.523
+  MAS: para saldo credor acumulado, use o ÚLTIMO saldo confirmado como BASE (não a média), pois é cumulativo:
+  Saldo credor FINAL confirmado = R$ 97.174,49. Projetar acúmulo ADICIONAL: média de acúmulo mensal × meses restantes × 0.50
+  Acúmulo médio mensal = (97.174,49 - 504,90) / 12 meses entre mai/2021 e mai/2022 = R$ 8.055/mês
+  Projeção = R$ 97.174 + (R$ 8.055 × 48 meses restantes × 0.50) = R$ 97.174 + R$ 193.320 = R$ 290.494
+  Arredondar para BAIXO ao milhar mais próximo: R$ 290.000
+
+- PIS-Importação confirmado R$ 3.603 em 3 meses com importação → R$ 3.603 / 3 × 24 meses estimados de importação em 60 × 0.50 = R$ 14.412
+  Arredondar para BAIXO: R$ 14.000
+
+- COFINS-Importação confirmado R$ 17.872 em 3 meses → R$ 17.872 / 3 × 24 × 0.50 = R$ 71.488
+  Arredondar para BAIXO: R$ 71.000
+
+### REGRAS ABSOLUTAS:
+1. NUNCA mude o fator de desconto (SEMPRE 0.50 = 50%)
+2. NUNCA use estimativas arredondadas bonitas (R$ 220.000, R$ 350.000, R$ 95.000) — use o resultado EXATO da fórmula, arredondado para BAIXO ao milhar
+3. NUNCA use um multiplicador > 0.50 — se tiver dúvida, use 0.40
+4. Para saldo credor ACUMULADO (ICMS): usar último saldo + projeção de acúmulo adicional (NÃO multiplicar o saldo por 60/meses)
+5. Para créditos PERIÓDICOS (PIS, COFINS, INSS): usar média mensal × 60 × 0.50
+6. SEMPRE mostre a conta COMPLETA na descrição — cada número deve ser rastreável
+7. Se só tem 5 meses de dados de 60, ALERTE que a precisão é limitada e use fator 0.40 em vez de 0.50
+
+### REGRA DE CONSISTÊNCIA:
+Se a mesma empresa for analisada duas vezes com os mesmos SPEDs, os valores DEVEM ser idênticos (ou muito próximos).
+A fórmula fixa garante isso. Se você não seguir a fórmula, o relatório será REJEITADO.
+
+Aplique TODAS as regras abaixo adicionalmente:
 
 1. Use SEMPRE a estimativa mais BAIXA quando houver faixa de valores possíveis
 2. Arredonde valores estimados PARA BAIXO, nunca para cima
@@ -582,7 +620,9 @@ Seja CONSERVADOR nas estimativas de valores. É preferível que o cliente tenha 
 - SEMPRE analise TESE 2.9 (crédito extemporâneo) se houver indício de troca de sistema ou erro de escrituração
 - SEMPRE analise TESE 3.4 (FGTS) junto com TESE 3.1 (INSS) — mesma lógica, impacto adicional
 - Se não tiver dados suficientes para calcular, ESTIME baseado em percentuais típicos e INFORME que é estimativa
-- NUNCA deixe de analisar uma tese por falta de dados — use estimativas conservadoras
+- NUNCA deixe de analisar uma tese por falta de dados — use estimativas conservadoras com a fórmula fixa
+- NUNCA omita uma oportunidade que existe nos dados. Se encontrou indício, INCLUA com a ressalva adequada.
+- Se uma tese foi identificável nos dados (ex: crédito extemporâneo, benefícios fiscais ICMS), ela DEVE aparecer no relatório mesmo que o valor seja pequeno.
 
 ## JURISPRUDÊNCIA VINCULANTE — CITE ESTAS EMENTAS NA FUNDAMENTAÇÃO
 
@@ -868,9 +908,9 @@ Este relatório é o produto final entregue ao CLIENTE. Ele PAGA por este extrat
 Se uma frase poderia se aplicar a qualquer empresa do Brasil, REESCREVA com dados específicos desta empresa.
 Se a fundamentação não citar a ementa do acórdão, está INCOMPLETA.
 
-## REGRAS FINAIS — CONSERVADORISMO ESTRITO
-1. CONSERVADORISMO É LEI — arredonde para BAIXO, use margem de segurança de 20-30%, descarte oportunidades com probabilidade < 60%
-2. Use APENAS valores confirmados no documento. Se só tem 7 meses de dados, estime para 5 anos proporcionalmente (valor_7meses / 7 × 60) e aplique desconto de 25% como margem de segurança
+## REGRAS FINAIS — CONSISTÊNCIA E CONSERVADORISMO
+1. USE A FÓRMULA FIXA: valor = (confirmado / meses) × 60 × 0.50. NUNCA invente outro multiplicador.
+2. ARREDONDE PARA BAIXO ao milhar mais próximo. NUNCA use números redondos "bonitos" como R$ 220.000 ou R$ 350.000.
 3. CADA oportunidade DEVE ter fundamentação legal com número de lei/artigo E tema STF/STJ
 4. PIS e COFINS devem ser linhas SEPARADAS (alíquotas diferentes: PIS 1,65%, COFINS 7,6%)
 5. Se não houver dados suficientes, use estimativa CONSERVADORA e INFORME nos alertas
