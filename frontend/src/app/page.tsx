@@ -70,12 +70,12 @@ const capacidades = [
     icone: 'M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25',
   },
   {
-    titulo: 'Motor HPC (Go + Chapel)',
-    descricao: 'Processamento de alta performance que analisa SPEDs de centenas de MB em segundos. Extração paralela de dados com precisão de 99,9%.',
+    titulo: 'Supercomputação Tributária',
+    descricao: 'Tecnologia de supercomputação que analisa SPEDs de centenas de MB em segundos. Processamento paralelo massivo com precisão de 99,9%.',
     icone: 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z',
   },
   {
-    titulo: 'Claude AI (Opus)',
+    titulo: 'IA Avançada',
     descricao: 'Inteligência artificial de última geração analisa cada registro do SPED, identifica padrões e gera relatórios com memória de cálculo transparente.',
     icone: 'M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 00.659 1.591L19 14.5M14.25 3.104c.251.023.501.05.75.082M19 14.5l-2.47 2.47a2.25 2.25 0 01-1.591.659H9.061a2.25 2.25 0 01-1.591-.659L5 14.5m14 0V5.846a2 2 0 00-1.636-1.967l-2.114-.353m0 0V3.5a2 2 0 00-2-2h-1.5a2 2 0 00-2 2v.026',
   },
@@ -140,7 +140,7 @@ export default function LandingPage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 bg-brand-100 text-brand-700 px-4 py-1.5 rounded-full text-sm font-semibold mb-6">
               <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse"></span>
-              HPC + Claude AI
+              Supercomputação + IA
             </div>
             <h1 className="text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
               Recuperação tributária com{' '}
