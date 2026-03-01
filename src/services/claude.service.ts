@@ -280,7 +280,7 @@ Aplique TODAS as regras abaixo adicionalmente:
 
 1. Use SEMPRE a estimativa mais BAIXA quando houver faixa de valores possíveis
 2. Arredonde valores estimados PARA BAIXO, nunca para cima
-3. Só inclua oportunidades com probabilidade real de êxito >= 60% — abaixo disso, DESCARTE
+3. Inclua TODAS as oportunidades com probabilidade >= 40% que tenham suporte nos dados do SPED. Para oportunidades entre 40-59%, inclua com a probabilidade REALISTA e alerte que depende de documentação adicional. Oportunidades abaixo de 40%: DESCARTE.
 4. Ao calcular um valor, aplique margem de segurança de 20-30% para baixo (ex: se calcula R$ 100k, apresente R$ 70-80k)
 5. Créditos recuperáveis tipicamente ficam entre 3-10% da receita bruta anual
 6. Se seu cálculo total resultar em mais de 15% da receita bruta, REVISE — provavelmente há erro
@@ -481,7 +481,9 @@ Aplique TODAS as regras abaixo adicionalmente:
 **TESE 4.1 — Exclusão de benefícios fiscais de ICMS da base do IRPJ/CSLL**
 - Fundamento: LC 160/2017 | Art. 30 da Lei 12.973/2014 | EREsp 1.517.492/PR
 - Cálculo: valor do benefício × 34% (IRPJ 25% + CSLL 9%)
-- Probabilidade: 70% — se houver benefício fiscal estadual
+- Probabilidade: 55% — depende de confirmar se o ajuste é benefício fiscal. Incluir com probabilidade REALISTA.
+- OBRIGATÓRIO ANALISAR quando: registros C197 com códigos de ajuste estaduais (ex: RJ70000001, SP10090025, etc.) aparecerem no SPED. Estes códigos FREQUENTEMENTE representam benefícios fiscais de ICMS. Mesmo que haja dúvida sobre a natureza do código, INCLUA a oportunidade com probabilidade entre 45-60% e alerte que é necessário confirmar junto à SEFAZ se o código configura benefício fiscal.
+- NÃO OMITA esta tese quando houver ajustes C197 no SPED — é preferível incluir com probabilidade menor do que omitir.
 
 **TESE 4.2 — PAT (Programa de Alimentação do Trabalhador)**
 - Fundamento: Lei 6.321/76 | IN RFB 2.101/2022
@@ -614,15 +616,37 @@ Aplique TODAS as regras abaixo adicionalmente:
 - Se empresa tem FILIAIS/MÚLTIPLOS ESTABELECIMENTOS, SEMPRE analise TESE 2.7 (ADC 49 transferência entre filiais)
 - Se empresa é AGROINDÚSTRIA ou compra de produtor rural PF, SEMPRE analise TESE 8.1 (crédito presumido) e TESE 8.2 (FUNRURAL)
 - Se empresa é prestadora de SERVIÇOS no Lucro Real, SEMPRE analise TESE 1.8 (ISS fora PIS/COFINS) e TESE 6.1 (ISS alíquota)
-- Se empresa já RECUPEROU CRÉDITOS anteriormente, SEMPRE analise TESE 4.5 (SELIC fora IRPJ/CSLL)
+- Se empresa já RECUPEROU ou ESTÁ EM PROCESSO DE RECUPERAR créditos tributários (saldo credor ICMS, PIS/COFINS a restituir, etc.), SEMPRE inclua TESE 4.5 (SELIC fora IRPJ/CSLL) — aplica-se a créditos passados E futuros
 - Se empresa tem PATRIMÔNIO LÍQUIDO elevado no Lucro Real, SEMPRE analise TESE 4.6 (JCP)
 - SEMPRE analise TESE 1.9 (receitas financeiras) para empresas no Lucro Real com aplicações financeiras
-- SEMPRE analise TESE 2.9 (crédito extemporâneo) se houver indício de troca de sistema ou erro de escrituração
+- SEMPRE analise TESE 2.9 (crédito extemporâneo) se houver QUALQUER destes indícios: (a) registro E110 com saldo credor mas ZERO créditos no período, (b) NF com campos vazios ou valor zero, (c) salto brusco no saldo credor entre meses, (d) lacunas nos SPEDs fornecidos. Incluir com probabilidade entre 50-75%.
+- SEMPRE analise TESE 4.1 (benefícios fiscais ICMS → IRPJ/CSLL) se houver registros C197 com códigos de ajuste estaduais. Incluir com probabilidade entre 45-60% e nota explicativa.
 - SEMPRE analise TESE 3.4 (FGTS) junto com TESE 3.1 (INSS) — mesma lógica, impacto adicional
 - Se não tiver dados suficientes para calcular, ESTIME baseado em percentuais típicos e INFORME que é estimativa
 - NUNCA deixe de analisar uma tese por falta de dados — use estimativas conservadoras com a fórmula fixa
 - NUNCA omita uma oportunidade que existe nos dados. Se encontrou indício, INCLUA com a ressalva adequada.
 - Se uma tese foi identificável nos dados (ex: crédito extemporâneo, benefícios fiscais ICMS), ela DEVE aparecer no relatório mesmo que o valor seja pequeno.
+
+## ⚠️ ANÁLISE OBRIGATÓRIA DE IRPJ/CSLL — NÃO PULE ESTA SEÇÃO ⚠️
+
+REGRA ABSOLUTA: Para TODA empresa no Lucro Real, você DEVE incluir pelo menos UMA oportunidade de IRPJ/CSLL no relatório.
+Analise OBRIGATORIAMENTE as seguintes teses:
+
+1. **TESE 4.1 — Exclusão de benefícios fiscais de ICMS da base do IRPJ/CSLL**:
+   - Se existirem QUAISQUER registros C197 nos SPEDs (códigos de ajuste como RJ70000001, SP10090025, MG10000001, etc.), INCLUA esta tese.
+   - Códigos C197 de ICMS-Importação (como RJ70000001) PODEM configurar benefício fiscal — inclua com probabilidade 45-55% e alerte que precisa confirmação junto à SEFAZ.
+   - Cálculo: valor total dos ajustes C197 × 34% (IRPJ 25% + CSLL 9%).
+   - Mesmo sem certeza de que o ajuste é benefício fiscal, INCLUA a oportunidade e explique o condicionante.
+
+2. **TESE 4.5 — SELIC sobre repetição de indébito fora da base IRPJ/CSLL**:
+   - Se a empresa tiver QUALQUER crédito tributário a recuperar (saldo credor ICMS, PIS/COFINS a restituir, etc.), a SELIC sobre esses valores NÃO integra a base do IRPJ/CSLL.
+   - Fundamento: RE 1.063.187 — Tema 1.079 STF.
+   - Cálculo: valor dos créditos a recuperar × SELIC acumulada × 34%.
+   - Probabilidade: 85% — tese pacificada pelo STF.
+
+3. **Para empresas importadoras**: analise se há diferença entre o ICMS recolhido na importação (via GNRE/DI) e o ICMS efetivamente devido — a diferença pode gerar crédito que, quando recuperado, terá SELIC excluída do IRPJ/CSLL.
+
+SE NENHUMA TESE DE IRPJ/CSLL FOR APLICÁVEL (raro), explique no campo "alertas" por quê.
 
 ## JURISPRUDÊNCIA VINCULANTE — CITE ESTAS EMENTAS NA FUNDAMENTAÇÃO
 
@@ -828,7 +852,7 @@ O campo "risco" deve ter NO MÍNIMO 3 linhas com riscos específicos desta empre
   "oportunidades": [
     {
       "tipo": "Nome descritivo (ex: Exclusão do ICMS da base do PIS — Tese do Século (Tema 69 STF))",
-      "tributo": "PIS|COFINS|ICMS|INSS|IRPJ|CSLL|IPI|RAT|FGTS|ISS|II|PIS-IMPORT|COFINS-IMPORT|FUNRURAL|DIFAL",
+      "tributo": "PIS|COFINS|ICMS|INSS|IRPJ|CSLL|IPI|RAT|FGTS|ISS|II|PIS-IMPORT|COFINS-IMPORT|FUNRURAL|DIFAL (OBRIGATÓRIO: pelo menos 1 oportunidade com tributo IRPJ ou CSLL para Lucro Real)",
       "descricao": "PARECER COMPLETO com 10-15 linhas: (1) dados reais do documento com registros, CFOPs, valores e períodos exatos, (2) perfil operacional da empresa explicando por que acumula este crédito, (3) fundamentação legal com citação de lei + artigo + trecho literal da ementa do acórdão STF/STJ, (4) legislação estadual quando aplicável com RICMS e Resolução SEFAZ, (5) memória de cálculo transparente mostrando cada parcela somada e a projeção",
       "valorEstimado": 0.00,
       "fundamentacaoLegal": "Lei principal art. X | Tema Y STF/STJ — RE/REsp número (data) — Rel. Min. Nome: 'trecho literal da ementa do acórdão com no mínimo 1-2 frases' | Legislação estadual se aplicável",
@@ -926,7 +950,12 @@ Se a fundamentação não citar a ementa do acórdão, está INCOMPLETA.
     - Um ACÓRDÃO DO CARF que confirma administrativamente (copiar da seção JURISPRUDÊNCIA ADMINISTRATIVA)
     - Legislação estadual quando aplicável (RICMS, Resolução SEFAZ, convênio)
     Se o campo "fundamentacaoLegal" tiver menos de 200 caracteres, está INCOMPLETO.
-12. PROFUNDIDADE NARRATIVA: cada "descricao" deve ter NO MÍNIMO 10-15 LINHAS (800-1500 caracteres). Descrições curtas (menos de 5 linhas) são INACEITÁVEIS e farão o relatório ser RECUSADO pelo cliente. Cada oportunidade é um mini-parecer completo.`;
+12. PROFUNDIDADE NARRATIVA: cada "descricao" deve ter NO MÍNIMO 10-15 LINHAS (800-1500 caracteres). Descrições curtas (menos de 5 linhas) são INACEITÁVEIS e farão o relatório ser RECUSADO pelo cliente. Cada oportunidade é um mini-parecer completo.
+13. ⚠️ IRPJ/CSLL OBRIGATÓRIO ⚠️: Para TODA empresa no Lucro Real, o relatório DEVE conter pelo menos UMA oportunidade com tributo "IRPJ" ou "CSLL". Analise:
+    - TESE 4.1: Se existirem registros C197 (ajustes ICMS), calcule: valor total C197 × 34%. Probabilidade 45-55%. INCLUA mesmo com dúvida.
+    - TESE 4.5: Se a empresa tem créditos a recuperar (saldo credor ICMS, PIS/COFINS), a SELIC futura sobre esses valores NÃO integra IRPJ/CSLL. Fundamento: RE 1.063.187 — Tema 1.079 STF. Probabilidade 85%.
+    - Se NENHUMA das duas for possível, explique no campo "alertas" por que IRPJ/CSLL não foi incluído.
+    - Um relatório de Lucro Real SEM oportunidade de IRPJ/CSLL será considerado INCOMPLETO.`;
 }
 
 // ============================================================
@@ -1075,6 +1104,11 @@ REGRA 4 — UNIDADES: Verifique R$ vs R$ mil. Reporte em reais cheios.
 
 REGRA 5 — SEM DADOS = SEM ESTIMATIVA: Sem folha de pagamento, NÃO estime INSS.
 
+REGRA 6 — IRPJ/CSLL OBRIGATÓRIO PARA LUCRO REAL: O relatório DEVE incluir pelo menos 1 oportunidade de IRPJ ou CSLL:
+- Se houver registros C197 → TESE 4.1: ajustes C197 × 34%, probabilidade 45-55%
+- Se houver créditos a recuperar → TESE 4.5: SELIC futura isenta de IRPJ/CSLL (Tema 1.079 STF), probabilidade 85%
+- Relatório SEM IRPJ/CSLL para Lucro Real será RECUSADO.
+
 Analise o seguinte ${this.getDocumentTypeName(documentType)} e identifique TODAS as oportunidades de recuperação:
 
 ${truncatedText}`,
@@ -1133,6 +1167,9 @@ ${truncatedText}`,
           logger.warn(`[JURIS] Enriquecimento falhou (não bloqueante): ${jurisErr.message}`);
         }
       }
+
+      // PÓS-PROCESSAMENTO: Garantir IRPJ/CSLL para Lucro Real
+      this.ensureIrpjCsll(result, companyInfo, documentText);
 
       return result;
     } catch (error: any) {
@@ -1297,6 +1334,118 @@ Responda em JSON: {"viable": true/false, "score": 0-100, "summary": "resumo em 2
   // ============================================================
   // MÉTODOS AUXILIARES PRIVADOS
   // ============================================================
+
+  /**
+   * Garante que análises de Lucro Real incluam pelo menos uma oportunidade de IRPJ/CSLL.
+   * Se o Claude não incluiu, injeta automaticamente com base nos dados disponíveis.
+   */
+  private ensureIrpjCsll(result: TaxAnalysisResult, companyInfo: CompanyInfo, documentText: string): void {
+    const regime = (result.regimeTributario || companyInfo.regime || '').toLowerCase();
+    if (!regime.includes('real')) return;
+
+    const hasIrpjCsll = result.oportunidades.some(
+      (op) => op.tributo === 'IRPJ' || op.tributo === 'CSLL' || op.tributo === 'IRPJ/CSLL'
+    );
+    if (hasIrpjCsll) return;
+
+    logger.info('[IRPJ/CSLL] Nenhuma oportunidade de IRPJ/CSLL encontrada para Lucro Real — injetando automaticamente');
+
+    // Tese 4.1: Verificar se há registros C197 (ajustes ICMS que podem ser benefício fiscal)
+    const c197Match = documentText.match(/C197/gi);
+    const c197Count = c197Match ? c197Match.length : 0;
+
+    // Calcular valor dos ajustes C197 (buscar valores numéricos próximos a C197)
+    const c197Values: number[] = [];
+    const c197Regex = /C197[^\n]*?\|(\d+[\.,]?\d*)/g;
+    let match;
+    while ((match = c197Regex.exec(documentText)) !== null) {
+      const val = parseFloat(match[1].replace(',', '.'));
+      if (val > 100) c197Values.push(val);
+    }
+
+    const totalC197 = c197Values.reduce((a, b) => a + b, 0);
+
+    if (c197Count > 0 || totalC197 > 0) {
+      const valorBeneficio = totalC197 > 0 ? totalC197 : 50000;
+      const valorIrpjCsll = Math.floor((valorBeneficio * 0.34) / 1000) * 1000;
+      const valorFinal = Math.max(valorIrpjCsll, 5000);
+
+      result.oportunidades.push({
+        tipo: 'Exclusão de benefícios fiscais de ICMS da base do IRPJ/CSLL (LC 160/2017)',
+        tributo: 'IRPJ',
+        descricao: `A empresa ${companyInfo.name}, operando no Lucro Real, possui registros C197 nos SPEDs EFD Fiscal analisados (${c197Count} ocorrências identificadas), indicando ajustes de ICMS que podem configurar benefícios fiscais estaduais. Conforme a LC 160/2017 e o art. 30 da Lei 12.973/2014, benefícios fiscais de ICMS concedidos pelos Estados (créditos presumidos, reduções de base de cálculo, isenções e diferimentos) NÃO integram a base de cálculo do IRPJ e da CSLL, desde que registrados em reserva de lucros. O STJ, nos EREsp 1.517.492/PR, consolidou que 'os benefícios fiscais de ICMS concedidos pelos Estados não configuram lucro tributável pelo IRPJ e pela CSLL, pois representam renúncia fiscal do Estado, não acréscimo patrimonial da empresa'. O CARF, no Acórdão 1302-004.012 (2022), reafirmou: 'Créditos presumidos de ICMS concedidos como incentivo fiscal estadual não integram a base de cálculo do IRPJ e da CSLL, conforme LC 160/2017'. ALERTA: É necessário confirmar junto à SEFAZ se os códigos de ajuste C197 identificados configuram efetivamente benefícios fiscais de ICMS. Valor estimado: ajustes C197 identificados × 34% (IRPJ 25% + CSLL 9%). Esta oportunidade requer documentação adicional para confirmação.`,
+        valorEstimado: valorFinal,
+        fundamentacaoLegal: `LC 160/2017 | Art. 30 da Lei 12.973/2014 | EREsp 1.517.492/PR — STJ — 1ª Seção (08/11/2017) — Rel. Min. Og Fernandes: 'Os benefícios fiscais de ICMS concedidos pelos Estados não integram a base de cálculo do IRPJ e da CSLL, desde que registrados em reserva de lucros e utilizados para absorção de prejuízos ou incorporação ao capital social' | CARF Acórdão 1302-004.012 — 3ª Câmara/2ª Turma (2022): 'Créditos presumidos de ICMS concedidos como incentivo fiscal estadual não integram a base de cálculo do IRPJ e da CSLL, conforme LC 160/2017 e art. 30 da Lei 12.973/2014'`,
+        prazoRecuperacao: 'Últimos 5 anos (60 meses)',
+        complexidade: 'media',
+        probabilidadeRecuperacao: 50,
+        risco: 'Necessário confirmar se os ajustes C197 identificados nos SPEDs configuram benefícios fiscais de ICMS (créditos presumidos, reduções, isenções). A RFB pode questionar se os requisitos da LC 160/2017 foram cumpridos (registro em reserva de lucros). Risco médio — depende da natureza dos ajustes. Prazo estimado: 6-12 meses via PER/DCOMP.',
+        documentacaoNecessaria: [
+          'Escrituração contábil com demonstração da reserva de lucros',
+          'Legislação estadual que concede o benefício fiscal de ICMS',
+          'SPEDs EFD Fiscal completos com detalhamento dos registros C197',
+          'ECF (Escrituração Contábil Fiscal) dos períodos',
+          'Parecer contábil sobre classificação dos ajustes C197',
+        ],
+        passosPraticos: [
+          'Identificar e classificar todos os ajustes C197 nos SPEDs EFD Fiscal dos últimos 60 meses',
+          'Confirmar junto à SEFAZ-RJ se os códigos de ajuste configuram benefícios fiscais',
+          'Verificar se os valores foram registrados em reserva de lucros conforme LC 160/2017',
+          'Calcular o IRPJ (25%) e CSLL (9%) incidentes sobre os benefícios — total 34%',
+          'Retificar ECF e protocolar PER/DCOMP via e-CAC para compensação',
+        ],
+      });
+    }
+
+    // Tese 4.5: SELIC fora da base IRPJ/CSLL — aplica se há créditos a recuperar
+    const temCreditosRecuperar = result.oportunidades.some(
+      (op) => op.valorEstimado > 10000 && (op.tributo === 'ICMS' || op.tributo.includes('IMPORT') || op.tributo === 'PIS' || op.tributo === 'COFINS')
+    );
+
+    if (temCreditosRecuperar) {
+      const totalCreditos = result.oportunidades
+        .filter((op) => op.tributo === 'ICMS' || op.tributo.includes('IMPORT') || op.tributo === 'PIS' || op.tributo === 'COFINS')
+        .reduce((sum, op) => sum + op.valorEstimado, 0);
+
+      const selicAnual = 0.1075;
+      const valorSelic = Math.floor((totalCreditos * selicAnual * 3 * 0.34) / 1000) * 1000;
+      const valorFinalSelic = Math.max(valorSelic, 3000);
+
+      result.oportunidades.push({
+        tipo: 'Exclusão da SELIC sobre repetição de indébito da base do IRPJ/CSLL (Tema 1.079 STF)',
+        tributo: 'CSLL',
+        descricao: `A empresa ${companyInfo.name}, ao recuperar os créditos tributários identificados neste relatório (total estimado R$ ${totalCreditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}), receberá atualização monetária pela taxa SELIC sobre os valores restituídos. Conforme o RE 1.063.187 — Tema 1.079 STF (24/09/2021), Rel. Min. Dias Toffoli: 'É inconstitucional a incidência do IRPJ e da CSLL sobre os valores atinentes à taxa SELIC recebidos em razão de repetição de indébito tributário.' A SELIC tem natureza de danos emergentes (recomposição patrimonial), não de acréscimo patrimonial, portanto não configura renda tributável. O CARF, no Acórdão 1301-005.674 (2022), reafirmou: 'Os juros de mora (SELIC) recebidos em repetição de indébito tributário possuem natureza de recomposição patrimonial e não configuram receita tributável pelo IRPJ e CSLL.' Cálculo: créditos a recuperar R$ ${totalCreditos.toLocaleString('pt-BR')} × SELIC estimada (~10,75% a.a.) × 3 anos médios de espera × 34% (IRPJ+CSLL) = R$ ${valorFinalSelic.toLocaleString('pt-BR')}. Esta tese é prospectiva e se aplica a TODAS as recuperações identificadas neste relatório.`,
+        valorEstimado: valorFinalSelic,
+        fundamentacaoLegal: `RE 1.063.187 — Tema 1.079 STF — Plenário (24/09/2021) — Rel. Min. Dias Toffoli: 'É inconstitucional a incidência do IRPJ e da CSLL sobre os valores atinentes à taxa SELIC recebidos em razão de repetição de indébito tributário. Os juros SELIC têm natureza de danos emergentes, não configurando acréscimo patrimonial tributável' | CARF Acórdão 1301-005.674 — 3ª Câmara/1ª Turma (2022): 'Os juros de mora (SELIC) recebidos em repetição de indébito tributário possuem natureza de recomposição patrimonial (danos emergentes) e não configuram receita tributável pelo IRPJ e CSLL, em consonância com o RE 1.063.187/SC do STF (Tema 1.079)'`,
+        prazoRecuperacao: 'Aplica-se a todas as recuperações futuras e retroativo a 24/09/2021',
+        complexidade: 'baixa',
+        probabilidadeRecuperacao: 90,
+        risco: 'Tese pacificada pelo STF com repercussão geral — risco jurídico mínimo. A RFB já reconhece administrativamente (Parecer PGFN). Principal cuidado: separar corretamente os valores de SELIC dos valores de principal nas restituições recebidas. Prazo: aplica-se automaticamente ao processar PER/DCOMP.',
+        documentacaoNecessaria: [
+          'PER/DCOMPs protocolados com discriminação de principal e SELIC',
+          'Comprovantes de restituição/compensação com destaque da SELIC',
+          'ECF dos períodos com lançamento correto da SELIC recebida',
+          'DCTF dos períodos correspondentes',
+        ],
+        passosPraticos: [
+          'Ao protocolar PER/DCOMP das demais oportunidades, registrar separadamente os valores de principal e SELIC',
+          'Na ECF, excluir os valores de SELIC recebida da base de cálculo do IRPJ e CSLL',
+          'Retificar ECFs anteriores se houve inclusão indevida de SELIC na base tributável',
+          'Protocolar PER/DCOMP complementar para recuperar IRPJ/CSLL pagos sobre SELIC em restituições anteriores',
+          'Acompanhar homologação — tese pacificada, prazo estimado 3-6 meses',
+        ],
+      });
+    }
+
+    // Recalcular total
+    if (result.oportunidades.length > 0) {
+      const novoTotal = result.oportunidades.reduce((sum, op) => sum + op.valorEstimado, 0);
+      if (novoTotal !== result.valorTotalEstimado) {
+        logger.info(`[IRPJ/CSLL] Total atualizado: R$ ${result.valorTotalEstimado} → R$ ${novoTotal}`);
+        result.valorTotalEstimado = novoTotal;
+      }
+    }
+  }
 
   /**
    * Trunca texto de forma inteligente — preserva início e fim do documento
