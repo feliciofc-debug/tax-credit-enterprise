@@ -56,7 +56,7 @@ const tributos = [
 const capacidades = [
   {
     titulo: 'SPED EFD Fiscal',
-    descricao: 'Análise completa dos últimos 5 anos (60 meses) de escrituração fiscal digital — registros C100, C170, C190, C197, E110, E520 e bloco G (CIAP).',
+    descricao: 'O EFD Fiscal contém dados de ICMS, PIS e COFINS: C170 (VL_PIS, VL_COFINS por item), C120 (PIS/COFINS-Importação nas DIs) e E520 (apuração resumida). Analisamos 60 meses retroativos.',
     icone: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
   },
   {
@@ -94,7 +94,8 @@ const stats = [
 ];
 
 const diferenciais = [
-  { texto: 'Análise de SPED EFD Fiscal completo — 60 meses retroativos', icone: 'check' },
+  { texto: 'Análise de SPED EFD Fiscal completo — 60 meses retroativos (ICMS, PIS e COFINS via C170, C120, E520)', icone: 'check' },
+  { texto: 'Metodologia em duas etapas: identificação no EFD Fiscal → confirmação no EFD Contribuições', icone: 'check' },
   { texto: 'Cruzamento automático entre NFs, DIs, C197 e registros de apuração', icone: 'check' },
   { texto: 'Jurisprudência STF, STJ e CARF citada em cada oportunidade', icone: 'check' },
   { texto: 'Memória de cálculo transparente — cada número é rastreável', icone: 'check' },
@@ -218,6 +219,23 @@ export default function LandingPage() {
               </ul>
             </div>
           ))}
+        </div>
+
+        {/* Metodologia — EFD Fiscal vs EFD Contribuições */}
+        <div className="mt-16 p-6 rounded-2xl bg-blue-50 border border-blue-100">
+          <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+            <svg className="w-5 h-5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Metodologia em duas etapas
+          </h3>
+          <p className="text-gray-700 text-sm leading-relaxed mb-4">
+            O <strong>SPED EFD Fiscal</strong> já contém dados de PIS e COFINS nos registros C170 (valores por item de NF), C120 (PIS/COFINS-Importação nas DIs) e E520 (apuração resumida). Com isso, identificamos oportunidades como Tema 69 STF, créditos de importação e monofásicos. O <strong>SPED EFD Contribuições</strong> é solicitado em seguida para confirmar se os créditos foram ou não aproveitados e fechar o cálculo definitivo antes do protocolo. Duas fases: identificação (Fiscal) → confirmação (Contribuições).
+          </p>
+          <div className="flex flex-wrap gap-4 text-xs">
+            <span className="px-3 py-1.5 bg-white rounded-lg border border-blue-200 text-gray-700 font-medium">EFD Fiscal = triagem e identificação</span>
+            <span className="px-3 py-1.5 bg-white rounded-lg border border-blue-200 text-gray-700 font-medium">EFD Contribuições = confirmação e precisão</span>
+          </div>
         </div>
       </section>
 
