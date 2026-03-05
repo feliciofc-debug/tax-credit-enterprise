@@ -149,8 +149,16 @@ export default function FormalizacaoPage() {
         }),
       });
       const data = await res.json();
-      if (data.success) {
-        setGeneratedDoc(data.data.document);
+      if (data.success && data.data) {
+        const docs = data.data.documents;
+        if (Array.isArray(docs) && docs.length > 0) {
+          const combined = docs.map((d: any) =>
+            `${'='.repeat(80)}\n  PARECER PER/DCOMP — ${d.tributo} (${d.naturezaCredito})\n  Valor: R$ ${Number(d.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n${'='.repeat(80)}\n\n${d.document}`
+          ).join('\n\n\n');
+          setGeneratedDoc(combined);
+        } else {
+          alert('Nenhuma oportunidade federal encontrada para gerar PER/DCOMP. Oportunidades estaduais (ICMS) devem usar o Requerimento SEFAZ.');
+        }
       } else {
         alert(data.error || 'Erro ao gerar documento');
       }
