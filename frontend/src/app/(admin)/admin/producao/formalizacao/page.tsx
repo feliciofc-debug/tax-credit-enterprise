@@ -136,11 +136,16 @@ export default function FormalizacaoPage() {
   };
 
   const handleGeneratePerdcomp = async () => {
-    if (!selectedAnalysis) return;
+    if (!selectedAnalysis) {
+      alert('Selecione uma analise primeiro.');
+      return;
+    }
     setGenerating(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${apiBase}/api/formalization/generate-perdcomp`, {
+      const url = `${apiBase}/api/formalization/generate-perdcomp`;
+      console.log('[PER/DCOMP] Requesting:', url, 'analysisId:', selectedAnalysis.id);
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -149,6 +154,7 @@ export default function FormalizacaoPage() {
         }),
       });
       const data = await res.json();
+      console.log('[PER/DCOMP] Response:', JSON.stringify(data).substring(0, 500));
       if (data.success && data.data) {
         const docs = data.data.documents;
         if (Array.isArray(docs) && docs.length > 0) {
@@ -157,13 +163,17 @@ export default function FormalizacaoPage() {
           ).join('\n\n\n');
           setGeneratedDoc(combined);
         } else {
-          alert('Nenhuma oportunidade federal encontrada para gerar PER/DCOMP. Oportunidades estaduais (ICMS) devem usar o Requerimento SEFAZ.');
+          alert('Nenhuma oportunidade federal encontrada para gerar PER/DCOMP.\n\nOportunidades estaduais (ICMS) devem usar a aba "Requerimento SEFAZ".');
+        }
+        if (data.data.avisoEstaduais) {
+          alert(data.data.avisoEstaduais);
         }
       } else {
-        alert(data.error || 'Erro ao gerar documento');
+        alert('Erro: ' + (data.error || 'Resposta inesperada do servidor'));
       }
-    } catch (e) {
-      alert('Erro de conexao');
+    } catch (e: any) {
+      console.error('[PER/DCOMP] Error:', e);
+      alert('Erro de conexao: ' + (e.message || 'Falha na comunicacao com o servidor'));
     } finally {
       setGenerating(false);
     }
