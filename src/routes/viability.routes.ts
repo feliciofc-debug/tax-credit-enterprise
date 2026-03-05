@@ -847,6 +847,10 @@ function runFullAnalysisInBackground(
         source: 'platform',
       });
 
+      // Reconnect — connection may drop during long Claude analysis
+      await prisma.$disconnect();
+      await prisma.$connect();
+
       await prisma.viabilityAnalysis.update({
         where: { id: viabilityId },
         data: {

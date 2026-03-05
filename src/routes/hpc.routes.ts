@@ -297,8 +297,6 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
     let savedId: string | null = null;
     let saveError: string | null = null;
 
-    // Encode all Claude analysis metadata as JSON in aiSummary
-    // so nothing is lost (fundamentacaoGeral, recomendacoes, etc.)
     const aiSummaryJson = JSON.stringify({
       resumoExecutivo: analysis.resumoExecutivo || '',
       fundamentacaoGeral: analysis.fundamentacaoGeral || '',
@@ -310,20 +308,29 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
       pipeline,
     });
 
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    // Resolve partnerId separately — must not block the save
+    let partnerId: string | null = null;
+    try {
+      partnerId = await getOperatorPartnerId(user);
+      if (!partnerId) {
+        const firstPartner = await prisma.partner.findFirst({
+          where: { status: 'active' },
+          orderBy: { createdAt: 'asc' },
+        });
+        partnerId = firstPartner?.id || null;
+      }
+    } catch (partnerErr: any) {
+      logger.warn(`[HPC-SAVE] Falha ao resolver partnerId (salvando sem): ${partnerErr.message}`);
+      partnerId = null;
+    }
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        let partnerId = await getOperatorPartnerId(user);
-
-        if (!partnerId) {
-          const firstPartner = await prisma.partner.findFirst({
-            where: { status: 'active' },
-            orderBy: { createdAt: 'asc' },
-          });
-          partnerId = firstPartner?.id || null;
-          logger.info(`[HPC-SAVE] Admin sem partnerId — usando partner: ${partnerId || 'nenhum (salvar sem partner)'}`);
-        }
-
-        logger.info(`[HPC-SAVE] Tentativa ${attempt} — partnerId: ${partnerId}, empresa: ${companyName}`);
+        // Reconnect Prisma — connection drops during long Claude analysis (200s+)
+        logger.info(`[HPC-SAVE] Tentativa ${attempt} — reconectando banco...`);
+        await prisma.$disconnect();
+        await prisma.$connect();
+        logger.info(`[HPC-SAVE] Banco reconectado — partnerId: ${partnerId}, empresa: ${companyName}`);
 
         const saved = await prisma.viabilityAnalysis.create({
           data: {
@@ -350,8 +357,10 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
       } catch (saveErr: any) {
         saveError = saveErr.message || 'Erro desconhecido ao salvar';
         logger.error(`[HPC-SAVE] Erro tentativa ${attempt}: ${saveErr.message}`, saveErr.stack);
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 1000));
+        if (attempt < 3) {
+          const delay = attempt * 2000;
+          logger.info(`[HPC-SAVE] Aguardando ${delay}ms antes da próxima tentativa...`);
+          await new Promise(r => setTimeout(r, delay));
         }
       }
     }
