@@ -34,6 +34,17 @@ const upload = multer({
 // HELPER: Extrai arquivos de ZIPs e detecta SPED
 // ============================================================
 
+/**
+ * Remove invalid UTF-8 bytes (e.g. 0x80-0xFF from Latin-1 SPED files)
+ * so PostgreSQL accepts the text.
+ */
+function sanitizeUtf8(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+             .replace(/\uFFFD/g, '')
+             .replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\uFFFF]/g, '');
+}
+
 function isSpedContent(text: string): boolean {
   const lines = text.split('\n').slice(0, 20);
   return lines.some(l => /^\|[0-9A-Z]{4}\|/.test(l.trim()));
@@ -94,7 +105,7 @@ function extractFilesFromUploads(
 function buildFallbackText(files: { buffer: Buffer; originalname: string }[]): string {
   const parts: string[] = [];
   for (const f of files) {
-    const text = f.buffer.toString('utf-8');
+    const text = sanitizeUtf8(f.buffer.toString('utf-8'));
     if (text.length > 50) {
       parts.push(`=== ARQUIVO: ${f.originalname} ===\n${text}`);
     }
@@ -335,18 +346,18 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
         const saved = await prisma.viabilityAnalysis.create({
           data: {
             partnerId: partnerId || undefined,
-            companyName: companyName || 'Empresa HPC',
+            companyName: sanitizeUtf8(companyName || 'Empresa HPC'),
             cnpj: cnpj || null,
             regime: regime || null,
-            sector: sector || null,
+            sector: sector ? sanitizeUtf8(sector) : null,
             docsUploaded: files.length,
-            docsText: textoParaClaude.substring(0, 50000),
+            docsText: sanitizeUtf8(textoParaClaude.substring(0, 50000)),
             viabilityScore: analysis.score,
             scoreLabel,
             estimatedCredit: analysis.valorTotalEstimado,
-            opportunities: JSON.stringify(analysis.oportunidades),
-            aiSummary: aiSummaryJson,
-            risks: JSON.stringify(analysis.alertas || []),
+            opportunities: sanitizeUtf8(JSON.stringify(analysis.oportunidades)),
+            aiSummary: sanitizeUtf8(aiSummaryJson),
+            risks: sanitizeUtf8(JSON.stringify(analysis.alertas || [])),
             status: 'completed',
           },
         });
