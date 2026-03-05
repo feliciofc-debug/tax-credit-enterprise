@@ -35,14 +35,25 @@ const upload = multer({
 // ============================================================
 
 /**
- * Remove invalid UTF-8 bytes (e.g. 0x80-0xFF from Latin-1 SPED files)
- * so PostgreSQL accepts the text.
+ * Safely decode a Buffer to string. SPED files use Latin-1 (ISO-8859-1)
+ * encoding, so we try latin1 first if utf-8 produces replacement chars.
+ */
+function bufferToString(buf: Buffer): string {
+  const utf8 = buf.toString('utf-8');
+  if (utf8.includes('\uFFFD')) {
+    return buf.toString('latin1');
+  }
+  return utf8;
+}
+
+/**
+ * Strip any character that PostgreSQL UTF-8 encoding rejects:
+ * C0/C1 control chars, replacement char, surrogates, null bytes.
  */
 function sanitizeUtf8(text: string): string {
   // eslint-disable-next-line no-control-regex
-  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
-             .replace(/\uFFFD/g, '')
-             .replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\uFFFF]/g, '');
+  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+             .replace(/\uFFFD/g, '');
 }
 
 function isSpedContent(text: string): boolean {
@@ -73,7 +84,7 @@ function extractFilesFromUploads(
           const buf = entry.getData();
 
           if (entryExt === 'txt' || entryExt === 'sped' || !entryExt) {
-            const preview = buf.toString('utf-8', 0, Math.min(buf.length, 2000));
+            const preview = bufferToString(buf.subarray(0, Math.min(buf.length, 2000)));
             if (isSpedContent(preview)) {
               logger.info(`[HPC] SPED encontrado dentro do ZIP: "${name}" (${buf.length} bytes)`);
               extracted.push({ buffer: buf, originalname: name, mimetype: 'text/plain' });
@@ -105,7 +116,7 @@ function extractFilesFromUploads(
 function buildFallbackText(files: { buffer: Buffer; originalname: string }[]): string {
   const parts: string[] = [];
   for (const f of files) {
-    const text = sanitizeUtf8(f.buffer.toString('utf-8'));
+    const text = sanitizeUtf8(bufferToString(f.buffer));
     if (text.length > 50) {
       parts.push(`=== ARQUIVO: ${f.originalname} ===\n${text}`);
     }
@@ -177,7 +188,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
     const spedFiles: typeof extractedFiles = [];
     const otherFiles: typeof extractedFiles = [];
     for (const f of extractedFiles) {
-      const preview = f.buffer.toString('utf-8', 0, Math.min(f.buffer.length, 2000));
+      const preview = bufferToString(f.buffer.subarray(0, Math.min(f.buffer.length, 2000)));
       if (isSpedContent(preview)) {
         spedFiles.push(f);
       } else {
@@ -211,7 +222,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
           const hpcResult = await hpcGateway.processSped(spedFiles);
 
           if (hpcResult.success && hpcResult.textoUnificado && hpcResult.textoUnificado.length >= 200) {
-            textoParaClaude = hpcResult.textoUnificado;
+            textoParaClaude = sanitizeUtf8(hpcResult.textoUnificado);
             hpcData = {
               arquivosProcessados: hpcResult.arquivosProcessados,
               tempoTotalMs: hpcResult.tempoTotalMs,
