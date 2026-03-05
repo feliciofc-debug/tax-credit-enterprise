@@ -37,6 +37,7 @@ interface AnalysisItem {
   alertas?: string[];
   hasFullAnalysis?: boolean;
   partnerName?: string;
+  source?: string;
   createdAt?: string;
 }
 
@@ -60,6 +61,7 @@ interface AnalysisDetail {
   oportunidades?: Oportunidade[];
   hasFullAnalysis?: boolean;
   partnerName?: string;
+  source?: string;
   createdAt?: string;
 }
 
@@ -595,7 +597,7 @@ export default function AdminAnalisesPage() {
 
             {/* Rodape */}
             <div className="px-6 py-3 bg-gray-100 text-xs text-gray-400 flex justify-between">
-              <span>Analise: IA Avancada | TaxCredit Enterprise</span>
+              <span>Analise: IA Avancada {detail.source === 'hpc' ? '| HPC Go+Chapel + Claude Opus' : ''} | TaxCredit Enterprise</span>
               <span>{detail.createdAt ? new Date(detail.createdAt).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</span>
             </div>
           </div>
@@ -774,6 +776,11 @@ export default function AdminAnalisesPage() {
                         <h3 className="text-gray-900 font-semibold text-base truncate group-hover:text-indigo-700 transition-colors">
                           {a.companyName || 'Empresa'}
                         </h3>
+                        {a.source === 'hpc' && (
+                          <span className="shrink-0 text-xs font-bold bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full">
+                            HPC
+                          </span>
+                        )}
                         {a.hasFullAnalysis ? (
                           <span className="shrink-0 text-xs font-bold bg-purple-100 text-purple-700 px-2.5 py-0.5 rounded-full">
                             Análise Completa

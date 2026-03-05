@@ -295,41 +295,65 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
       : 'inviavel';
 
     let savedId: string | null = null;
-    try {
-      let partnerId = await getOperatorPartnerId(user);
+    let saveError: string | null = null;
 
-      if (!partnerId) {
-        const firstPartner = await prisma.partner.findFirst({
-          where: { status: 'active' },
-          orderBy: { createdAt: 'asc' },
+    // Encode all Claude analysis metadata as JSON in aiSummary
+    // so nothing is lost (fundamentacaoGeral, recomendacoes, etc.)
+    const aiSummaryJson = JSON.stringify({
+      resumoExecutivo: analysis.resumoExecutivo || '',
+      fundamentacaoGeral: analysis.fundamentacaoGeral || '',
+      periodoAnalisado: analysis.periodoAnalisado || 'Últimos 5 anos',
+      regimeTributario: analysis.regimeTributario || regime || '',
+      riscoGeral: analysis.riscoGeral || '',
+      recomendacoes: analysis.recomendacoes || [],
+      source: 'hpc',
+      pipeline,
+    });
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        let partnerId = await getOperatorPartnerId(user);
+
+        if (!partnerId) {
+          const firstPartner = await prisma.partner.findFirst({
+            where: { status: 'active' },
+            orderBy: { createdAt: 'asc' },
+          });
+          partnerId = firstPartner?.id || null;
+          logger.info(`[HPC-SAVE] Admin sem partnerId — usando partner: ${partnerId || 'nenhum (salvar sem partner)'}`);
+        }
+
+        logger.info(`[HPC-SAVE] Tentativa ${attempt} — partnerId: ${partnerId}, empresa: ${companyName}`);
+
+        const saved = await prisma.viabilityAnalysis.create({
+          data: {
+            partnerId: partnerId || undefined,
+            companyName: companyName || 'Empresa HPC',
+            cnpj: cnpj || null,
+            regime: regime || null,
+            sector: sector || null,
+            docsUploaded: files.length,
+            docsText: textoParaClaude.substring(0, 50000),
+            viabilityScore: analysis.score,
+            scoreLabel,
+            estimatedCredit: analysis.valorTotalEstimado,
+            opportunities: JSON.stringify(analysis.oportunidades),
+            aiSummary: aiSummaryJson,
+            risks: JSON.stringify(analysis.alertas || []),
+            status: 'completed',
+          },
         });
-        partnerId = firstPartner?.id || null;
-        logger.info(`[HPC-ROUTE] Admin sem partnerId — usando partner: ${partnerId || 'nenhum (salvar sem partner)'}`);
+        savedId = saved.id;
+        saveError = null;
+        logger.info(`[HPC-SAVE] Análise salva com sucesso — id: ${saved.id}, empresa: ${companyName}, score: ${analysis.score}`);
+        break;
+      } catch (saveErr: any) {
+        saveError = saveErr.message || 'Erro desconhecido ao salvar';
+        logger.error(`[HPC-SAVE] Erro tentativa ${attempt}: ${saveErr.message}`, saveErr.stack);
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1000));
+        }
       }
-
-      logger.info(`[HPC-SAVE] Tentando salvar análise — partnerId: ${partnerId}, userId: ${(user as any).id}, empresa: ${companyName}`);
-      const saved = await prisma.viabilityAnalysis.create({
-        data: {
-          partnerId: partnerId || undefined,
-          companyName: companyName || 'Empresa HPC',
-          cnpj: cnpj || null,
-          regime: regime || null,
-          sector: sector || null,
-          docsUploaded: files.length,
-          docsText: textoParaClaude.substring(0, 50000),
-          viabilityScore: analysis.score,
-          scoreLabel,
-          estimatedCredit: analysis.valorTotalEstimado,
-          opportunities: JSON.stringify(analysis.oportunidades),
-          aiSummary: analysis.resumoExecutivo || '',
-          risks: JSON.stringify(analysis.alertas || []),
-          status: 'completed',
-        },
-      });
-      savedId = saved.id;
-      logger.info(`[HPC-SAVE] Análise salva com sucesso — id: ${saved.id}, empresa: ${companyName}, score: ${analysis.score}`);
-    } catch (saveErr: any) {
-      logger.error(`[HPC-ROUTE] Erro ao salvar: ${saveErr.message}`, saveErr.stack);
     }
 
     // -----------------------------------------------
@@ -338,6 +362,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
     return res.json({
       success: true,
       savedId,
+      saveError,
       pipeline,
       timing: {
         hpcProcessingMs: hpcData?.tempoTotalMs || 0,

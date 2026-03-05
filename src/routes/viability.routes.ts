@@ -518,8 +518,21 @@ router.get('/admin-analyses', authenticateToken, async (req: Request, res: Respo
     const results = analyses.map(a => {
       let oportunidades: any[] = [];
       let alertas: string[] = [];
+      let source = 'platform';
+      let aiSummaryDisplay = a.aiSummary || '';
       try { oportunidades = a.opportunities ? JSON.parse(a.opportunities) : []; } catch {}
       try { alertas = a.risks ? JSON.parse(a.risks) : []; } catch {}
+
+      // Detect HPC source from aiSummary JSON
+      if (a.aiSummary) {
+        try {
+          const parsed = JSON.parse(a.aiSummary);
+          if (parsed && typeof parsed === 'object' && parsed.resumoExecutivo !== undefined) {
+            aiSummaryDisplay = parsed.resumoExecutivo || '';
+            source = parsed.source || 'platform';
+          }
+        } catch {}
+      }
 
       return {
         id: a.id,
@@ -531,10 +544,11 @@ router.get('/admin-analyses', authenticateToken, async (req: Request, res: Respo
         viabilityScore: a.viabilityScore,
         scoreLabel: a.scoreLabel,
         estimatedCredit: a.estimatedCredit,
-        aiSummary: a.aiSummary,
+        aiSummary: aiSummaryDisplay,
         oportunidades,
         alertas,
         status: a.status,
+        source,
         hasFullAnalysis: oportunidades.length > 0,
         partnerId: a.partnerId,
         partnerName: a.partner?.company || a.partner?.name || 'Admin direto',
@@ -591,18 +605,55 @@ router.get('/admin-analysis/:id', authenticateToken, async (req: Request, res: R
     let oportunidades: any[] = [];
     let alertas: string[] = [];
     let recomendacoes: string[] = [];
+    let resumoExecutivo = '';
+    let fundamentacaoGeral = '';
+    let periodoAnalisado = 'Últimos 5 anos';
+    let regimeTributario = viability.regime || '';
+    let riscoGeral = viability.viabilityScore && viability.viabilityScore >= 70 ? 'baixo' : viability.viabilityScore && viability.viabilityScore >= 50 ? 'medio' : 'alto';
+    let source = 'platform';
+
     try { oportunidades = viability.opportunities ? JSON.parse(viability.opportunities) : []; } catch {}
     try { alertas = viability.risks ? JSON.parse(viability.risks) : []; } catch {}
 
-    // Inferir recomendações se não explícitas
-    if (oportunidades.length >= 5) {
-      recomendacoes.push('Diversas oportunidades identificadas — recomenda-se priorizar as de maior valor');
+    // Try to parse aiSummary as JSON (HPC analyses store full metadata)
+    let aiParsed: any = null;
+    if (viability.aiSummary) {
+      try {
+        aiParsed = JSON.parse(viability.aiSummary);
+        if (aiParsed && typeof aiParsed === 'object' && aiParsed.resumoExecutivo !== undefined) {
+          resumoExecutivo = aiParsed.resumoExecutivo || '';
+          fundamentacaoGeral = aiParsed.fundamentacaoGeral || '';
+          periodoAnalisado = aiParsed.periodoAnalisado || periodoAnalisado;
+          regimeTributario = aiParsed.regimeTributario || regimeTributario;
+          riscoGeral = aiParsed.riscoGeral || riscoGeral;
+          if (Array.isArray(aiParsed.recomendacoes) && aiParsed.recomendacoes.length > 0) {
+            recomendacoes = aiParsed.recomendacoes;
+          }
+          source = aiParsed.source || 'platform';
+        } else {
+          aiParsed = null;
+        }
+      } catch {
+        aiParsed = null;
+      }
     }
-    if (oportunidades.some((o: any) => (o.probabilidadeRecuperacao || 0) >= 85)) {
-      recomendacoes.push('Existem teses com alta probabilidade de êxito — iniciar imediatamente');
+
+    // Fallback: aiSummary is plain text
+    if (!aiParsed) {
+      resumoExecutivo = viability.aiSummary || '';
     }
-    if (oportunidades.some((o: any) => o.complexidade === 'alta')) {
-      recomendacoes.push('Algumas teses possuem alta complexidade — considerar assessoria jurídica especializada');
+
+    // Infer recommendations if not stored
+    if (recomendacoes.length === 0) {
+      if (oportunidades.length >= 5) {
+        recomendacoes.push('Diversas oportunidades identificadas — recomenda-se priorizar as de maior valor');
+      }
+      if (oportunidades.some((o: any) => (o.probabilidadeRecuperacao || 0) >= 85)) {
+        recomendacoes.push('Existem teses com alta probabilidade de êxito — iniciar imediatamente');
+      }
+      if (oportunidades.some((o: any) => o.complexidade === 'alta')) {
+        recomendacoes.push('Algumas teses possuem alta complexidade — considerar assessoria jurídica especializada');
+      }
     }
 
     return res.json({
@@ -617,16 +668,17 @@ router.get('/admin-analysis/:id', authenticateToken, async (req: Request, res: R
         viabilityScore: viability.viabilityScore,
         scoreLabel: viability.scoreLabel,
         estimatedCredit: viability.estimatedCredit,
-        resumoExecutivo: viability.aiSummary || '',
+        resumoExecutivo,
         oportunidades,
         alertas,
         recomendacoes,
-        fundamentacaoGeral: '',
-        periodoAnalisado: 'Últimos 5 anos',
-        regimeTributario: viability.regime || '',
-        riscoGeral: viability.viabilityScore && viability.viabilityScore >= 70 ? 'baixo' : viability.viabilityScore && viability.viabilityScore >= 50 ? 'medio' : 'alto',
+        fundamentacaoGeral,
+        periodoAnalisado,
+        regimeTributario,
+        riscoGeral,
         hasFullAnalysis: oportunidades.length > 0,
         partnerName: viability.partner?.company || viability.partner?.name || 'Admin direto',
+        source,
         createdAt: viability.createdAt,
       },
     });
@@ -785,7 +837,16 @@ function runFullAnalysisInBackground(
 
       const scoreLabel = analysis.score >= 85 ? 'excelente' : analysis.score >= 70 ? 'bom' : analysis.score >= 50 ? 'medio' : analysis.score >= 30 ? 'baixo' : 'inviavel';
 
-      // Salvar resultado completo no banco
+      const aiSummaryJson = JSON.stringify({
+        resumoExecutivo: analysis.resumoExecutivo || '',
+        fundamentacaoGeral: analysis.fundamentacaoGeral || '',
+        periodoAnalisado: analysis.periodoAnalisado || 'Últimos 5 anos',
+        regimeTributario: analysis.regimeTributario || companyInfo.regime || '',
+        riscoGeral: analysis.riscoGeral || '',
+        recomendacoes: analysis.recomendacoes || [],
+        source: 'platform',
+      });
+
       await prisma.viabilityAnalysis.update({
         where: { id: viabilityId },
         data: {
@@ -793,7 +854,7 @@ function runFullAnalysisInBackground(
           scoreLabel,
           estimatedCredit: analysis.valorTotalEstimado,
           opportunities: JSON.stringify(analysis.oportunidades),
-          aiSummary: analysis.resumoExecutivo,
+          aiSummary: aiSummaryJson,
           risks: JSON.stringify(analysis.alertas),
           status: 'completed',
         },

@@ -49,6 +49,7 @@ interface AnalysisOportunidade {
 
 interface FullAnalysisResult {
   savedId?: string | null;
+  saveError?: string | null;
   pipeline: string;
   timing: { hpcProcessingMs: number; claudeAnalysisMs: number; totalMs: number };
   hpc: { arquivosProcessados: number; resultados: HPCResult[]; erros?: string[] };
@@ -692,11 +693,19 @@ details[open]{background:white}
               </a>
             </div>
           ) : (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex items-center gap-2">
-              <svg className="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-yellow-700 text-xs">Analise nao foi salva no banco. Salve o PDF para nao perder o resultado.</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-red-800 font-semibold text-sm">Analise NAO foi salva no banco de dados</p>
+              </div>
+              <p className="text-red-600 text-xs">Salve o PDF para nao perder o resultado.</p>
+              {fullResult.saveError && (
+                <p className="text-red-500 text-xs mt-1 font-mono bg-red-100 px-2 py-1 rounded">
+                  Erro: {fullResult.saveError}
+                </p>
+              )}
             </div>
           )}
 
