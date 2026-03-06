@@ -38,29 +38,42 @@ const PORT = process.env.PORT || 3000;
 // Corrige o erro ERR_ERL_UNEXPECTED_X_FORWARDED_FOR do express-rate-limit
 app.set('trust proxy', 1);
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false,
+}));
 
-// CORS restritivo - apenas origens autorizadas
+// CORS - origens autorizadas
 const allowedOrigins = [
-  'https://tax-credit-enterprise-92lv.vercel.app',  // Vercel default
-  'https://taxcreditenterprise.com',                 // Dominio principal
-  'https://www.taxcreditenterprise.com',             // WWW
-  'https://hpc.taxcreditenterprise.com',             // Preview HPC branch
+  'https://tax-credit-enterprise-92lv.vercel.app',
+  'https://taxcreditenterprise.com',
+  'https://www.taxcreditenterprise.com',
+  'https://hpc.taxcreditenterprise.com',
   process.env.FRONTEND_URL,
   process.env.CUSTOM_DOMAIN_URL,
 ].filter(Boolean) as string[];
 
-// Em desenvolvimento, permitir localhost
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
 }
 
 app.use(cors({
-  origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      logger.warn(`[CORS] Origem bloqueada: ${origin}`);
+      callback(null, false);
+    }
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
 }));
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ==============================
 // Rate limiting por tipo de rota
