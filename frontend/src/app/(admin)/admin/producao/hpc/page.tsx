@@ -192,7 +192,7 @@ export default function HPCTestPage() {
         }
       }
 
-      await new Promise(r => setTimeout(r, 3000));
+      await new Promise(r => setTimeout(r, 5000));
     }
   };
 

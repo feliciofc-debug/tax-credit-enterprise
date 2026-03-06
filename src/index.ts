@@ -99,8 +99,16 @@ const uploadLimiter = rateLimit({
 
 // API geral: mais permissivo
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 300,                  // 300 requests
+  windowMs: 15 * 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// HPC: rate limit generoso (polling a cada 5s por ~10min = ~120 requests)
+const hpcLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -112,6 +120,7 @@ app.use('/api/admin/register', authLimiter);
 app.use('/api/partner/login', authLimiter);
 app.use('/api/partner/register', authLimiter);
 app.use('/api/batch/upload', uploadLimiter);
+app.use('/api/hpc', hpcLimiter);
 app.use('/api/', apiLimiter);
 
 // ==============================
