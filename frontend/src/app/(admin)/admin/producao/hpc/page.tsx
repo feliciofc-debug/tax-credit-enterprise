@@ -86,10 +86,12 @@ export default function HPCTestPage() {
   const [fullResult, setFullResult] = useState<FullAnalysisResult | null>(null);
   const [processError, setProcessError] = useState('');
   const [elapsed, setElapsed] = useState(0);
+  const [jobProgress, setJobProgress] = useState('');
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
   const extratoRef = useRef<HTMLDivElement>(null);
+  const pollingRef = useRef<boolean>(false);
 
   const apiBase = typeof window !== 'undefined'
     ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
@@ -100,7 +102,10 @@ export default function HPCTestPage() {
   }, [apiBase]);
 
   useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      pollingRef.current = false;
+    };
   }, []);
 
   const checkStatus = async () => {
@@ -135,6 +140,42 @@ export default function HPCTestPage() {
     }
   };
 
+  const pollJob = async (jobId: string) => {
+    const token = localStorage.getItem('token');
+    pollingRef.current = true;
+
+    while (pollingRef.current) {
+      try {
+        const res = await fetch(`${apiBase}/api/hpc/job/${jobId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (data.status === 'completed') {
+          pollingRef.current = false;
+          setFullResult(data);
+          setProcessing(false);
+          stopTimer();
+          return;
+        }
+
+        if (data.status === 'failed') {
+          pollingRef.current = false;
+          setProcessError(data.error || 'Erro na analise');
+          setProcessing(false);
+          stopTimer();
+          return;
+        }
+
+        setJobProgress(data.progress || data.status || 'Processando...');
+      } catch {
+        // Network hiccup during poll — just retry
+      }
+
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  };
+
   const handleProcess = async () => {
     if (files.length === 0) return;
     if (mode === 'full-analysis' && !companyName) {
@@ -146,6 +187,7 @@ export default function HPCTestPage() {
     setProcessError('');
     setProcessResult(null);
     setFullResult(null);
+    setJobProgress('Enviando arquivos...');
     startTimer();
 
     try {
@@ -173,14 +215,22 @@ export default function HPCTestPage() {
 
       if (!res.ok || !data.success) {
         setProcessError(data.error || `Erro ${res.status}`);
+        setProcessing(false);
+        stopTimer();
       } else if (mode === 'process-only') {
         setProcessResult(data);
+        setProcessing(false);
+        stopTimer();
+      } else if (data.jobId) {
+        setJobProgress('Arquivos recebidos, processamento em andamento...');
+        pollJob(data.jobId);
       } else {
         setFullResult(data);
+        setProcessing(false);
+        stopTimer();
       }
     } catch (e: any) {
       setProcessError(e.message || 'Erro de conexão');
-    } finally {
       setProcessing(false);
       stopTimer();
     }
@@ -514,7 +564,7 @@ details[open]{background:white}
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              Processando... {formatMs(elapsed)}
+              {jobProgress || 'Processando...'} {formatMs(elapsed)}
             </>
           ) : mode === 'process-only' ? (
             <>

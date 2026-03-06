@@ -1,7 +1,6 @@
 // src/routes/hpc.routes.ts
 // Rotas ISOLADAS para teste de integracao com HPC Go+Chapel
-// NAO interfere nos endpoints existentes de viabilidade/analise
-// Estas rotas sao EXCLUSIVAS para a branch hpc-integration
+// Usa processamento ASSINCRONO para evitar timeout em uploads grandes
 
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
@@ -13,13 +12,13 @@ import { claudeService } from '../services/claude.service';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
 import pdfParse from 'pdf-parse';
+import crypto from 'crypto';
 
 const router = Router();
 
-// Upload config — memoryStorage (buffer direto, sem disco)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB (HPC suporta arquivos grandes)
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = file.originalname.toLowerCase().split('.').pop();
     const allowed = ['zip', 'txt', 'pdf', 'xlsx', 'xls', 'csv'];
@@ -32,13 +31,30 @@ const upload = multer({
 });
 
 // ============================================================
-// HELPER: Extrai arquivos de ZIPs e detecta SPED
+// ASYNC JOB STORE — keeps analysis results in memory
+// Jobs are cleaned up after 30 minutes
+// ============================================================
+interface HpcJob {
+  status: 'uploading' | 'extracting' | 'hpc-processing' | 'claude-analyzing' | 'saving' | 'completed' | 'failed';
+  progress: string;
+  startedAt: number;
+  result?: any;
+  error?: string;
+}
+
+const jobs = new Map<string, HpcJob>();
+
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [id, job] of jobs) {
+    if (job.startedAt < cutoff) jobs.delete(id);
+  }
+}, 5 * 60 * 1000);
+
+// ============================================================
+// HELPERS
 // ============================================================
 
-/**
- * Safely decode a Buffer to string. SPED files use Latin-1 (ISO-8859-1)
- * encoding, so we try latin1 first if utf-8 produces replacement chars.
- */
 function bufferToString(buf: Buffer): string {
   const utf8 = buf.toString('utf-8');
   if (utf8.includes('\uFFFD')) {
@@ -47,10 +63,6 @@ function bufferToString(buf: Buffer): string {
   return utf8;
 }
 
-/**
- * Strip any character that PostgreSQL UTF-8 encoding rejects:
- * C0/C1 control chars, replacement char, surrogates, null bytes.
- */
 function sanitizeUtf8(text: string): string {
   // eslint-disable-next-line no-control-regex
   return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
@@ -114,10 +126,21 @@ function extractFilesFromUploads(
   return extracted;
 }
 
+const MAX_PDF_TEXT = 80000;
+
 async function extractPdfText(buffer: Buffer, filename: string): Promise<string> {
   try {
-    const data = await pdfParse(buffer);
-    const text = (data.text || '').trim();
+    const timeoutMs = 30000;
+    const data = await Promise.race([
+      pdfParse(buffer),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('PDF parse timeout (30s)')), timeoutMs)
+      ),
+    ]);
+    let text = (data.text || '').trim();
+    if (text.length > MAX_PDF_TEXT) {
+      text = text.substring(0, MAX_PDF_TEXT) + '\n\n[... texto truncado por limite ...]';
+    }
     logger.info(`[HPC] PDF "${filename}" extraido: ${text.length} chars, ${data.numpages} paginas`);
     return text;
   } catch (err: any) {
@@ -131,11 +154,18 @@ function isPdf(file: { originalname: string; mimetype: string }): boolean {
     file.originalname.toLowerCase().endsWith('.pdf');
 }
 
+const MAX_TOTAL_TEXT = 200000;
+
 async function buildFallbackText(
   files: { buffer: Buffer; originalname: string; mimetype: string }[]
 ): Promise<string> {
   const parts: string[] = [];
+  let totalLen = 0;
   for (const f of files) {
+    if (totalLen >= MAX_TOTAL_TEXT) {
+      logger.info(`[HPC] Limite de texto atingido (${MAX_TOTAL_TEXT}), pulando "${f.originalname}"`);
+      break;
+    }
     let text = '';
     if (isPdf(f)) {
       text = sanitizeUtf8(await extractPdfText(f.buffer, f.originalname));
@@ -144,6 +174,7 @@ async function buildFallbackText(
     }
     if (text.length > 50) {
       parts.push(`=== ARQUIVO: ${f.originalname} ===\n${text}`);
+      totalLen += text.length;
     }
   }
   return parts.join('\n\n');
@@ -151,7 +182,6 @@ async function buildFallbackText(
 
 // ============================================================
 // GET /api/hpc/status
-// Verifica se o HPC esta online e retorna capabilities
 // ============================================================
 router.get('/status', async (_req: Request, res: Response) => {
   try {
@@ -172,44 +202,106 @@ router.get('/status', async (_req: Request, res: Response) => {
 });
 
 // ============================================================
+// GET /api/hpc/job/:jobId
+// Poll for async job status
+// ============================================================
+router.get('/job/:jobId', authenticateToken, async (req: Request, res: Response) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) {
+    return res.status(404).json({ success: false, error: 'Job nao encontrado' });
+  }
+
+  const elapsed = Date.now() - job.startedAt;
+
+  if (job.status === 'completed') {
+    return res.json({
+      success: true,
+      status: 'completed',
+      elapsed,
+      ...job.result,
+    });
+  }
+
+  if (job.status === 'failed') {
+    return res.json({
+      success: false,
+      status: 'failed',
+      elapsed,
+      error: job.error,
+      progress: job.progress,
+    });
+  }
+
+  return res.json({
+    success: true,
+    status: job.status,
+    progress: job.progress,
+    elapsed,
+  });
+});
+
+// ============================================================
 // POST /api/hpc/analyze
-// Endpoint PRINCIPAL de teste:
-//   1. Recebe arquivos SPED
-//   2. Envia para Go+Chapel na VPS (processamento paralelo)
-//   3. Recebe dados parseados
-//   4. Envia texto consolidado para Claude Opus (analise juridica)
-//   5. Retorna extrato completo com oportunidades
+// ASYNC: Receives files, returns jobId immediately, processes in background
 // ============================================================
 router.post('/analyze', authenticateToken, upload.array('documents', 50), async (req: Request, res: Response) => {
-  const startTime = Date.now();
-
   try {
     const user = (req as any).user;
     const files = req.files as Express.Multer.File[];
     const { companyName, cnpj, regime, sector, documentType } = req.body;
 
     if (!files || files.length === 0) {
-      return res.status(400).json({ success: false, error: 'Envie pelo menos um arquivo SPED para analise' });
+      return res.status(400).json({ success: false, error: 'Envie pelo menos um arquivo para analise' });
     }
 
     if (!companyName) {
       return res.status(400).json({ success: false, error: 'Nome da empresa e obrigatorio' });
     }
 
-    // -----------------------------------------------
-    // PASSO 0: Extrair arquivos de ZIPs
-    // -----------------------------------------------
+    const jobId = crypto.randomBytes(8).toString('hex');
+    const job: HpcJob = {
+      status: 'uploading',
+      progress: 'Arquivos recebidos, iniciando processamento...',
+      startedAt: Date.now(),
+    };
+    jobs.set(jobId, job);
+
+    logger.info(`[HPC-ROUTE] Job ${jobId} criado para "${companyName}" — ${files.length} arquivo(s)`);
+
+    // Return jobId immediately — processing continues in background
+    res.json({ success: true, jobId, message: 'Analise iniciada em segundo plano' });
+
+    // ====== BACKGROUND PROCESSING ======
+    runAnalysisInBackground(jobId, job, user, files, { companyName, cnpj, regime, sector, documentType });
+
+  } catch (error: any) {
+    logger.error(`[HPC-ROUTE] Erro ao criar job:`, error.message);
+    return res.status(500).json({ success: false, error: error.message || 'Erro ao iniciar analise' });
+  }
+});
+
+async function runAnalysisInBackground(
+  jobId: string,
+  job: HpcJob,
+  user: any,
+  files: Express.Multer.File[],
+  params: { companyName: string; cnpj?: string; regime?: string; sector?: string; documentType?: string }
+) {
+  const startTime = Date.now();
+  const { companyName, cnpj, regime, sector, documentType } = params;
+
+  try {
+    // PASSO 0: Extrair ZIPs
+    job.status = 'extracting';
+    job.progress = 'Extraindo arquivos...';
     const extractedFiles = extractFilesFromUploads(files);
 
-    logger.info(`[HPC-ROUTE] Nova analise HPC iniciada`, {
+    logger.info(`[HPC-JOB ${jobId}] Extraidos ${extractedFiles.length} arquivo(s)`, {
       user: user.email,
       empresa: companyName,
-      arquivosOriginais: files.length,
-      arquivosExtraidos: extractedFiles.length,
       tamanhoTotal: extractedFiles.reduce((sum, f) => sum + f.buffer.length, 0),
     });
 
-    // Separar SPED de nao-SPED
     const spedFiles: typeof extractedFiles = [];
     const otherFiles: typeof extractedFiles = [];
     for (const f of extractedFiles) {
@@ -221,7 +313,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
       }
     }
 
-    logger.info(`[HPC-ROUTE] Classificacao: ${spedFiles.length} SPED, ${otherFiles.length} outros`);
+    logger.info(`[HPC-JOB ${jobId}] Classificacao: ${spedFiles.length} SPED, ${otherFiles.length} outros`);
 
     const companyInfo = {
       name: companyName,
@@ -234,84 +326,63 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
     let hpcData: any = null;
     let pipeline = '';
 
-    // -----------------------------------------------
-    // PASSO 1: Se tem SPED, enviar para HPC Go+Chapel
-    // -----------------------------------------------
+    // PASSO 1: HPC Go+Chapel para SPED
     if (spedFiles.length > 0) {
+      job.status = 'hpc-processing';
+      job.progress = `Processando ${spedFiles.length} arquivo(s) SPED no motor HPC...`;
       const health = await hpcGateway.healthCheck();
 
       if (health) {
-        logger.info(`[HPC-ROUTE] Enviando ${spedFiles.length} arquivo(s) SPED para HPC Go+Chapel...`);
-
         try {
           const hpcResult = await hpcGateway.processSped(spedFiles);
-
           if (hpcResult.success && hpcResult.textoUnificado && hpcResult.textoUnificado.length >= 200) {
             textoParaClaude = sanitizeUtf8(hpcResult.textoUnificado);
             hpcData = {
               arquivosProcessados: hpcResult.arquivosProcessados,
               tempoTotalMs: hpcResult.tempoTotalMs,
               resultados: hpcResult.resultados.map(r => ({
-                arquivo: r.arquivo,
-                tipo: r.tipo,
-                periodo: r.periodo,
-                empresa: r.empresa,
-                resumo: r.resumo,
-                processadoEm: r.processadoEm,
+                arquivo: r.arquivo, tipo: r.tipo, periodo: r.periodo,
+                empresa: r.empresa, resumo: r.resumo, processadoEm: r.processadoEm,
               })),
               erros: hpcResult.erros,
             };
             pipeline = 'hpc-go-chapel';
-            logger.info(`[HPC-ROUTE] HPC OK: ${textoParaClaude.length} chars`);
-            logger.info(`[HPC-DEBUG-TEXTO] ${textoParaClaude.substring(0, 5000)}`);
-          } else {
-            logger.warn(`[HPC-ROUTE] HPC retornou texto insuficiente, usando fallback`);
+            logger.info(`[HPC-JOB ${jobId}] HPC OK: ${textoParaClaude.length} chars`);
           }
         } catch (err: any) {
-          logger.warn(`[HPC-ROUTE] HPC falhou, usando fallback: ${err.message}`);
+          logger.warn(`[HPC-JOB ${jobId}] HPC falhou: ${err.message}`);
         }
-      } else {
-        logger.warn(`[HPC-ROUTE] HPC offline, usando fallback direto`);
       }
     }
 
-    // -----------------------------------------------
-    // PASSO 2: Fallback - se HPC nao gerou texto, ler arquivos direto
-    // -----------------------------------------------
+    // PASSO 2: Fallback — leitura direta + extração de PDF
     if (!textoParaClaude || textoParaClaude.length < 200) {
+      job.progress = `Extraindo texto de ${extractedFiles.length} arquivo(s)...`;
       const allTextFiles = [...spedFiles, ...otherFiles];
       textoParaClaude = await buildFallbackText(allTextFiles);
       pipeline = pipeline ? pipeline + ' + fallback-direto' : 'fallback-direto';
-      logger.info(`[HPC-ROUTE] Fallback: leitura direta de ${allTextFiles.length} arquivo(s), ${textoParaClaude.length} chars`);
+      logger.info(`[HPC-JOB ${jobId}] Fallback: ${textoParaClaude.length} chars`);
     } else if (otherFiles.length > 0) {
+      job.progress = `Extraindo texto de ${otherFiles.length} arquivo(s) adicionais...`;
       const extraText = await buildFallbackText(otherFiles);
       if (extraText.length > 50) {
         textoParaClaude += '\n\n' + extraText;
-        logger.info(`[HPC-ROUTE] Adicionando ${otherFiles.length} arquivo(s) nao-SPED ao texto`);
       }
     }
 
     if (!textoParaClaude || textoParaClaude.length < 100) {
-      return res.status(422).json({
-        success: false,
-        error: 'Nao foi possivel extrair texto dos arquivos. Verifique se sao arquivos SPED (.txt com registros |0000|, |C100|, etc) ou documentos de texto.',
-        dica: 'Para melhor resultado, envie o arquivo SPED Fiscal (.txt) diretamente, sem compactar em ZIP.',
-      });
+      job.status = 'failed';
+      job.error = 'Nao foi possivel extrair texto dos arquivos. Verifique se sao SPED (.txt) ou PDFs com texto.';
+      job.progress = 'Falha na extracao de texto';
+      return;
     }
 
-    // -----------------------------------------------
-    // DEBUG: Mostrar texto que vai para o Claude
-    // -----------------------------------------------
-    logger.info(`[HPC-DEBUG] ===== TEXTO PARA CLAUDE (primeiros 3000 chars) =====`);
-    logger.info(`[HPC-DEBUG] Pipeline: ${pipeline} | Total chars: ${textoParaClaude.length}`);
-    logger.info(`[HPC-DEBUG] CONTEUDO:\n${textoParaClaude.substring(0, 3000)}`);
-    logger.info(`[HPC-DEBUG] ===== FIM DO PREVIEW =====`);
-
-    // -----------------------------------------------
-    // PASSO 3: Enviar texto para Claude Opus (cerebro juridico)
-    // -----------------------------------------------
+    // PASSO 3: Claude Opus
+    job.status = 'claude-analyzing';
+    job.progress = `Analise juridica com IA em andamento (${textoParaClaude.length.toLocaleString()} caracteres)...`;
     const claudeStart = Date.now();
-    logger.info(`[HPC-ROUTE] Enviando para Claude Opus (analise juridica)... ${textoParaClaude.length} chars`);
+
+    logger.info(`[HPC-JOB ${jobId}] Enviando para Claude: ${textoParaClaude.length} chars`);
 
     const analysis = await claudeService.analyzeDocument(
       textoParaClaude,
@@ -319,35 +390,25 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
       companyInfo
     );
 
-    const totalElapsed = Date.now() - startTime;
     const claudeMs = Date.now() - claudeStart;
-
-    logger.info(`[HPC-ROUTE] Analise completa em ${totalElapsed}ms`, {
-      pipeline,
-      claudeMs,
-      oportunidades: analysis.oportunidades.length,
-      valorTotal: analysis.valorTotalEstimado,
-      score: analysis.score,
-    });
-
     pipeline += ' + claude-opus';
 
-    // -----------------------------------------------
-    // PASSO 4: SALVAR no banco de dados
-    // -----------------------------------------------
+    logger.info(`[HPC-JOB ${jobId}] Claude OK em ${claudeMs}ms — score: ${analysis.score}, oportunidades: ${analysis.oportunidades.length}`);
+
+    // PASSO 4: Salvar no banco
+    job.status = 'saving';
+    job.progress = 'Salvando resultado no banco de dados...';
+
     const scoreLabel = analysis.score >= 85 ? 'excelente'
       : analysis.score >= 70 ? 'bom'
       : analysis.score >= 50 ? 'medio'
       : analysis.score >= 30 ? 'baixo'
       : 'inviavel';
 
-    let savedId: string | null = null;
-    let saveError: string | null = null;
-
     const aiSummaryJson = JSON.stringify({
       resumoExecutivo: analysis.resumoExecutivo || '',
       fundamentacaoGeral: analysis.fundamentacaoGeral || '',
-      periodoAnalisado: analysis.periodoAnalisado || 'Últimos 5 anos',
+      periodoAnalisado: analysis.periodoAnalisado || 'Ultimos 5 anos',
       regimeTributario: analysis.regimeTributario || regime || '',
       riscoGeral: analysis.riscoGeral || '',
       recomendacoes: analysis.recomendacoes || [],
@@ -355,30 +416,24 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
       pipeline,
     });
 
-    // Resolve partnerId separately — must not block the save
     let partnerId: string | null = null;
     try {
       partnerId = await getOperatorPartnerId(user);
       if (!partnerId) {
-        const firstPartner = await prisma.partner.findFirst({
-          where: { status: 'active' },
-          orderBy: { createdAt: 'asc' },
-        });
+        const firstPartner = await prisma.partner.findFirst({ where: { status: 'active' }, orderBy: { createdAt: 'asc' } });
         partnerId = firstPartner?.id || null;
       }
-    } catch (partnerErr: any) {
-      logger.warn(`[HPC-SAVE] Falha ao resolver partnerId (salvando sem): ${partnerErr.message}`);
+    } catch {
       partnerId = null;
     }
 
+    let savedId: string | null = null;
+    let saveError: string | null = null;
+
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        // Reconnect Prisma — connection drops during long Claude analysis (200s+)
-        logger.info(`[HPC-SAVE] Tentativa ${attempt} — reconectando banco...`);
         await prisma.$disconnect();
         await prisma.$connect();
-        logger.info(`[HPC-SAVE] Banco reconectado — partnerId: ${partnerId}, empresa: ${companyName}`);
-
         const saved = await prisma.viabilityAnalysis.create({
           data: {
             partnerId: partnerId || undefined,
@@ -399,24 +454,21 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
         });
         savedId = saved.id;
         saveError = null;
-        logger.info(`[HPC-SAVE] Análise salva com sucesso — id: ${saved.id}, empresa: ${companyName}, score: ${analysis.score}`);
+        logger.info(`[HPC-JOB ${jobId}] Salvo: id=${saved.id}`);
         break;
       } catch (saveErr: any) {
-        saveError = saveErr.message || 'Erro desconhecido ao salvar';
-        logger.error(`[HPC-SAVE] Erro tentativa ${attempt}: ${saveErr.message}`, saveErr.stack);
-        if (attempt < 3) {
-          const delay = attempt * 2000;
-          logger.info(`[HPC-SAVE] Aguardando ${delay}ms antes da próxima tentativa...`);
-          await new Promise(r => setTimeout(r, delay));
-        }
+        saveError = saveErr.message;
+        logger.error(`[HPC-JOB ${jobId}] Save attempt ${attempt} failed: ${saveErr.message}`);
+        if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 2000));
       }
     }
 
-    // -----------------------------------------------
-    // PASSO 5: Retornar resultado completo
-    // -----------------------------------------------
-    return res.json({
-      success: true,
+    const totalElapsed = Date.now() - startTime;
+
+    // Mark job as completed with full result
+    job.status = 'completed';
+    job.progress = 'Analise concluida';
+    job.result = {
       savedId,
       saveError,
       pipeline,
@@ -439,41 +491,36 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
         recomendacoes: analysis.recomendacoes,
         alertas: analysis.alertas,
       },
-    });
+    };
+
+    logger.info(`[HPC-JOB ${jobId}] CONCLUIDO em ${totalElapsed}ms — score: ${analysis.score}, valor: ${analysis.valorTotalEstimado}`);
+
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
-    logger.error(`[HPC-ROUTE] ERRO na analise HPC (${elapsed}ms):`, error.message);
-
-    return res.status(500).json({
-      success: false,
-      error: error.message || 'Erro na analise HPC',
-      timing: { totalMs: elapsed },
-    });
+    logger.error(`[HPC-JOB ${jobId}] ERRO (${elapsed}ms): ${error.message}`);
+    job.status = 'failed';
+    job.error = error.message || 'Erro interno na analise';
+    job.progress = 'Falha no processamento';
   }
-});
+}
 
 // ============================================================
 // POST /api/hpc/process-only
-// Teste: envia para HPC mas NAO envia para Claude
-// Util para validar que o parser Go+Chapel funciona corretamente
 // ============================================================
 router.post('/process-only', authenticateToken, upload.array('documents', 50), async (req: Request, res: Response) => {
   try {
     const files = req.files as Express.Multer.File[];
-
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, error: 'Envie pelo menos um arquivo' });
     }
 
     const extractedFiles = extractFilesFromUploads(files);
-
     const health = await hpcGateway.healthCheck();
     if (!health) {
       return res.status(503).json({ success: false, error: 'HPC indisponivel' });
     }
 
     const hpcResult = await hpcGateway.processSped(extractedFiles);
-
     return res.json({
       success: true,
       pipeline: 'hpc-go-chapel-only',
