@@ -145,15 +145,19 @@ export default function HPCTestPage() {
     pollingRef.current = true;
     let networkErrors = 0;
 
+    // Use same-origin relative URL for polling to avoid CORS entirely.
+    // Next.js rewrites /api/* to the backend automatically.
+    const pollUrl = `/api/hpc/job/${jobId}`;
+
     while (pollingRef.current) {
       try {
-        const res = await fetch(`${apiBase}/api/hpc/job/${jobId}`, {
+        const res = await fetch(pollUrl, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (res.status === 404) {
           pollingRef.current = false;
-          setProcessError('Processamento foi interrompido (servidor reiniciou). Tente novamente.');
+          setProcessError('Processamento foi interrompido. Tente novamente.');
           setProcessing(false);
           stopTimer();
           return;
@@ -183,7 +187,7 @@ export default function HPCTestPage() {
         setJobProgress(data.progress || 'Processando...');
       } catch {
         networkErrors++;
-        if (networkErrors > 10) {
+        if (networkErrors > 20) {
           pollingRef.current = false;
           setProcessError('Perda de conexao com o servidor. Tente novamente.');
           setProcessing(false);
