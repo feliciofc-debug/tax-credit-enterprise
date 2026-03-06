@@ -386,7 +386,7 @@ async function runAnalysisInBackground(
 
     const analysis = await claudeService.analyzeDocument(
       textoParaClaude,
-      documentType || 'dre',
+      (documentType as 'dre' | 'balancete' | 'balanco') || 'dre',
       companyInfo
     );
 
