@@ -12,6 +12,7 @@ import { hpcGateway } from '../services/hpc-gateway.service';
 import { claudeService } from '../services/claude.service';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
+import pdfParse from 'pdf-parse';
 
 const router = Router();
 
@@ -113,10 +114,34 @@ function extractFilesFromUploads(
   return extracted;
 }
 
-function buildFallbackText(files: { buffer: Buffer; originalname: string }[]): string {
+async function extractPdfText(buffer: Buffer, filename: string): Promise<string> {
+  try {
+    const data = await pdfParse(buffer);
+    const text = (data.text || '').trim();
+    logger.info(`[HPC] PDF "${filename}" extraido: ${text.length} chars, ${data.numpages} paginas`);
+    return text;
+  } catch (err: any) {
+    logger.warn(`[HPC] Falha ao extrair PDF "${filename}": ${err.message}`);
+    return '';
+  }
+}
+
+function isPdf(file: { originalname: string; mimetype: string }): boolean {
+  return file.mimetype === 'application/pdf' ||
+    file.originalname.toLowerCase().endsWith('.pdf');
+}
+
+async function buildFallbackText(
+  files: { buffer: Buffer; originalname: string; mimetype: string }[]
+): Promise<string> {
   const parts: string[] = [];
   for (const f of files) {
-    const text = sanitizeUtf8(bufferToString(f.buffer));
+    let text = '';
+    if (isPdf(f)) {
+      text = sanitizeUtf8(await extractPdfText(f.buffer, f.originalname));
+    } else {
+      text = sanitizeUtf8(bufferToString(f.buffer));
+    }
     if (text.length > 50) {
       parts.push(`=== ARQUIVO: ${f.originalname} ===\n${text}`);
     }
@@ -255,11 +280,11 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
     // -----------------------------------------------
     if (!textoParaClaude || textoParaClaude.length < 200) {
       const allTextFiles = [...spedFiles, ...otherFiles];
-      textoParaClaude = buildFallbackText(allTextFiles);
+      textoParaClaude = await buildFallbackText(allTextFiles);
       pipeline = pipeline ? pipeline + ' + fallback-direto' : 'fallback-direto';
       logger.info(`[HPC-ROUTE] Fallback: leitura direta de ${allTextFiles.length} arquivo(s), ${textoParaClaude.length} chars`);
     } else if (otherFiles.length > 0) {
-      const extraText = buildFallbackText(otherFiles);
+      const extraText = await buildFallbackText(otherFiles);
       if (extraText.length > 50) {
         textoParaClaude += '\n\n' + extraText;
         logger.info(`[HPC-ROUTE] Adicionando ${otherFiles.length} arquivo(s) nao-SPED ao texto`);
