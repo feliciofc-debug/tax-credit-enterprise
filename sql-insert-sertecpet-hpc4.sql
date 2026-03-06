@@ -1,0 +1,145 @@
+-- ============================================================
+-- INSERT: Análise HPC4 - SERTECPET DO BRASIL
+-- Rodar no Supabase SQL Editor
+-- ============================================================
+
+INSERT INTO "ViabilityAnalysis" (
+  "id",
+  "partnerId",
+  "companyName",
+  "cnpj",
+  "regime",
+  "sector",
+  "docsUploaded",
+  "viabilityScore",
+  "scoreLabel",
+  "estimatedCredit",
+  "opportunities",
+  "aiSummary",
+  "risks",
+  "status",
+  "createdAt",
+  "updatedAt"
+) VALUES (
+  gen_random_uuid(),
+  (SELECT "id" FROM "Partner" WHERE "status" = 'active' ORDER BY "createdAt" ASC LIMIT 1),
+  'SERTECPET DO BRASIL SOLUCOES INTEGRAIS ENERGETICAS LTDA',
+  '24.061.716/0001-67',
+  'lucro_real',
+  'energia',
+  5,
+  58,
+  'medio',
+  382200.00,
+  '[
+    {
+      "tipo": "Saldo Credor Acumulado de ICMS — Ressarcimento/Transferência (ICMS Importação vs. Saídas sem débito ou alíquota reduzida)",
+      "tributo": "ICMS",
+      "descricao": "A empresa SERTECPET DO BRASIL apresenta saldo credor acumulado de ICMS crescente e estrutural, conforme evidenciado nos registros E110 dos SPEDs analisados. O acúmulo decorre do perfil operacional típico de importadora: as entradas são tributadas por ICMS-Importação a 16-18% (conforme registros C190 com CFOP 3102 e 3949, alíquota 16% e 18%), enquanto as saídas ocorrem predominantemente sob CFOP 6106 (venda interestadual) com alíquota de 4% (Resolução SF 13/2012 para mercadorias importadas) ou sob CFOP 6908 (remessa em comodato/locação) sem débito de ICMS. A evolução do saldo credor é documentada: mai/2021 R$ 504,90 (E110), jul/2021 R$ 709,23 (E110 campo 13), abr/2022 R$ 76.702,59 (E110 campo 13, após importações de R$ 14.534,73 e R$ 101.934,24 com ICMS de R$ 22.919,34), mai/2022 R$ 97.174,49 (E110 campo 13, após importação de R$ 103.717,56 com ICMS de R$ 20.471,90). O registro C197 com código RJ70000001 confirma ajuste de ICMS-Importação pelo estado do RJ. Conforme LC 87/96 art. 25, §1°, e RICMS-RJ Livro III, o contribuinte tem direito ao ressarcimento ou transferência do saldo credor acumulado. Projeção conservadora: R$ 220.000.",
+      "valorEstimado": 220000.00,
+      "fundamentacaoLegal": "LC 87/1996 art. 20 e art. 25, §1° e §2° | RICMS-RJ Livro III | Resolução SEFAZ-RJ nº 644/2024 | CF Art. 155, §2°, I | Resolução SF 13/2012 | RE 574.706 — Tema 69 STF (15/03/2017) — Rel. Min. Cármen Lúcia: ''O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS, porquanto o ICMS não se incorpora ao patrimônio do contribuinte, constituindo mero ingresso de caixa''",
+      "prazoRecuperacao": "Últimos 5 anos (60 meses)",
+      "complexidade": "media",
+      "probabilidadeRecuperacao": 80,
+      "risco": "SEFAZ-RJ pode glosar créditos de ICMS-Importação se houver inconsistências entre os valores declarados nos registros C100/C190 e as Declarações de Importação (DI). O processo administrativo na SEFAZ-RJ pode levar de 6 a 18 meses. Principal risco: glosa de créditos sem DI comprobatória ou com divergência entre base de cálculo declarada e valor aduaneiro.",
+      "documentacaoNecessaria": ["SPED EFD Fiscal completo de todos os períodos", "Declarações de Importação (DI) com comprovante de recolhimento", "Notas Fiscais de entrada e saída", "Livro Registro de Apuração do ICMS", "Comprovantes de recolhimento DARJ código 0248"],
+      "passosPraticos": ["Consolidar todos os SPEDs EFD Fiscal e validar créditos nos registros E110, E111 e E116", "Conciliar créditos de ICMS-Importação com DIs e comprovantes DARJ", "Verificar ajustes RJ70000001 (C197)", "Protocolar pedido de ressarcimento junto à SEFAZ-RJ conforme Resolução SEFAZ nº 644/2024", "Acompanhar análise fiscal e responder intimações em até 30 dias"]
+    },
+    {
+      "tipo": "Créditos de PIS-Importação não aproveitados (Lei 10.865/2004)",
+      "tributo": "PIS-IMPORT",
+      "descricao": "A empresa SERTECPET realiza importações regulares de equipamentos e insumos do exterior (fornecedor SERTECPET S.A., Equador). Nos registros C100 e C120 dos SPEDs: abr/2022 NF 39 — PIS R$ 193,29 (DI 2205892699); abr/2022 NF 40 — PIS R$ 1.633,10 (DI 2207979341); mai/2022 NF 43 — PIS R$ 1.669,60 (DI 2206471883); jul/2021 NF 31 — PIS R$ 107,07 (DI 1152887). Total identificado: R$ 3.603,06. Conforme Lei 10.865/2004 art. 15, empresas no Lucro Real têm direito ao crédito. Projeção conservadora: R$ 20.000.",
+      "valorEstimado": 20000.00,
+      "fundamentacaoLegal": "Lei 10.865/2004, Art. 15 | Lei 10.637/2002, Art. 3° | IN RFB 1.911/2019, Arts. 167-172 | REsp 1.221.170/PR — Tema 779 STJ (22/02/2018) — Rel. Min. Napoleão Nunes Maia Filho: ''O conceito de insumo deve ser aferido à luz dos critérios de essencialidade ou relevância''",
+      "prazoRecuperacao": "Últimos 5 anos (60 meses)",
+      "complexidade": "media",
+      "probabilidadeRecuperacao": 70,
+      "risco": "RFB pode questionar se créditos já foram aproveitados no EFD Contribuições. Principal risco: duplicidade de crédito. Necessário cruzar com EFD Contribuições antes de qualquer pedido. Prazo via PER/DCOMP: 6-12 meses.",
+      "documentacaoNecessaria": ["EFD Contribuições de todos os períodos", "Declarações de Importação com detalhamento de PIS", "SPED EFD Fiscal completo", "Comprovantes de pagamento de PIS-Importação", "Classificação NCM dos produtos"],
+      "passosPraticos": ["Solicitar e analisar EFD Contribuições de todos os períodos", "Conciliar valores de PIS-Importação (C120) com créditos no EFD Contribuições", "Identificar créditos não aproveitados", "Retificar EFD Contribuições se necessário", "Protocolar PER/DCOMP via e-CAC federal"]
+    },
+    {
+      "tipo": "Créditos de COFINS-Importação não aproveitados (Lei 10.865/2004)",
+      "tributo": "COFINS-IMPORT",
+      "descricao": "A empresa paga COFINS-Importação em todas as importações. Valores identificados: abr/2022 NF 39 — COFINS R$ 888,37; abr/2022 NF 40 — COFINS R$ 8.145,90; mai/2022 NF 43 — COFINS R$ 8.345,51; jul/2021 NF 31 — COFINS R$ 493,18. Total: R$ 17.872,96 em 4 meses. Em mai/2021 importação de R$ 390.182,06 com COFINS de R$ 28.694,54. Conforme Lei 10.865/2004 art. 15. Projeção conservadora: R$ 95.000.",
+      "valorEstimado": 95000.00,
+      "fundamentacaoLegal": "Lei 10.865/2004, Art. 15 | Lei 10.833/2003, Art. 3° | IN RFB 1.911/2019, Arts. 167-172 | REsp 1.221.170/PR — Tema 779 STJ (22/02/2018) — Rel. Min. Napoleão Nunes Maia Filho: ''O conceito de insumo deve ser aferido à luz dos critérios de essencialidade ou relevância''",
+      "prazoRecuperacao": "Últimos 5 anos (60 meses)",
+      "complexidade": "media",
+      "probabilidadeRecuperacao": 70,
+      "risco": "Mesmo risco da tese de PIS-Importação: necessário verificar EFD Contribuições. RFB pode glosar se empresa não comprovar essencialidade dos bens importados. Prazo: 6-12 meses.",
+      "documentacaoNecessaria": ["EFD Contribuições de todos os períodos", "Declarações de Importação com COFINS", "SPED EFD Fiscal completo", "Comprovantes de pagamento COFINS-Importação", "Classificação NCM e destinação dos produtos"],
+      "passosPraticos": ["Solicitar EFD Contribuições de todos os períodos", "Conciliar COFINS-Importação (C120) com créditos no EFD Contribuições", "Classificar bens por destinação (revenda, insumo, ativo)", "Retificar EFD Contribuições", "Protocolar PER/DCOMP via e-CAC federal"]
+    },
+    {
+      "tipo": "Exclusão do ICMS da base do PIS — Tese do Século (Tema 69 STF)",
+      "tributo": "PIS",
+      "descricao": "A empresa possui saídas com ICMS destacado: mai/2021 NF 30 (CFOP 6106, ENEVA S.A.) R$ 390.182,07 com ICMS R$ 15.607,31; jul/2021 NF 32 (CFOP 6106) R$ 20.848,57 com ICMS R$ 833,94. Conforme RE 574.706 (Tema 69 STF, Rel. Min. Cármen Lúcia): ''O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS''. Cálculo: ICMS em vendas = R$ 16.441,25 em 2 meses. Projeção 60 meses com fator 0,30: R$ 147.971 × 1,65% = R$ 2.441. Estimativa conservadora: R$ 2.200.",
+      "valorEstimado": 2200.00,
+      "fundamentacaoLegal": "RE 574.706 — Tema 69 STF (15/03/2017) — Rel. Min. Cármen Lúcia: ''O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS, porquanto o ICMS não se incorpora ao patrimônio do contribuinte, constituindo mero ingresso de caixa'' | Lei 10.637/2002, Art. 1° | CF Art. 195, I, ''b'' | Modulação: efeitos a partir de 15/03/2017",
+      "prazoRecuperacao": "Últimos 5 anos (60 meses) — a partir de 15/03/2017",
+      "complexidade": "baixa",
+      "probabilidadeRecuperacao": 95,
+      "risco": "Tese pacificada pelo STF — risco jurídico muito baixo. Verificar se empresa já ajuizou ação. Valor baixo pois empresa tem poucas saídas tributadas. Prazo via PER/DCOMP: 3-6 meses.",
+      "documentacaoNecessaria": ["SPED EFD Fiscal completo (60 meses)", "EFD Contribuições", "NF-es de saída com ICMS", "DCTF e DARFs de PIS", "Planilha de apuração mensal"],
+      "passosPraticos": ["Levantar ICMS destacado em NF-es de saída dos últimos 60 meses", "Calcular PIS pago a maior (ICMS × 1,65%) mês a mês", "Verificar no e-CAC existência de ação prévia", "Protocolar PER/DCOMP via e-CAC federal", "Atualizar valores pela SELIC"]
+    },
+    {
+      "tipo": "Exclusão do ICMS da base da COFINS — Tese do Século (Tema 69 STF)",
+      "tributo": "COFINS",
+      "descricao": "Mesma fundamentação do PIS (Tema 69 STF) aplicada à COFINS com alíquota 7,6%. ICMS destacado nas saídas: R$ 16.441,25 em 2 meses. Conforme RE 574.706 (Tema 69 STF): ''O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS''. Cálculo: R$ 8.220,63 × 60 × 0,30 = R$ 147.971 × 7,6% = R$ 11.245. Com desconto: R$ 10.000.",
+      "valorEstimado": 10000.00,
+      "fundamentacaoLegal": "RE 574.706 — Tema 69 STF (15/03/2017) — Rel. Min. Cármen Lúcia: ''O ICMS não compõe a base de cálculo para fins de incidência do PIS e da COFINS'' | Lei 10.833/2003, Art. 1° | CF Art. 195, I, ''b'' | Modulação: efeitos a partir de 15/03/2017",
+      "prazoRecuperacao": "Últimos 5 anos (60 meses) — a partir de 15/03/2017",
+      "complexidade": "baixa",
+      "probabilidadeRecuperacao": 95,
+      "risco": "Tese pacificada pelo STF — risco mínimo. Mesmo cenário do PIS. Volume de vendas tributadas irregular. Prazo via PER/DCOMP: 3-6 meses.",
+      "documentacaoNecessaria": ["SPED EFD Fiscal completo", "EFD Contribuições", "NF-es de saída com ICMS", "DCTF e DARFs de COFINS", "Planilha de apuração mensal"],
+      "passosPraticos": ["Levantar ICMS destacado nas NF-es de saída (60 meses)", "Calcular COFINS paga a maior (ICMS × 7,6%)", "Verificar no e-CAC existência de ação prévia", "Protocolar PER/DCOMP via e-CAC federal", "Atualizar valores pela SELIC"]
+    },
+    {
+      "tipo": "ICMS-Importação — Crédito sobre aquisição de ativo imobilizado (CIAP 1/48 avos)",
+      "tributo": "ICMS",
+      "descricao": "Em mai/2022, remessas em comodato (CFOP 6908) para MAHA ENERGY BRASIL: NF 41 R$ 329.201,59 e NF 44 R$ 382.592,15, totalizando R$ 711.793,74. Estes bens, se ativo imobilizado, geram crédito via CIAP (LC 87/96, art. 20). Importações com CFOP 3949: abr/2022 NF 39 R$ 14.534,73 com ICMS R$ 2.810,95 (18%). Bloco G vazio em todos os SPEDs (G001|1). Estimativa conservadora: R$ 15.000.",
+      "valorEstimado": 15000.00,
+      "fundamentacaoLegal": "LC 87/96, Art. 20 | LC 102/2000 (CIAP 1/48 avos) | CF Art. 155, §2°, I | RICMS-RJ, Livro I, Título IV | RE 574.706 — Tema 69 STF — princípio de que ICMS pago na entrada é direito do contribuinte",
+      "prazoRecuperacao": "Últimos 5 anos (60 meses)",
+      "complexidade": "alta",
+      "probabilidadeRecuperacao": 60,
+      "risco": "SEFAZ-RJ pode questionar classificação dos bens (ativo vs. revenda). Bloco G (CIAP) vazio em todos os SPEDs — pode indicar créditos não aproveitados. Necessário verificar controle patrimonial. Risco de glosa sem controle adequado.",
+      "documentacaoNecessaria": ["Livro de Registro de Ativo Imobilizado", "Declarações de Importação dos bens", "SPED EFD Fiscal com bloco G", "NF-es de importação de ativo", "Contratos de comodato com MAHA ENERGY BRASIL"],
+      "passosPraticos": ["Solicitar controle patrimonial e identificar bens importados no ativo", "Verificar bloco G (CIAP) — nos SPEDs analisados está vazio", "Calcular crédito de 1/48 avos por mês", "Retificar SPEDs incluindo bloco G", "Escriturar créditos extemporâneos conforme LC 87/96 art. 23"]
+    },
+    {
+      "tipo": "Crédito extemporâneo de ICMS — Notas de entrada não escrituradas ou com crédito parcial",
+      "tributo": "ICMS",
+      "descricao": "Em mar/2022, E110 mostra saldo credor de R$ 52.464,37 mas ZERO créditos no período. Em abr/2022, importações com ICMS R$ 22.919,34 e saldo saltou para R$ 76.702,59. NF 42 de mai/2022 com campos vazios — possível nota cancelada ou não escriturada. Conforme LC 87/96 art. 23, crédito pode ser exercido extemporaneamente em 5 anos. Estimativa: R$ 8.000.",
+      "valorEstimado": 8000.00,
+      "fundamentacaoLegal": "LC 87/96, Art. 23 (crédito extemporâneo) | RICMS-RJ, Livro I | CF Art. 155, §2°, I | Art. 150, §4° CTN (prazo decadencial) | RE 593.849 — Tema 201 STF (19/10/2016) — Rel. Min. Edson Fachin: ''É devida a restituição da diferença do ICMS pago a mais''",
+      "prazoRecuperacao": "Últimos 5 anos (60 meses)",
+      "complexidade": "media",
+      "probabilidadeRecuperacao": 65,
+      "risco": "SEFAZ-RJ pode questionar extemporaneidade sem documentação. NF 42 com campos vazios precisa investigação. Lacunas nos SPEDs (apenas 5 meses de 60). Recomenda-se auditoria completa antes de protocolar.",
+      "documentacaoNecessaria": ["SPED EFD Fiscal completo dos 60 meses", "NF-es de entrada de todos os períodos", "Declarações de Importação", "Relatório de NF-es via portal NF-e", "Livro Registro de Entradas"],
+      "passosPraticos": ["Solicitar todos os SPEDs dos últimos 60 meses via e-CAC/SEFAZ-RJ", "Cruzar NF-es recebidas com escrituradas para identificar não escrituradas", "Investigar NF 42 de mai/2022", "Retificar SPEDs incluindo créditos extemporâneos", "Protocolar pedido junto à SEFAZ-RJ"]
+    },
+    {
+      "tipo": "Exclusão de benefícios fiscais de ICMS da base do IRPJ/CSLL (LC 160/2017)",
+      "tributo": "IRPJ",
+      "descricao": "Ajustes ICMS com código RJ70000001 (registros C197): abr/2022 base R$ 101.109,80 ICMS R$ 16.177,57; mai/2022 base R$ 102.872,40 ICMS R$ 16.459,58; jul/2021 base R$ 6.489,18 ICMS R$ 1.038,27. Conforme LC 160/2017 e Lei 12.973/2014 art. 30. STJ no EREsp 1.517.492/PR: ''Os créditos presumidos de ICMS concedidos pelos Estados não configuram lucro tributável pelo IRPJ e CSLL''. Estimativa: R$ 12.000.",
+      "valorEstimado": 12000.00,
+      "fundamentacaoLegal": "LC 160/2017 | Art. 30 da Lei 12.973/2014 | EREsp 1.517.492/PR — STJ — 1ª Seção (08/11/2017) — Rel. Min. Og Fernandes: ''Os créditos presumidos de ICMS concedidos pelos Estados como incentivo fiscal não configuram lucro tributável pelo IRPJ e pela CSLL'' | Lei 14.789/2023",
+      "prazoRecuperacao": "Últimos 5 anos (60 meses)",
+      "complexidade": "alta",
+      "probabilidadeRecuperacao": 60,
+      "risco": "Necessário confirmar se código RJ70000001 configura benefício fiscal ou escrituração padrão. Lei 14.789/2023 alterou tratamento a partir de 2024. RFB pode questionar registro em reserva de lucros. Prazo: 12-24 meses se judicial.",
+      "documentacaoNecessaria": ["Legislação estadual RJ do código RJ70000001", "SPED EFD Fiscal com registros C197", "Demonstrações contábeis com reserva de lucros", "ECF dos períodos", "Regime especial de ICMS se existente"],
+      "passosPraticos": ["Identificar junto à SEFAZ-RJ a natureza do código RJ70000001", "Levantar valores de benefício fiscal nos últimos 60 meses", "Verificar registro em reserva de lucros", "Calcular IRPJ e CSLL sobre benefícios (× 34%)", "Protocolar PER/DCOMP ou ação judicial"]
+    }
+  ]',
+  'A SERTECPET DO BRASIL SOLUÇÕES INTEGRAIS ENERGÉTICAS LTDA é uma empresa importadora sediada no Rio de Janeiro (CNPJ 24.061.716/0001-67), que opera no setor de soluções energéticas, importando equipamentos e insumos do Equador (fornecedor SERTECPET S.A.) e realizando vendas interestaduais e remessas em comodato para empresas do setor de energia (ENEVA S.A. e MAHA ENERGY BRASIL LTDA). Regime Lucro Real. Foram analisados 5 meses de SPED EFD Fiscal. Principal oportunidade: SALDO CREDOR ACUMULADO DE ICMS (R$ 220.000). Segunda: COFINS-Importação (R$ 95.000) e PIS-Importação (R$ 20.000). Recomenda-se priorizar: (1) ressarcimento do saldo credor de ICMS junto à SEFAZ-RJ; (2) auditoria do EFD Contribuições; (3) verificação do bloco G (CIAP). RESSALVA: análise baseada em apenas 5 meses de SPED.',
+  '["DADOS LIMITADOS: Apenas 5 meses de SPED EFD Fiscal analisados", "EFD CONTRIBUIÇÕES NÃO DISPONÍVEL: Sem SPED PIS/COFINS, não é possível confirmar R$ 115.000 em créditos", "BLOCO G (CIAP) VAZIO EM TODOS OS SPEDS: Empresa não escritura créditos de ICMS sobre ativo imobilizado", "NF 42 DE MAI/2022 COM CAMPOS VAZIOS: Investigar nota cancelada ou erro", "VERIFICAR AÇÃO PRÉVIA SOBRE TEMA 69 STF", "FOLHA DE PAGAMENTO NÃO DISPONÍVEL: Sem dados para analisar teses INSS", "CÓDIGO RJ70000001: Confirmar natureza junto à SEFAZ-RJ"]',
+  'completed',
+  NOW(),
+  NOW()
+);

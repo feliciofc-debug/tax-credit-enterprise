@@ -52,15 +52,17 @@ function isSpedContent(text: string): boolean {
   return lines.some(l => /^\|[0-9A-Z]{4}\|/.test(l.trim()));
 }
 
-const MAX_PDFS = 10;
-const MAX_PDF_SIZE = 20 * 1024 * 1024; // 20MB per PDF
-const MAX_PDF_TEXT = 60000;
-const MAX_TOTAL_TEXT = 150000;
+const MAX_PDFS = 5;
+const MAX_PDF_SIZE = 8 * 1024 * 1024; // 8MB per PDF
+const MAX_PDF_TEXT = 40000;
+const MAX_TOTAL_TEXT = 120000;
+const MAX_ZIP_EXTRACT = 50 * 1024 * 1024; // 50MB total extracted from ZIP
 
 function extractFilesFromUploads(
   files: Express.Multer.File[]
 ): { buffer: Buffer; originalname: string; mimetype: string }[] {
   const extracted: { buffer: Buffer; originalname: string; mimetype: string }[] = [];
+  let totalExtracted = 0;
 
   for (const file of files) {
     const ext = file.originalname.toLowerCase().split('.').pop();
@@ -71,8 +73,22 @@ function extractFilesFromUploads(
         const entries = zip.getEntries();
         logger.info(`[HPC] ZIP "${file.originalname}" contem ${entries.length} arquivo(s)`);
 
-        for (const entry of entries) {
+        // Sort: SPED/txt first (small, high value), then PDFs by size ascending
+        const sorted = [...entries].sort((a, b) => {
+          const aExt = (a.entryName.split('.').pop() || '').toLowerCase();
+          const bExt = (b.entryName.split('.').pop() || '').toLowerCase();
+          if (aExt === 'txt' && bExt !== 'txt') return -1;
+          if (bExt === 'txt' && aExt !== 'txt') return 1;
+          return a.header.size - b.header.size;
+        });
+
+        for (const entry of sorted) {
           if (entry.isDirectory) continue;
+          if (totalExtracted >= MAX_ZIP_EXTRACT) {
+            logger.warn(`[HPC] Limite de extracao (${(MAX_ZIP_EXTRACT / 1024 / 1024).toFixed(0)}MB) atingido`);
+            break;
+          }
+
           const name = entry.entryName.split('/').pop() || entry.entryName;
           if (name.startsWith('.') || name.startsWith('__MACOSX')) continue;
 
@@ -84,12 +100,13 @@ function extractFilesFromUploads(
             if (isSpedContent(preview)) {
               logger.info(`[HPC] SPED: "${name}" (${buf.length} bytes)`);
               extracted.push({ buffer: buf, originalname: name, mimetype: 'text/plain' });
+              totalExtracted += buf.length;
               continue;
             }
           }
 
           if (entryExt === 'pdf' && buf.length > MAX_PDF_SIZE) {
-            logger.warn(`[HPC] PDF muito grande, pulando: "${name}" (${(buf.length / 1024 / 1024).toFixed(1)}MB)`);
+            logger.warn(`[HPC] PDF grande demais, pulando: "${name}" (${(buf.length / 1024 / 1024).toFixed(1)}MB > ${MAX_PDF_SIZE / 1024 / 1024}MB)`);
             continue;
           }
 
@@ -98,16 +115,21 @@ function extractFilesFromUploads(
             originalname: name,
             mimetype: entryExt === 'pdf' ? 'application/pdf' : entryExt === 'txt' ? 'text/plain' : 'application/octet-stream',
           });
+          totalExtracted += buf.length;
         }
+
+        // Free ZIP buffer from memory
+        file.buffer = Buffer.alloc(0);
       } catch (err: any) {
         logger.warn(`[HPC] Falha ao extrair ZIP "${file.originalname}": ${err.message}`);
-        extracted.push({ buffer: file.buffer, originalname: file.originalname, mimetype: file.mimetype });
       }
     } else {
       extracted.push({ buffer: file.buffer, originalname: file.originalname, mimetype: file.mimetype });
+      totalExtracted += file.buffer.length;
     }
   }
 
+  logger.info(`[HPC] Total extraido: ${(totalExtracted / 1024 / 1024).toFixed(1)}MB em ${extracted.length} arquivo(s)`);
   return extracted;
 }
 
@@ -154,6 +176,9 @@ async function buildFallbackText(
     } else {
       text = sanitizeUtf8(bufferToString(f.buffer));
     }
+
+    // Free buffer after text extraction to reduce memory usage
+    f.buffer = Buffer.alloc(0);
 
     if (text.length > 50) {
       parts.push(`=== ARQUIVO: ${f.originalname} ===\n${text}`);
