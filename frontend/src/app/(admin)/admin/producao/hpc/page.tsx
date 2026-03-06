@@ -143,17 +143,29 @@ export default function HPCTestPage() {
   const pollJob = async (jobId: string) => {
     const token = localStorage.getItem('token');
     pollingRef.current = true;
+    let networkErrors = 0;
 
     while (pollingRef.current) {
       try {
         const res = await fetch(`${apiBase}/api/hpc/job/${jobId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (res.status === 404) {
+          pollingRef.current = false;
+          setProcessError('Processamento foi interrompido (servidor reiniciou). Tente novamente.');
+          setProcessing(false);
+          stopTimer();
+          return;
+        }
+
         const data = await res.json();
+        networkErrors = 0;
 
         if (data.status === 'completed') {
           pollingRef.current = false;
           setFullResult(data);
+          setJobProgress('');
           setProcessing(false);
           stopTimer();
           return;
@@ -162,14 +174,22 @@ export default function HPCTestPage() {
         if (data.status === 'failed') {
           pollingRef.current = false;
           setProcessError(data.error || 'Erro na analise');
+          setJobProgress('');
           setProcessing(false);
           stopTimer();
           return;
         }
 
-        setJobProgress(data.progress || data.status || 'Processando...');
+        setJobProgress(data.progress || 'Processando...');
       } catch {
-        // Network hiccup during poll — just retry
+        networkErrors++;
+        if (networkErrors > 10) {
+          pollingRef.current = false;
+          setProcessError('Perda de conexao com o servidor. Tente novamente.');
+          setProcessing(false);
+          stopTimer();
+          return;
+        }
       }
 
       await new Promise(r => setTimeout(r, 3000));

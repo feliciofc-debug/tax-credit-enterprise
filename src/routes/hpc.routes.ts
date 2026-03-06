@@ -1,6 +1,5 @@
 // src/routes/hpc.routes.ts
-// Rotas ISOLADAS para teste de integracao com HPC Go+Chapel
-// Usa processamento ASSINCRONO para evitar timeout em uploads grandes
+// HPC analysis with async processing and DB-persisted job state
 
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
@@ -30,26 +29,8 @@ const upload = multer({
   },
 });
 
-// ============================================================
-// ASYNC JOB STORE — keeps analysis results in memory
-// Jobs are cleaned up after 30 minutes
-// ============================================================
-interface HpcJob {
-  status: 'uploading' | 'extracting' | 'hpc-processing' | 'claude-analyzing' | 'saving' | 'completed' | 'failed';
-  progress: string;
-  startedAt: number;
-  result?: any;
-  error?: string;
-}
-
-const jobs = new Map<string, HpcJob>();
-
-setInterval(() => {
-  const cutoff = Date.now() - 30 * 60 * 1000;
-  for (const [id, job] of jobs) {
-    if (job.startedAt < cutoff) jobs.delete(id);
-  }
-}, 5 * 60 * 1000);
+// In-memory progress tracker (supplements DB state for real-time progress)
+const jobProgress = new Map<string, string>();
 
 // ============================================================
 // HELPERS
@@ -57,22 +38,24 @@ setInterval(() => {
 
 function bufferToString(buf: Buffer): string {
   const utf8 = buf.toString('utf-8');
-  if (utf8.includes('\uFFFD')) {
-    return buf.toString('latin1');
-  }
+  if (utf8.includes('\uFFFD')) return buf.toString('latin1');
   return utf8;
 }
 
 function sanitizeUtf8(text: string): string {
   // eslint-disable-next-line no-control-regex
-  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
-             .replace(/\uFFFD/g, '');
+  return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '').replace(/\uFFFD/g, '');
 }
 
 function isSpedContent(text: string): boolean {
   const lines = text.split('\n').slice(0, 20);
   return lines.some(l => /^\|[0-9A-Z]{4}\|/.test(l.trim()));
 }
+
+const MAX_PDFS = 10;
+const MAX_PDF_SIZE = 20 * 1024 * 1024; // 20MB per PDF
+const MAX_PDF_TEXT = 60000;
+const MAX_TOTAL_TEXT = 150000;
 
 function extractFilesFromUploads(
   files: Express.Multer.File[]
@@ -99,19 +82,21 @@ function extractFilesFromUploads(
           if (entryExt === 'txt' || entryExt === 'sped' || !entryExt) {
             const preview = bufferToString(buf.subarray(0, Math.min(buf.length, 2000)));
             if (isSpedContent(preview)) {
-              logger.info(`[HPC] SPED encontrado dentro do ZIP: "${name}" (${buf.length} bytes)`);
+              logger.info(`[HPC] SPED: "${name}" (${buf.length} bytes)`);
               extracted.push({ buffer: buf, originalname: name, mimetype: 'text/plain' });
               continue;
             }
           }
 
-          logger.info(`[HPC] Arquivo extraido do ZIP: "${name}" (${buf.length} bytes)`);
+          if (entryExt === 'pdf' && buf.length > MAX_PDF_SIZE) {
+            logger.warn(`[HPC] PDF muito grande, pulando: "${name}" (${(buf.length / 1024 / 1024).toFixed(1)}MB)`);
+            continue;
+          }
+
           extracted.push({
             buffer: buf,
             originalname: name,
-            mimetype: entryExt === 'pdf' ? 'application/pdf' :
-                     entryExt === 'txt' ? 'text/plain' :
-                     'application/octet-stream',
+            mimetype: entryExt === 'pdf' ? 'application/pdf' : entryExt === 'txt' ? 'text/plain' : 'application/octet-stream',
           });
         }
       } catch (err: any) {
@@ -126,52 +111,50 @@ function extractFilesFromUploads(
   return extracted;
 }
 
-const MAX_PDF_TEXT = 80000;
-
 async function extractPdfText(buffer: Buffer, filename: string): Promise<string> {
   try {
-    const timeoutMs = 30000;
     const data = await Promise.race([
       pdfParse(buffer),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('PDF parse timeout (30s)')), timeoutMs)
-      ),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('PDF timeout 30s')), 30000)),
     ]);
     let text = (data.text || '').trim();
     if (text.length > MAX_PDF_TEXT) {
-      text = text.substring(0, MAX_PDF_TEXT) + '\n\n[... texto truncado por limite ...]';
+      text = text.substring(0, MAX_PDF_TEXT) + '\n[... truncado ...]';
     }
-    logger.info(`[HPC] PDF "${filename}" extraido: ${text.length} chars, ${data.numpages} paginas`);
+    logger.info(`[HPC] PDF "${filename}": ${text.length} chars, ${data.numpages} pags`);
     return text;
   } catch (err: any) {
-    logger.warn(`[HPC] Falha ao extrair PDF "${filename}": ${err.message}`);
+    logger.warn(`[HPC] Falha PDF "${filename}": ${err.message}`);
     return '';
   }
 }
 
 function isPdf(file: { originalname: string; mimetype: string }): boolean {
-  return file.mimetype === 'application/pdf' ||
-    file.originalname.toLowerCase().endsWith('.pdf');
+  return file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
 }
-
-const MAX_TOTAL_TEXT = 200000;
 
 async function buildFallbackText(
   files: { buffer: Buffer; originalname: string; mimetype: string }[]
 ): Promise<string> {
   const parts: string[] = [];
   let totalLen = 0;
+  let pdfCount = 0;
+
   for (const f of files) {
-    if (totalLen >= MAX_TOTAL_TEXT) {
-      logger.info(`[HPC] Limite de texto atingido (${MAX_TOTAL_TEXT}), pulando "${f.originalname}"`);
-      break;
-    }
+    if (totalLen >= MAX_TOTAL_TEXT) break;
+
     let text = '';
     if (isPdf(f)) {
+      if (pdfCount >= MAX_PDFS) {
+        logger.info(`[HPC] Limite de ${MAX_PDFS} PDFs atingido, pulando "${f.originalname}"`);
+        continue;
+      }
+      pdfCount++;
       text = sanitizeUtf8(await extractPdfText(f.buffer, f.originalname));
     } else {
       text = sanitizeUtf8(bufferToString(f.buffer));
     }
+
     if (text.length > 50) {
       parts.push(`=== ARQUIVO: ${f.originalname} ===\n${text}`);
       totalLen += text.length;
@@ -187,62 +170,86 @@ router.get('/status', async (_req: Request, res: Response) => {
   try {
     const gatewayInfo = hpcGateway.getInfo();
     const health = await hpcGateway.healthCheck();
-
     return res.json({
       success: true,
       gateway: gatewayInfo,
       hpc: health || { status: 'offline', message: 'HPC nao respondeu ao health check' },
     });
   } catch (error: any) {
-    return res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
 // ============================================================
-// GET /api/hpc/job/:jobId
-// Poll for async job status
+// GET /api/hpc/job/:jobId — Poll for job status (DB-backed)
 // ============================================================
 router.get('/job/:jobId', authenticateToken, async (req: Request, res: Response) => {
-  const job = jobs.get(req.params.jobId);
-  if (!job) {
-    return res.status(404).json({ success: false, error: 'Job nao encontrado' });
-  }
+  const { jobId } = req.params;
 
-  const elapsed = Date.now() - job.startedAt;
+  try {
+    const record = await prisma.viabilityAnalysis.findUnique({ where: { id: jobId } });
 
-  if (job.status === 'completed') {
+    if (!record) {
+      return res.status(404).json({ success: false, error: 'Job nao encontrado' });
+    }
+
+    const elapsed = Date.now() - record.createdAt.getTime();
+
+    if (record.status === 'completed') {
+      let opportunities: any[] = [];
+      let risks: string[] = [];
+      let aiData: any = {};
+      try { opportunities = JSON.parse(record.opportunities || '[]'); } catch {}
+      try { risks = JSON.parse(record.risks || '[]'); } catch {}
+      try { aiData = JSON.parse(record.aiSummary || '{}'); } catch {}
+
+      return res.json({
+        success: true,
+        status: 'completed',
+        elapsed,
+        savedId: record.id,
+        pipeline: aiData.pipeline || 'unknown',
+        analysis: {
+          score: record.viabilityScore,
+          scoreLabel: record.scoreLabel,
+          regimeTributario: aiData.regimeTributario || record.regime,
+          riscoGeral: aiData.riscoGeral || '',
+          valorTotalEstimado: record.estimatedCredit,
+          periodoAnalisado: aiData.periodoAnalisado || '',
+          resumoExecutivo: aiData.resumoExecutivo || '',
+          fundamentacaoGeral: aiData.fundamentacaoGeral || '',
+          oportunidades: opportunities,
+          recomendacoes: aiData.recomendacoes || [],
+          alertas: risks,
+        },
+      });
+    }
+
+    if (record.status === 'failed') {
+      return res.json({
+        success: false,
+        status: 'failed',
+        elapsed,
+        error: record.aiSummary || 'Erro no processamento',
+      });
+    }
+
+    // Still processing — return progress from in-memory tracker
+    const progress = jobProgress.get(jobId) || 'Processando...';
     return res.json({
       success: true,
-      status: 'completed',
+      status: 'processing',
+      progress,
       elapsed,
-      ...job.result,
     });
+  } catch (err: any) {
+    logger.error(`[HPC-POLL] Erro ao consultar job ${jobId}: ${err.message}`);
+    return res.status(500).json({ success: false, error: 'Erro ao consultar status' });
   }
-
-  if (job.status === 'failed') {
-    return res.json({
-      success: false,
-      status: 'failed',
-      elapsed,
-      error: job.error,
-      progress: job.progress,
-    });
-  }
-
-  return res.json({
-    success: true,
-    status: job.status,
-    progress: job.progress,
-    elapsed,
-  });
 });
 
 // ============================================================
-// POST /api/hpc/analyze
-// ASYNC: Receives files, returns jobId immediately, processes in background
+// POST /api/hpc/analyze — Async: returns jobId, processes in background
 // ============================================================
 router.post('/analyze', authenticateToken, upload.array('documents', 50), async (req: Request, res: Response) => {
   try {
@@ -253,36 +260,51 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, error: 'Envie pelo menos um arquivo para analise' });
     }
-
     if (!companyName) {
       return res.status(400).json({ success: false, error: 'Nome da empresa e obrigatorio' });
     }
 
-    const jobId = crypto.randomBytes(8).toString('hex');
-    const job: HpcJob = {
-      status: 'uploading',
-      progress: 'Arquivos recebidos, iniciando processamento...',
-      startedAt: Date.now(),
-    };
-    jobs.set(jobId, job);
+    // Resolve partnerId
+    let partnerId: string | null = null;
+    try {
+      partnerId = await getOperatorPartnerId(user);
+      if (!partnerId) {
+        const first = await prisma.partner.findFirst({ where: { status: 'active' }, orderBy: { createdAt: 'asc' } });
+        partnerId = first?.id || null;
+      }
+    } catch { partnerId = null; }
 
-    logger.info(`[HPC-ROUTE] Job ${jobId} criado para "${companyName}" — ${files.length} arquivo(s)`);
+    // Create DB record immediately with status 'analyzing'
+    const record = await prisma.viabilityAnalysis.create({
+      data: {
+        partnerId: partnerId || undefined,
+        companyName: sanitizeUtf8(companyName),
+        cnpj: cnpj || null,
+        regime: regime || null,
+        sector: sector ? sanitizeUtf8(sector) : null,
+        docsUploaded: files.length,
+        status: 'analyzing',
+      },
+    });
 
-    // Return jobId immediately — processing continues in background
-    res.json({ success: true, jobId, message: 'Analise iniciada em segundo plano' });
+    const jobId = record.id;
+    jobProgress.set(jobId, 'Arquivos recebidos, iniciando processamento...');
+    logger.info(`[HPC] Job ${jobId} criado para "${companyName}" — ${files.length} arquivo(s)`);
 
-    // ====== BACKGROUND PROCESSING ======
-    runAnalysisInBackground(jobId, job, user, files, { companyName, cnpj, regime, sector, documentType });
+    // Return immediately
+    res.json({ success: true, jobId });
+
+    // Background processing
+    runAnalysis(jobId, user, files, { companyName, cnpj, regime, sector, documentType });
 
   } catch (error: any) {
-    logger.error(`[HPC-ROUTE] Erro ao criar job:`, error.message);
-    return res.status(500).json({ success: false, error: error.message || 'Erro ao iniciar analise' });
+    logger.error(`[HPC] Erro ao criar job: ${error.message}`);
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 
-async function runAnalysisInBackground(
+async function runAnalysis(
   jobId: string,
-  job: HpcJob,
   user: any,
   files: Express.Multer.File[],
   params: { companyName: string; cnpj?: string; regime?: string; sector?: string; documentType?: string }
@@ -290,30 +312,25 @@ async function runAnalysisInBackground(
   const startTime = Date.now();
   const { companyName, cnpj, regime, sector, documentType } = params;
 
-  try {
-    // PASSO 0: Extrair ZIPs
-    job.status = 'extracting';
-    job.progress = 'Extraindo arquivos...';
-    const extractedFiles = extractFilesFromUploads(files);
+  const setProgress = (msg: string) => {
+    jobProgress.set(jobId, msg);
+    logger.info(`[HPC-JOB ${jobId}] ${msg}`);
+  };
 
-    logger.info(`[HPC-JOB ${jobId}] Extraidos ${extractedFiles.length} arquivo(s)`, {
-      user: user.email,
-      empresa: companyName,
-      tamanhoTotal: extractedFiles.reduce((sum, f) => sum + f.buffer.length, 0),
-    });
+  try {
+    // STEP 1: Extract files
+    setProgress('Extraindo arquivos do ZIP...');
+    const extractedFiles = extractFilesFromUploads(files);
 
     const spedFiles: typeof extractedFiles = [];
     const otherFiles: typeof extractedFiles = [];
     for (const f of extractedFiles) {
       const preview = bufferToString(f.buffer.subarray(0, Math.min(f.buffer.length, 2000)));
-      if (isSpedContent(preview)) {
-        spedFiles.push(f);
-      } else {
-        otherFiles.push(f);
-      }
+      if (isSpedContent(preview)) spedFiles.push(f);
+      else otherFiles.push(f);
     }
 
-    logger.info(`[HPC-JOB ${jobId}] Classificacao: ${spedFiles.length} SPED, ${otherFiles.length} outros`);
+    setProgress(`${extractedFiles.length} arquivo(s) extraidos (${spedFiles.length} SPED, ${otherFiles.length} outros)`);
 
     const companyInfo = {
       name: companyName,
@@ -326,12 +343,10 @@ async function runAnalysisInBackground(
     let hpcData: any = null;
     let pipeline = '';
 
-    // PASSO 1: HPC Go+Chapel para SPED
+    // STEP 2: HPC for SPED files
     if (spedFiles.length > 0) {
-      job.status = 'hpc-processing';
-      job.progress = `Processando ${spedFiles.length} arquivo(s) SPED no motor HPC...`;
+      setProgress(`Processando ${spedFiles.length} SPED no motor HPC...`);
       const health = await hpcGateway.healthCheck();
-
       if (health) {
         try {
           const hpcResult = await hpcGateway.processSped(spedFiles);
@@ -340,14 +355,13 @@ async function runAnalysisInBackground(
             hpcData = {
               arquivosProcessados: hpcResult.arquivosProcessados,
               tempoTotalMs: hpcResult.tempoTotalMs,
-              resultados: hpcResult.resultados.map(r => ({
+              resultados: hpcResult.resultados.map((r: any) => ({
                 arquivo: r.arquivo, tipo: r.tipo, periodo: r.periodo,
-                empresa: r.empresa, resumo: r.resumo, processadoEm: r.processadoEm,
+                empresa: r.empresa, resumo: r.resumo,
               })),
               erros: hpcResult.erros,
             };
             pipeline = 'hpc-go-chapel';
-            logger.info(`[HPC-JOB ${jobId}] HPC OK: ${textoParaClaude.length} chars`);
           }
         } catch (err: any) {
           logger.warn(`[HPC-JOB ${jobId}] HPC falhou: ${err.message}`);
@@ -355,34 +369,30 @@ async function runAnalysisInBackground(
       }
     }
 
-    // PASSO 2: Fallback — leitura direta + extração de PDF
+    // STEP 3: Fallback — extract text from PDFs/other files
     if (!textoParaClaude || textoParaClaude.length < 200) {
-      job.progress = `Extraindo texto de ${extractedFiles.length} arquivo(s)...`;
-      const allTextFiles = [...spedFiles, ...otherFiles];
-      textoParaClaude = await buildFallbackText(allTextFiles);
-      pipeline = pipeline ? pipeline + ' + fallback-direto' : 'fallback-direto';
-      logger.info(`[HPC-JOB ${jobId}] Fallback: ${textoParaClaude.length} chars`);
+      const pdfCount = otherFiles.filter(f => isPdf(f)).length;
+      setProgress(`Extraindo texto de ${pdfCount} PDF(s) e ${otherFiles.length - pdfCount} outro(s)...`);
+      textoParaClaude = await buildFallbackText([...spedFiles, ...otherFiles]);
+      pipeline = pipeline ? pipeline + ' + fallback' : 'fallback-direto';
     } else if (otherFiles.length > 0) {
-      job.progress = `Extraindo texto de ${otherFiles.length} arquivo(s) adicionais...`;
-      const extraText = await buildFallbackText(otherFiles);
-      if (extraText.length > 50) {
-        textoParaClaude += '\n\n' + extraText;
-      }
+      setProgress(`Extraindo texto de ${otherFiles.length} arquivo(s) adicionais...`);
+      const extra = await buildFallbackText(otherFiles);
+      if (extra.length > 50) textoParaClaude += '\n\n' + extra;
     }
 
     if (!textoParaClaude || textoParaClaude.length < 100) {
-      job.status = 'failed';
-      job.error = 'Nao foi possivel extrair texto dos arquivos. Verifique se sao SPED (.txt) ou PDFs com texto.';
-      job.progress = 'Falha na extracao de texto';
+      await prisma.viabilityAnalysis.update({
+        where: { id: jobId },
+        data: { status: 'failed', aiSummary: 'Nao foi possivel extrair texto dos arquivos.' },
+      });
+      jobProgress.delete(jobId);
       return;
     }
 
-    // PASSO 3: Claude Opus
-    job.status = 'claude-analyzing';
-    job.progress = `Analise juridica com IA em andamento (${textoParaClaude.length.toLocaleString()} caracteres)...`;
+    // STEP 4: Claude analysis
+    setProgress(`Analise juridica com IA em andamento (${(textoParaClaude.length / 1000).toFixed(0)}K caracteres)...`);
     const claudeStart = Date.now();
-
-    logger.info(`[HPC-JOB ${jobId}] Enviando para Claude: ${textoParaClaude.length} chars`);
 
     const analysis = await claudeService.analyzeDocument(
       textoParaClaude,
@@ -393,12 +403,9 @@ async function runAnalysisInBackground(
     const claudeMs = Date.now() - claudeStart;
     pipeline += ' + claude-opus';
 
-    logger.info(`[HPC-JOB ${jobId}] Claude OK em ${claudeMs}ms — score: ${analysis.score}, oportunidades: ${analysis.oportunidades.length}`);
+    setProgress('Salvando resultado no banco de dados...');
 
-    // PASSO 4: Salvar no banco
-    job.status = 'saving';
-    job.progress = 'Salvando resultado no banco de dados...';
-
+    // STEP 5: Save results to DB
     const scoreLabel = analysis.score >= 85 ? 'excelente'
       : analysis.score >= 70 ? 'bom'
       : analysis.score >= 50 ? 'medio'
@@ -416,91 +423,41 @@ async function runAnalysisInBackground(
       pipeline,
     });
 
-    let partnerId: string | null = null;
-    try {
-      partnerId = await getOperatorPartnerId(user);
-      if (!partnerId) {
-        const firstPartner = await prisma.partner.findFirst({ where: { status: 'active' }, orderBy: { createdAt: 'asc' } });
-        partnerId = firstPartner?.id || null;
-      }
-    } catch {
-      partnerId = null;
-    }
+    await prisma.$disconnect();
+    await prisma.$connect();
 
-    let savedId: string | null = null;
-    let saveError: string | null = null;
-
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        await prisma.$disconnect();
-        await prisma.$connect();
-        const saved = await prisma.viabilityAnalysis.create({
-          data: {
-            partnerId: partnerId || undefined,
-            companyName: sanitizeUtf8(companyName || 'Empresa HPC'),
-            cnpj: cnpj || null,
-            regime: regime || null,
-            sector: sector ? sanitizeUtf8(sector) : null,
-            docsUploaded: files.length,
-            docsText: sanitizeUtf8(textoParaClaude.substring(0, 50000)),
-            viabilityScore: analysis.score,
-            scoreLabel,
-            estimatedCredit: analysis.valorTotalEstimado,
-            opportunities: sanitizeUtf8(JSON.stringify(analysis.oportunidades)),
-            aiSummary: sanitizeUtf8(aiSummaryJson),
-            risks: sanitizeUtf8(JSON.stringify(analysis.alertas || [])),
-            status: 'completed',
-          },
-        });
-        savedId = saved.id;
-        saveError = null;
-        logger.info(`[HPC-JOB ${jobId}] Salvo: id=${saved.id}`);
-        break;
-      } catch (saveErr: any) {
-        saveError = saveErr.message;
-        logger.error(`[HPC-JOB ${jobId}] Save attempt ${attempt} failed: ${saveErr.message}`);
-        if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 2000));
-      }
-    }
-
-    const totalElapsed = Date.now() - startTime;
-
-    // Mark job as completed with full result
-    job.status = 'completed';
-    job.progress = 'Analise concluida';
-    job.result = {
-      savedId,
-      saveError,
-      pipeline,
-      timing: {
-        hpcProcessingMs: hpcData?.tempoTotalMs || 0,
-        claudeAnalysisMs: claudeMs,
-        totalMs: totalElapsed,
-      },
-      hpc: hpcData || { arquivosProcessados: 0, nota: 'Processamento direto (sem HPC parser)' },
-      analysis: {
-        score: analysis.score,
+    await prisma.viabilityAnalysis.update({
+      where: { id: jobId },
+      data: {
+        docsText: sanitizeUtf8(textoParaClaude.substring(0, 50000)),
+        viabilityScore: analysis.score,
         scoreLabel,
-        regimeTributario: analysis.regimeTributario,
-        riscoGeral: analysis.riscoGeral,
-        valorTotalEstimado: analysis.valorTotalEstimado,
-        periodoAnalisado: analysis.periodoAnalisado,
-        resumoExecutivo: analysis.resumoExecutivo,
-        fundamentacaoGeral: analysis.fundamentacaoGeral,
-        oportunidades: analysis.oportunidades,
-        recomendacoes: analysis.recomendacoes,
-        alertas: analysis.alertas,
+        estimatedCredit: analysis.valorTotalEstimado,
+        opportunities: sanitizeUtf8(JSON.stringify(analysis.oportunidades)),
+        aiSummary: sanitizeUtf8(aiSummaryJson),
+        risks: sanitizeUtf8(JSON.stringify(analysis.alertas || [])),
+        status: 'completed',
       },
-    };
+    });
 
-    logger.info(`[HPC-JOB ${jobId}] CONCLUIDO em ${totalElapsed}ms — score: ${analysis.score}, valor: ${analysis.valorTotalEstimado}`);
+    const totalMs = Date.now() - startTime;
+    jobProgress.delete(jobId);
+    logger.info(`[HPC-JOB ${jobId}] CONCLUIDO em ${totalMs}ms — score: ${analysis.score}, valor: ${analysis.valorTotalEstimado}`);
 
   } catch (error: any) {
     const elapsed = Date.now() - startTime;
     logger.error(`[HPC-JOB ${jobId}] ERRO (${elapsed}ms): ${error.message}`);
-    job.status = 'failed';
-    job.error = error.message || 'Erro interno na analise';
-    job.progress = 'Falha no processamento';
+    try {
+      await prisma.$disconnect();
+      await prisma.$connect();
+      await prisma.viabilityAnalysis.update({
+        where: { id: jobId },
+        data: { status: 'failed', aiSummary: `Erro: ${error.message}` },
+      });
+    } catch (dbErr: any) {
+      logger.error(`[HPC-JOB ${jobId}] Falha ao salvar erro no DB: ${dbErr.message}`);
+    }
+    jobProgress.delete(jobId);
   }
 }
 
@@ -513,21 +470,11 @@ router.post('/process-only', authenticateToken, upload.array('documents', 50), a
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, error: 'Envie pelo menos um arquivo' });
     }
-
     const extractedFiles = extractFilesFromUploads(files);
     const health = await hpcGateway.healthCheck();
-    if (!health) {
-      return res.status(503).json({ success: false, error: 'HPC indisponivel' });
-    }
-
+    if (!health) return res.status(503).json({ success: false, error: 'HPC indisponivel' });
     const hpcResult = await hpcGateway.processSped(extractedFiles);
-    return res.json({
-      success: true,
-      pipeline: 'hpc-go-chapel-only',
-      arquivosOriginais: files.length,
-      arquivosExtraidos: extractedFiles.length,
-      hpcResult,
-    });
+    return res.json({ success: true, pipeline: 'hpc-go-chapel-only', hpcResult });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
