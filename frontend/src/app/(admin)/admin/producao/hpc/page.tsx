@@ -50,9 +50,9 @@ interface AnalysisOportunidade {
 interface FullAnalysisResult {
   savedId?: string | null;
   saveError?: string | null;
-  pipeline: string;
-  timing: { hpcProcessingMs: number; claudeAnalysisMs: number; totalMs: number };
-  hpc: { arquivosProcessados: number; resultados: HPCResult[]; erros?: string[] };
+  pipeline?: string;
+  timing?: { hpcProcessingMs?: number; claudeAnalysisMs?: number; totalMs?: number };
+  hpc?: { arquivosProcessados?: number; resultados?: HPCResult[]; erros?: string[] };
   analysis: {
     score: number;
     regimeTributario: string;
@@ -386,7 +386,7 @@ details[open]{background:white}
           HPC Motor — Teste de Pipeline
         </h1>
         <p className="text-gray-500 text-sm mt-1">
-          Envie arquivos SPED (.txt ou .zip) para processamento Go+Chapel + análise Claude Opus
+          Envie arquivos SPED (.txt ou .zip), PDF, Excel para processamento com supercomputacao e IA avancada
         </p>
       </div>
 
@@ -721,26 +721,26 @@ details[open]{background:white}
       {/* ============================================================ */}
       {/* RESULTS: Full Analysis — EXTRATO PROFISSIONAL */}
       {/* ============================================================ */}
-      {fullResult && (
+      {fullResult && fullResult.analysis && (
         <div className="space-y-6">
           {/* Timing bar */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-900">Pipeline</span>
-              <span className="text-xs font-mono text-gray-400">{fullResult.pipeline}</span>
+              <span className="text-xs font-mono text-gray-400">{fullResult.pipeline || 'unknown'}</span>
             </div>
             <div className="grid grid-cols-3 gap-3 mt-3">
               <div className="bg-amber-50 rounded-lg p-3 text-center border border-amber-100">
-                <p className="text-[10px] text-amber-600 font-medium">HPC Go+Chapel</p>
-                <p className="text-lg font-bold text-amber-700">{formatMs(fullResult.timing.hpcProcessingMs)}</p>
+                <p className="text-[10px] text-amber-600 font-medium">Supercomputacao HPC</p>
+                <p className="text-lg font-bold text-amber-700">{formatMs(fullResult.timing?.hpcProcessingMs || 0)}</p>
               </div>
               <div className="bg-indigo-50 rounded-lg p-3 text-center border border-indigo-100">
-                <p className="text-[10px] text-indigo-600 font-medium">Claude Opus (34 teses)</p>
-                <p className="text-lg font-bold text-indigo-700">{formatMs(fullResult.timing.claudeAnalysisMs)}</p>
+                <p className="text-[10px] text-indigo-600 font-medium">IA Avancada (34 teses)</p>
+                <p className="text-lg font-bold text-indigo-700">{formatMs(fullResult.timing?.claudeAnalysisMs || 0)}</p>
               </div>
               <div className="bg-green-50 rounded-lg p-3 text-center border border-green-100">
                 <p className="text-[10px] text-green-600 font-medium">Total</p>
-                <p className="text-lg font-bold text-green-700">{formatMs(fullResult.timing.totalMs)}</p>
+                <p className="text-lg font-bold text-green-700">{formatMs(fullResult.timing?.totalMs || 0)}</p>
               </div>
             </div>
           </div>
@@ -1002,21 +1002,23 @@ details[open]{background:white}
           </div>
 
           {/* HPC Details (collapsed) */}
-          <details className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <summary className="px-5 py-4 cursor-pointer hover:bg-gray-50 font-semibold text-gray-900 text-sm">
-              Detalhes do Parse HPC ({fullResult.hpc.arquivosProcessados} arquivo(s))
-            </summary>
-            <div className="px-5 pb-5">
-              {fullResult.hpc.resultados?.map((r: HPCResult, i: number) => (
-                <div key={i} className="border border-gray-100 rounded-lg p-3 mt-3">
-                  <p className="font-medium text-sm text-gray-900">{r.arquivo}</p>
-                  <p className="text-xs text-gray-500">
-                    {r.tipo} | {r.periodo?.inicio} a {r.periodo?.fim} | {r.empresa?.razaoSocial}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </details>
+          {fullResult.hpc && (fullResult.hpc.arquivosProcessados > 0 || (fullResult.hpc.resultados?.length || 0) > 0) && (
+            <details className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <summary className="px-5 py-4 cursor-pointer hover:bg-gray-50 font-semibold text-gray-900 text-sm">
+                Detalhes do Parse HPC ({fullResult.hpc?.arquivosProcessados || 0} arquivo(s))
+              </summary>
+              <div className="px-5 pb-5">
+                {fullResult.hpc?.resultados?.map((r: HPCResult, i: number) => (
+                  <div key={i} className="border border-gray-100 rounded-lg p-3 mt-3">
+                    <p className="font-medium text-sm text-gray-900">{r.arquivo}</p>
+                    <p className="text-xs text-gray-500">
+                      {r.tipo} | {r.periodo?.inicio} a {r.periodo?.fim} | {r.empresa?.razaoSocial}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
 
           {/* Print button */}
           <div className="flex gap-3 justify-end">

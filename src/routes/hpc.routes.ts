@@ -234,6 +234,8 @@ router.get('/job/:jobId', authenticateToken, async (req: Request, res: Response)
         elapsed,
         savedId: record.id,
         pipeline: aiData.pipeline || 'unknown',
+        timing: aiData.timing || { hpcProcessingMs: 0, claudeAnalysisMs: 0, totalMs: elapsed },
+        hpc: aiData.hpc || { arquivosProcessados: 0, resultados: [], erros: [] },
         analysis: {
           score: record.viabilityScore,
           scoreLabel: record.scoreLabel,
@@ -437,6 +439,9 @@ async function runAnalysis(
       : analysis.score >= 30 ? 'baixo'
       : 'inviavel';
 
+    const totalMs = Date.now() - startTime;
+    const hpcMs = hpcData?.tempoTotalMs || 0;
+
     const aiSummaryJson = JSON.stringify({
       resumoExecutivo: analysis.resumoExecutivo || '',
       fundamentacaoGeral: analysis.fundamentacaoGeral || '',
@@ -446,6 +451,12 @@ async function runAnalysis(
       recomendacoes: analysis.recomendacoes || [],
       source: 'hpc',
       pipeline,
+      timing: {
+        hpcProcessingMs: hpcMs,
+        claudeAnalysisMs: claudeMs,
+        totalMs,
+      },
+      hpc: hpcData || { arquivosProcessados: 0, resultados: [], erros: [] },
     });
 
     await prisma.$disconnect();
@@ -465,7 +476,6 @@ async function runAnalysis(
       },
     });
 
-    const totalMs = Date.now() - startTime;
     jobProgress.delete(jobId);
     logger.info(`[HPC-JOB ${jobId}] CONCLUIDO em ${totalMs}ms — score: ${analysis.score}, valor: ${analysis.valorTotalEstimado}`);
 
