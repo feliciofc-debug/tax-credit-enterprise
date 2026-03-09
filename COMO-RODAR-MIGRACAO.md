@@ -23,23 +23,20 @@ Você tem **duas opções**. A **Opção 1** é mais simples (só copiar e colar
 1. Abra: `prisma\migrations\20260224_add_tese_jurisprudencia\migration.sql`
 
 **Migração 2 — ViabilityAnalysis** (se o dashboard der HTTP 500):
-1. Cole e execute no Supabase:
-   ```sql
-   ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "authorizedByNames" TEXT;
-   ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "authorizedByCargos" TEXT;
-   ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "interviewData" TEXT;
-   ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "dataSources" TEXT;
-   ```
+Cole e execute no Supabase:
+```sql
+ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "authorizedByNames" TEXT;
+ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "authorizedByCargos" TEXT;
+ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "interviewData" TEXT;
+ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "dataSources" TEXT;
+```
 
-2. Para a migração 1, abra o arquivo no seu computador:
-   ```
-   C:\Users\usuario\tax-credit-enterprise\prisma\migrations\20260224_add_tese_jurisprudencia\migration.sql
-   ```
-2. Ou abra esse arquivo no Cursor (Ctrl+P, digite `migration.sql`)
-3. Selecione **todo** o conteúdo (Ctrl+A)
-4. Copie (Ctrl+C)
-5. Volte ao Supabase, no campo de texto grande
-6. Cole o código (Ctrl+V)
+**Para a migração 1 (TeseJurisprudencia):**
+1. Abra o arquivo no Cursor (Ctrl+P, digite `migration.sql`) ou em `prisma\migrations\20260224_add_tese_jurisprudencia\migration.sql`
+2. Selecione **todo** o conteúdo (Ctrl+A)
+3. Copie (Ctrl+C)
+4. Volte ao Supabase, no campo de texto grande
+5. Cole o código (Ctrl+V)
 
 ### Passo 4: Executar
 
