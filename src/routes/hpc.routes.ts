@@ -236,6 +236,9 @@ router.get('/job/:jobId', authenticateToken, async (req: Request, res: Response)
         pipeline: aiData.pipeline || 'unknown',
         timing: aiData.timing || { hpcProcessingMs: 0, claudeAnalysisMs: 0, totalMs: elapsed },
         hpc: aiData.hpc || { arquivosProcessados: 0, resultados: [], erros: [] },
+        authorizedByNames: aiData.authorizedByNames || record.authorizedByNames || null,
+        authorizedByCargos: aiData.authorizedByCargos || record.authorizedByCargos || null,
+        dataSources: aiData.dataSources || [],
         analysis: {
           score: record.viabilityScore,
           scoreLabel: record.scoreLabel,
@@ -282,7 +285,7 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
   try {
     const user = (req as any).user;
     const files = req.files as Express.Multer.File[];
-    const { companyName, cnpj, regime, sector, documentType } = req.body;
+    const { companyName, cnpj, regime, sector, documentType, authorizedByNames, authorizedByCargos, interviewData } = req.body;
 
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, error: 'Envie pelo menos um arquivo para analise' });
@@ -309,6 +312,9 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
         cnpj: cnpj || null,
         regime: regime || null,
         sector: sector ? sanitizeUtf8(sector) : null,
+        authorizedByNames: authorizedByNames ? sanitizeUtf8(authorizedByNames) : null,
+        authorizedByCargos: authorizedByCargos ? sanitizeUtf8(authorizedByCargos) : null,
+        interviewData: interviewData || null,
         docsUploaded: files.length,
         status: 'analyzing',
       },
@@ -322,7 +328,10 @@ router.post('/analyze', authenticateToken, upload.array('documents', 50), async 
     res.json({ success: true, jobId });
 
     // Background processing
-    runAnalysis(jobId, user, files, { companyName, cnpj, regime, sector, documentType });
+    runAnalysis(jobId, user, files, {
+      companyName, cnpj, regime, sector, documentType,
+      authorizedByNames, authorizedByCargos, interviewData,
+    });
 
   } catch (error: any) {
     logger.error(`[HPC] Erro ao criar job: ${error.message}`);
@@ -334,10 +343,13 @@ async function runAnalysis(
   jobId: string,
   user: any,
   files: Express.Multer.File[],
-  params: { companyName: string; cnpj?: string; regime?: string; sector?: string; documentType?: string }
+  params: {
+    companyName: string; cnpj?: string; regime?: string; sector?: string; documentType?: string;
+    authorizedByNames?: string; authorizedByCargos?: string; interviewData?: string;
+  }
 ) {
   const startTime = Date.now();
-  const { companyName, cnpj, regime, sector, documentType } = params;
+  const { companyName, cnpj, regime, sector, documentType, authorizedByNames, authorizedByCargos, interviewData } = params;
 
   const setProgress = (msg: string) => {
     jobProgress.set(jobId, msg);
@@ -359,11 +371,36 @@ async function runAnalysis(
 
     setProgress(`${extractedFiles.length} arquivo(s) extraidos (${spedFiles.length} SPED, ${otherFiles.length} outros)`);
 
+    let interviewParsed: Record<string, string> | undefined;
+    try {
+      if (interviewData && typeof interviewData === 'string') {
+        interviewParsed = JSON.parse(interviewData) as Record<string, string>;
+      }
+    } catch { interviewParsed = undefined; }
+
+    // Build dataSources for transparency in report
+    const dataSourcesArr: { tipo: string; descricao: string }[] = [];
+    if (spedFiles.length > 0) {
+      dataSourcesArr.push({ tipo: 'SPED', descricao: `${spedFiles.length} arquivo(s) EFD Fiscal/Contribuições` });
+    }
+    const hasDarf = extractedFiles.some(f => /darfs?|comprovante|arrecadacao/i.test(f.originalname));
+    const hasPerdcomp = extractedFiles.some(f => /perdcomp|per.?dcomp|recibo.*compensacao/i.test(f.originalname));
+    const hasPdf = extractedFiles.some(f => /\.pdf$/i.test(f.originalname));
+    if (hasDarf) dataSourcesArr.push({ tipo: 'DARF', descricao: 'Comprovantes de arrecadação' });
+    if (hasPerdcomp) dataSourcesArr.push({ tipo: 'PER/DCOMP', descricao: 'Recibos de compensação' });
+    if (hasPdf && !hasDarf && !hasPerdcomp) dataSourcesArr.push({ tipo: 'PDF', descricao: 'Documentos em PDF' });
+    if (interviewParsed && Object.keys(interviewParsed).length > 0) {
+      dataSourcesArr.push({ tipo: 'Entrevista', descricao: 'Dados declarados pelo cliente' });
+    }
+
     const companyInfo = {
       name: companyName,
       cnpj: cnpj || undefined,
       regime: (regime as 'lucro_real' | 'lucro_presumido' | 'simples') || undefined,
       sector: sector || undefined,
+      authorizedByNames: authorizedByNames || undefined,
+      authorizedByCargos: authorizedByCargos || undefined,
+      interviewData: interviewParsed,
     };
 
     let textoParaClaude = '';
@@ -451,6 +488,9 @@ async function runAnalysis(
       recomendacoes: analysis.recomendacoes || [],
       source: 'hpc',
       pipeline,
+      authorizedByNames: authorizedByNames || null,
+      authorizedByCargos: authorizedByCargos || null,
+      dataSources: dataSourcesArr,
       timing: {
         hpcProcessingMs: hpcMs,
         claudeAnalysisMs: claudeMs,
@@ -472,6 +512,7 @@ async function runAnalysis(
         opportunities: sanitizeUtf8(JSON.stringify(analysis.oportunidades)),
         aiSummary: sanitizeUtf8(aiSummaryJson),
         risks: sanitizeUtf8(JSON.stringify(analysis.alertas || [])),
+        dataSources: JSON.stringify(dataSourcesArr),
         status: 'completed',
       },
     });

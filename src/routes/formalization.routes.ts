@@ -42,6 +42,15 @@ router.post('/generate-sefaz', authenticateToken, async (req: Request, res: Resp
       inscricaoEstadual,
       atividadeEmpresa,
       cnaePrincipal,
+      empresaEndereco,
+      empresaCidade,
+      empresaCep,
+      representanteNome,
+      representanteCargo,
+      representanteCpf,
+      representanteRg,
+      periodoInicio,
+      periodoFim,
     } = req.body;
 
     if (!analysisId || !uf) {
@@ -85,30 +94,35 @@ router.post('/generate-sefaz', authenticateToken, async (req: Request, res: Resp
     const valorEstadual = teses.reduce((sum, t) => sum + t.valor, 0);
     const protocoloPlataforma = `TCE-${new Date().getFullYear()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
+    // Derivar periodo das oportunidades se nao informado
+    const periodoOp = teses[0]?.periodo;
+    const periodoInicioVal = periodoInicio || (periodoOp && typeof periodoOp === 'string' ? periodoOp.split(' a ')[0]?.trim() : null) || null;
+    const periodoFimVal = periodoFim || (periodoOp && typeof periodoOp === 'string' ? periodoOp.split(' a ')[1]?.trim() : null) || null;
+
     const params: SefazDocumentParams = {
       empresaNome: analysis.companyName,
-      cnpj: analysis.cnpj || '[CNPJ A INFORMAR]',
-      inscricaoEstadual: inscricaoEstadual || '[IE A INFORMAR]',
-      empresaEndereco: '[Endereco da empresa]',
-      empresaCidade: '[Cidade]',
+      cnpj: analysis.cnpj || 'A CONFIRMAR COM CLIENTE',
+      inscricaoEstadual: inscricaoEstadual?.trim() || 'A CONFIRMAR COM CLIENTE',
+      empresaEndereco: empresaEndereco || 'A CONFIRMAR COM CLIENTE',
+      empresaCidade: empresaCidade || 'A CONFIRMAR COM CLIENTE',
       empresaUf: uf,
-      empresaCep: '[CEP]',
-      atividadeEmpresa: atividadeEmpresa || '[Atividade]',
-      cnaePrincipal: cnaePrincipal || '[CNAE]',
-      advogadoNome: advogadoNome || '[Advogado]',
-      advogadoOab: advogadoOab || '[OAB]',
+      empresaCep: empresaCep || 'A CONFIRMAR COM CLIENTE',
+      atividadeEmpresa: atividadeEmpresa || 'A CONFIRMAR COM CLIENTE',
+      cnaePrincipal: cnaePrincipal || 'A CONFIRMAR COM CLIENTE',
+      advogadoNome: advogadoNome || 'A CONFIRMAR COM CLIENTE',
+      advogadoOab: advogadoOab || 'A CONFIRMAR COM CLIENTE',
       advogadoUf: advogadoUf || uf,
-      advogadoEmail: advogadoEmail || '[email@advogado.com]',
-      advogadoEndereco: advogadoEndereco || '[Endereco do escritorio]',
-      representanteNome: '[Representante Legal]',
-      representanteCargo: '[Cargo]',
-      representanteCpf: '[CPF]',
-      representanteRg: '[RG]',
+      advogadoEmail: advogadoEmail || 'A CONFIRMAR COM CLIENTE',
+      advogadoEndereco: advogadoEndereco || 'A CONFIRMAR COM CLIENTE',
+      representanteNome: representanteNome || 'A CONFIRMAR COM CLIENTE',
+      representanteCargo: representanteCargo || 'A CONFIRMAR COM CLIENTE',
+      representanteCpf: representanteCpf || 'A CONFIRMAR COM CLIENTE',
+      representanteRg: representanteRg || 'A CONFIRMAR COM CLIENTE',
       uf,
       tipoPedido: tipoPedido || 'COMPENSACAO',
       valorTotalCredito: valorEstadual,
-      periodoInicio: '[Data inicio]',
-      periodoFim: '[Data fim]',
+      periodoInicio: periodoInicioVal || 'A CONFIRMAR COM CLIENTE',
+      periodoFim: periodoFimVal || 'A CONFIRMAR COM CLIENTE',
       teses,
       protocoloPlataforma,
     };

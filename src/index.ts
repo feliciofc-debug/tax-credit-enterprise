@@ -24,6 +24,7 @@ import hpcRoutes from './routes/hpc.routes';
 import thesisRoutes from './routes/thesis.routes';
 import procurationRoutes from './routes/procuration.routes';
 import byceoRoutes from './routes/byceo.routes';
+import jurisprudenciaRoutes from './routes/jurisprudencia.routes';
 
 dotenv.config();
 
@@ -165,6 +166,7 @@ app.use('/api/hpc', hpcRoutes);
 app.use('/api/thesis', thesisRoutes);
 app.use('/api/procuration', procurationRoutes);
 app.use('/api/v1/byceo', byceoRoutes);
+app.use('/api/jurisprudencia', jurisprudenciaRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -186,5 +188,24 @@ app.listen(PORT, () => {
   logger.info(`Automacao de creditos: ATIVA`);
   logger.info(`HPC Gateway: ${process.env.HPC_GATEWAY_URL ? 'ATIVO (' + process.env.HPC_GATEWAY_URL + ')' : 'DESATIVADO'}`);
 });
+
+// Cron: varredura de jurisprudência (diária às 6h, quando habilitada)
+if (process.env.JURISPRUDENCIA_VARREDURA_CRON_ENABLED === 'true') {
+  try {
+    const cron = require('node-cron');
+    cron.schedule('0 6 * * *', async () => {
+      try {
+        const { runJurisprudenciaVarredura } = await import('./services/jurisprudencia-varredura.service');
+        const result = await runJurisprudenciaVarredura();
+        logger.info(`[CRON] Varredura jurisprudência: ${result.total} itens para revisão`);
+      } catch (err: any) {
+        logger.error('[CRON] Erro na varredura de jurisprudência:', err.message);
+      }
+    }, { timezone: 'America/Sao_Paulo' });
+    logger.info('Cron varredura jurisprudência: agendada diariamente às 6h (America/Sao_Paulo)');
+  } catch (e) {
+    logger.warn('node-cron não disponível — varredura jurisprudência desativada');
+  }
+}
 
 export default app;

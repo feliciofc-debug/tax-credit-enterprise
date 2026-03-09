@@ -53,6 +53,9 @@ interface FullAnalysisResult {
   pipeline?: string;
   timing?: { hpcProcessingMs?: number; claudeAnalysisMs?: number; totalMs?: number };
   hpc?: { arquivosProcessados?: number; resultados?: HPCResult[]; erros?: string[] };
+  authorizedByNames?: string | null;
+  authorizedByCargos?: string | null;
+  dataSources?: { tipo: string; descricao: string }[];
   analysis: {
     score: number;
     regimeTributario: string;
@@ -80,6 +83,12 @@ export default function HPCTestPage() {
   const [cnpj, setCnpj] = useState('');
   const [regime, setRegime] = useState('');
   const [sector, setSector] = useState('');
+  const [authorizedByNames, setAuthorizedByNames] = useState('');
+  const [authorizedByCargos, setAuthorizedByCargos] = useState('');
+  const [interviewFolha, setInterviewFolha] = useState('');
+  const [interviewEnergia, setInterviewEnergia] = useState('');
+  const [interviewAcoes, setInterviewAcoes] = useState('');
+  const [interviewDecisao20SM, setInterviewDecisao20SM] = useState<'sim' | 'nao' | ''>('');
 
   const [processing, setProcessing] = useState(false);
   const [processResult, setProcessResult] = useState<any>(null);
@@ -225,6 +234,14 @@ export default function HPCTestPage() {
         if (regime) formData.append('regime', regime);
         if (sector) formData.append('sector', sector);
         formData.append('documentType', 'sped');
+        if (authorizedByNames) formData.append('authorizedByNames', authorizedByNames);
+        if (authorizedByCargos) formData.append('authorizedByCargos', authorizedByCargos);
+        const interview: Record<string, string> = {};
+        if (interviewFolha) interview.folhaMensal = interviewFolha;
+        if (interviewEnergia) interview.energiaMensal = interviewEnergia;
+        if (interviewAcoes) interview.acoesJudiciais = interviewAcoes;
+        if (interviewDecisao20SM) interview.decisaoFavoravel20SM = interviewDecisao20SM;
+        if (Object.keys(interview).length > 0) formData.append('interviewData', JSON.stringify(interview));
       }
 
       const endpoint = mode === 'process-only' ? `${apiBase}/api/hpc/process-only` : `${apiBase}/api/hpc/analyze`;
@@ -538,6 +555,80 @@ details[open]{background:white}
           </div>
         )}
 
+        {/* Autorização e fundamentação jurídica */}
+        {mode === 'full-analysis' && (
+          <details className="mb-5 p-4 bg-amber-50/50 rounded-xl border border-amber-100">
+            <summary className="cursor-pointer font-medium text-amber-800 text-sm flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.187-.377-3.314M12 9v2m0 4h.01" />
+              </svg>
+              Autorização e dados para fundamentação jurídica (opcional)
+            </summary>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <div className="sm:col-span-2">
+                <label className="text-xs text-gray-600 mb-1 block font-medium">Sócios/Administradores que autorizaram a análise *</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={authorizedByNames}
+                  onChange={e => setAuthorizedByNames(e.target.value)}
+                  placeholder="Ex: João Silva, Maria Santos"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600 mb-1 block font-medium">Cargo(s)</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={authorizedByCargos}
+                  onChange={e => setAuthorizedByCargos(e.target.value)}
+                  placeholder="Ex: Sócio-Administrador"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600 mb-1 block font-medium">Folha de pagamento mensal (R$)</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  type="number"
+                  value={interviewFolha}
+                  onChange={e => setInterviewFolha(e.target.value)}
+                  placeholder="Ex: 438000"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600 mb-1 block font-medium">Energia elétrica mensal (R$)</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  type="number"
+                  value={interviewEnergia}
+                  onChange={e => setInterviewEnergia(e.target.value)}
+                  placeholder="Ex: 60000"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs text-gray-600 mb-1 block font-medium">Ações judiciais em curso (temas)</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={interviewAcoes}
+                  onChange={e => setInterviewAcoes(e.target.value)}
+                  placeholder="Ex: Tema 69, Tema 986 — ou deixe em branco se não houver"
+                />
+              </div>
+              <div className="sm:col-span-2 p-3 bg-red-50 rounded-lg border border-red-100">
+                <label className="text-xs text-red-800 mb-1 block font-medium">Contribuições a terceiros (20 SM) — Tese 3.2</label>
+                <p className="text-xs text-red-700 mb-2">A tese foi derrotada no STJ (Temas 1.079 e 1.390). Viável apenas para empresas com decisão favorável anterior a 25/10/2023.</p>
+                <select
+                  className="w-full border border-red-200 rounded-lg px-3 py-2 text-sm bg-white"
+                  value={interviewDecisao20SM}
+                  onChange={e => setInterviewDecisao20SM(e.target.value as 'sim' | 'nao' | '')}
+                >
+                  <option value="">— Selecione —</option>
+                  <option value="sim">Sim — possui decisão favorável anterior a 25/10/2023</option>
+                  <option value="nao">Não — ou não sabe</option>
+                </select>
+              </div>
+            </div>
+          </details>
+        )}
+
         {/* File upload */}
         <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-amber-400 transition-colors mb-4">
           <svg className="w-10 h-10 text-gray-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -806,6 +897,32 @@ details[open]{background:white}
                 <span>|</span>
                 <span>Score: <span className="font-bold text-white">{fullResult.analysis.score}</span></span>
               </div>
+              {(fullResult.authorizedByNames || (fullResult.dataSources && fullResult.dataSources.length > 0)) && (
+                <div className="mt-4 pt-3 border-t border-indigo-500/30">
+                  {fullResult.authorizedByNames && (
+                    <p className="text-xs text-indigo-100">
+                      Analise autorizada por: <span className="font-semibold text-white">{fullResult.authorizedByNames}</span>
+                      {fullResult.authorizedByCargos && ` (${fullResult.authorizedByCargos})`}
+                    </p>
+                  )}
+                  {fullResult.dataSources && fullResult.dataSources.length > 0 && (
+                    <p className="text-xs text-indigo-200 mt-1">
+                      Fontes: {fullResult.dataSources.map(d => `${d.tipo}`).join(', ')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Alerta Reforma Tributaria — Janela de Recuperacao */}
+            <div className="px-6 py-4 bg-amber-50 border-b-2 border-amber-200">
+              <p className="text-sm font-bold text-amber-800 mb-2">JANELA DE RECUPERACAO — REFORMA TRIBUTARIA</p>
+              <ul className="text-xs text-amber-900 space-y-1 list-disc list-inside">
+                <li>Creditos de PIS/COFINS: recuperar ANTES da extincao em 2027</li>
+                <li>Creditos de ICMS/ISS: recuperar ANTES da extincao progressiva (2029-2033)</li>
+                <li>Teses pacificadas (Tema 69, 985, 478, 72): executar AGORA — janela fechando</li>
+                <li>Prazo decadencial: ultimos 5 anos de cada tributo</li>
+              </ul>
             </div>
 
             {/* Resumo Executivo */}
@@ -893,6 +1010,12 @@ details[open]{background:white}
                         <span className="font-bold text-green-700 text-sm">{formatCurrency(op.valorEstimado)}</span>
                       </div>
                       <div className="px-4 py-4 bg-white space-y-3 text-sm">
+                        {((op.tipo || '').toLowerCase().includes('terceiros') || (op.tipo || '').toLowerCase().includes('20 sm') || (op.tipo || '').toLowerCase().includes('sistema s') || (op.fundamentacaoLegal || '').toLowerCase().includes('tema 1.079') || (op.fundamentacaoLegal || '').toLowerCase().includes('tema 1.390')) && (
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                            <p className="font-bold text-red-800 text-xs mb-1">ATENCAO: Tese com jurisprudencia desfavoravel no STJ</p>
+                            <p className="text-red-700 text-xs leading-relaxed">Temas 1.079 e 1.390 STJ. Viavel apenas para empresas com decisao judicial ou administrativa favoravel obtida antes de 25/10/2023.</p>
+                          </div>
+                        )}
                         {op.descricao && (
                           <div>
                             <p className="text-gray-700 leading-relaxed whitespace-pre-line">{op.descricao}</p>

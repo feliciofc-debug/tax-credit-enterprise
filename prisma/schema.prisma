@@ -124,6 +124,12 @@ model ViabilityAnalysis {
   regime        String?  // lucro_real, lucro_presumido, simples
   sector        String?  // Setor de atuacao
   annualRevenue Float?   // Faturamento anual estimado
+
+  // Autorizacao e entrevista (seguranca juridica)
+  authorizedByNames   String?  // "Joao Silva, Maria Santos" — socios que autorizaram
+  authorizedByCargos  String?  // "Socio-Administrador"
+  interviewData       String?  @db.Text // JSON: folha, energia, acoes judiciais, etc.
+  dataSources         String?  @db.Text // JSON: [{tipo:"SPED",periodo:"2020-2024"},{tipo:"DARF",mes:"03/2025"}]
   
   // Documentos enviados para analise rapida
   docsUploaded  Int      @default(0)
@@ -442,6 +448,29 @@ model ThesisUpdate {
 
   @@index([reviewed])
   @@index([relevance])
+}
+
+// ============================================
+// JURISPRUDENCIA VINCULANTE — Ajuste de probabilidade por tese
+// Claude consulta antes de atribuir probabilidade
+// ============================================
+model TeseJurisprudencia {
+  id                    String    @id @default(cuid())
+  teseId                String?   // codigo da tese (ex: 3.2, 20_SM)
+  teseCodigo            String    // "3.2", "20_SM" — para matching
+  temaVinculante        String?   // "Tema 1.079", "Tema 1.390"
+  tribunal              String?   // "STJ", "STF"
+  dataJulgamento        DateTime?
+  resultado             String    // FAVORAVEL, DESFAVORAVEL, PARCIAL
+  probabilidadeMaxima   Int?      // ex: 10 para desfavoravel
+  modulacao             String?   @db.Text
+  notas                 String?   @db.Text
+  ativo                 Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([teseCodigo])
+  @@index([ativo])
 }
 
 // ============================================

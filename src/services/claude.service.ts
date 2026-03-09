@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import { prisma } from '../utils/prisma';
 import { jurisprudenceService } from './jurisprudence.service';
 import { mapearTesesDasOportunidades } from '../utils/tese-mapper';
+import { getJurisprudenciaOverrides, formatOverridesForPrompt } from './tese-jurisprudencia.service';
 
 // ============================================================
 // CONFIGURAÇÃO DE MODELOS
@@ -37,6 +38,11 @@ export interface CompanyInfo {
   regime?: 'lucro_real' | 'lucro_presumido' | 'simples';
   sector?: string;
   uf?: string;
+  /** Socios que autorizaram a analise — para citar no relatorio (seguranca juridica) */
+  authorizedByNames?: string;
+  authorizedByCargos?: string;
+  /** Dados da entrevista: folha, energia, acoes judiciais */
+  interviewData?: Record<string, string>;
 }
 
 export interface AnalysisOpportunity {
@@ -184,6 +190,8 @@ ${companyInfo.regime ? `- Regime Tributário INFORMADO pelo operador: ${companyI
 ${companyInfo.sector ? `- Setor: ${companyInfo.sector}` : ''}
 ${companyInfo.uf ? `- UF: ${companyInfo.uf}` : ''}
 - Tipo de documento analisado: ${docTypeName}
+${companyInfo.authorizedByNames ? `\n## AUTORIZAÇÃO (incluir no relatório)\n- Análise autorizada por: ${companyInfo.authorizedByNames}${companyInfo.authorizedByCargos ? ` (${companyInfo.authorizedByCargos})` : ''}\n- INCLUA no resumo executivo e/ou rodapé: "Análise realizada com base em documentos e informações fornecidos por ${companyInfo.authorizedByNames}, que autorizaram a análise para fins de planejamento tributário."` : ''}
+${companyInfo.interviewData && Object.keys(companyInfo.interviewData).length > 0 ? `\n## DADOS DA ENTREVISTA (use para cálculos quando disponíveis)\n${Object.entries(companyInfo.interviewData).map(([k, v]) => `- ${k}: ${v}`).join('\n')}\n- Se folhaMensal foi informada, use esse valor em vez de estimar a partir de DARF.\n- Se energiaMensal foi informada, use para Tema 986 (TUSD/TUST).\n- Se acoesJudiciais foi informada, considere no prazo de recuperação (Tema 69, 986).\n- TESE 3.2 (20 SM): Se decisaoFavoravel20SM=sim → probabilidade 10-15%. Se decisaoFavoravel20SM=nao ou ausente → probabilidade 5%, incluir em alertas: "Tese 20 SM com jurisprudência desfavorável no STJ (Temas 1.079 e 1.390). Viável apenas com decisão favorável anterior a 25/10/2023."` : ''}
 
 ## REGRA CRÍTICA: IDENTIFICAÇÃO AUTOMÁTICA DO REGIME TRIBUTÁRIO
 
@@ -460,7 +468,8 @@ Aplique TODAS as regras abaixo adicionalmente:
 - Fundamento: Art. 4°, parágrafo único da Lei 6.950/81
 - Base deve ser limitada a 20 salários mínimos
 - Alíquotas: SESI/SENAI (2,5%), SEBRAE (0,6%), INCRA (0,2%), Sal. Educação (2,5%)
-- Probabilidade: 55%
+- ATENÇÃO: Tese DERROTADA no STJ — Temas 1.079 (25/10/2023) e 1.390 (fev/2026). O limite de 20 SM NÃO se aplica às contribuições parafiscais (SENAI, SESI, SESC, SENAC, salário-educação, INCRA, SEBRAE, SENAR, SESCOOP). Modulação: preserva direitos apenas de quem tinha decisão favorável até 25/10/2023.
+- Probabilidade: se decisaoFavoravel20SM=sim → 10-15%; se decisaoFavoravel20SM=nao ou vazio → 5% e adicionar alerta de inviabilidade
 
 **TESE 3.3 — RAT/FAP — Revisão do enquadramento**
 - Fundamento: Art. 22, II da Lei 8.212/91 | Decreto 3.048/99
@@ -1062,7 +1071,15 @@ class ClaudeService {
       logger.info('Usando teses hardcoded (fallback)');
     }
 
-    const systemPrompt = buildFullAnalysisPrompt(companyInfo, documentType, dbThesesText);
+    let systemPrompt = buildFullAnalysisPrompt(companyInfo, documentType, dbThesesText);
+    try {
+      const overrides = await getJurisprudenciaOverrides();
+      if (overrides.length > 0) {
+        systemPrompt += formatOverridesForPrompt(overrides);
+      }
+    } catch (err: any) {
+      logger.warn('Falha ao buscar jurisprudencia vinculante:', err.message);
+    }
 
     // Truncar texto respeitando limite do tipo de documento
     const limit = TEXT_LIMITS[documentType] || TEXT_LIMITS.default;
@@ -1108,6 +1125,8 @@ REGRA 6 — IRPJ/CSLL OBRIGATÓRIO PARA LUCRO REAL: O relatório DEVE incluir pe
 - Se houver registros C197 → TESE 4.1: ajustes C197 × 34%, probabilidade 45-55%
 - Se houver créditos a recuperar → TESE 4.5: SELIC futura isenta de IRPJ/CSLL (Tema 1.079 STF), probabilidade 85%
 - Relatório SEM IRPJ/CSLL para Lucro Real será RECUSADO.
+
+REGRA 7 — TESE 3.2 (20 SM): Tese derrotada no STJ (Temas 1.079 e 1.390). Se decisaoFavoravel20SM=nao ou ausente na entrevista: probabilidade 5%, adicionar alerta de inviabilidade. Se decisaoFavoravel20SM=sim: probabilidade 10-15%.
 
 Analise o seguinte ${this.getDocumentTypeName(documentType)} e identifique TODAS as oportunidades de recuperação:
 
@@ -1828,6 +1847,66 @@ Os valores definitivos devem ser apurados por profissional contábil qualificado
       sped: 'SPED EFD Fiscal (escrituração fiscal digital)',
     };
     return names[type] || type;
+  }
+
+  /**
+   * Classifica acórdão/decisão/norma e retorna JSON estruturado
+   * Usado pelo pipeline de varredura jurisprudencial
+   */
+  async classifyJurisprudencia(texto: string, tipoFonte?: string): Promise<{
+    tesesAfetadas: string[];
+    resultado: 'FAVORAVEL' | 'DESFAVORAVEL' | 'PARCIAL' | 'NEUTRO';
+    impactoProbabilidade: number;
+    resumo: string;
+    modulacao?: string;
+    acaoRecomendada: 'BLOQUEAR' | 'ALERTAR' | 'ATUALIZAR' | 'MONITORAR';
+  }> {
+    const prompt = `Analise o seguinte ${tipoFonte || 'documento jurídico'} e responda APENAS em JSON válido, sem markdown ou texto extra:
+
+{
+  "tesesAfetadas": ["lista de códigos de tese afetadas, ex: 3.2, 4.1, 1.1"],
+  "resultado": "FAVORAVEL" | "DESFAVORAVEL" | "PARCIAL" | "NEUTRO",
+  "impactoProbabilidade": número de -100 a +100 (negativo=reduz probabilidade, positivo=aumenta),
+  "resumo": "texto curto explicando o impacto",
+  "modulacao": "detalhes da modulação de efeitos se houver, ou null",
+  "acaoRecomendada": "BLOQUEAR" | "ALERTAR" | "ATUALIZAR" | "MONITORAR"
+}
+
+Teses da plataforma: 1.1/1.2 (ICMS base PIS/COFINS), 1.3/1.4 (insumos), 3.1 (INSS verbas), 3.2 (20 SM terceiros), 3.4 (FGTS), 4.1 (benefícios ICMS), 4.5 (SELIC), 2.1 (TUSD/TUST).
+
+Documento:
+---
+${texto.substring(0, 15000)}
+---`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: MODELS.DOCUMENTS,
+        max_tokens: 1024,
+        temperature: 0,
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      const raw = response.content
+        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+        .map(b => b.text)
+        .join('');
+
+      const json = raw.replace(/```json?\s*/g, '').replace(/```\s*$/g, '').trim();
+      const parsed = JSON.parse(json);
+
+      return {
+        tesesAfetadas: Array.isArray(parsed.tesesAfetadas) ? parsed.tesesAfetadas : [],
+        resultado: ['FAVORAVEL', 'DESFAVORAVEL', 'PARCIAL', 'NEUTRO'].includes(parsed.resultado) ? parsed.resultado : 'NEUTRO',
+        impactoProbabilidade: typeof parsed.impactoProbabilidade === 'number' ? parsed.impactoProbabilidade : 0,
+        resumo: String(parsed.resumo || ''),
+        modulacao: parsed.modulacao || undefined,
+        acaoRecomendada: ['BLOQUEAR', 'ALERTAR', 'ATUALIZAR', 'MONITORAR'].includes(parsed.acaoRecomendada) ? parsed.acaoRecomendada : 'MONITORAR',
+      };
+    } catch (err: any) {
+      logger.error('Erro ao classificar jurisprudência:', err.message);
+      throw err;
+    }
   }
 }
 

@@ -65,6 +65,15 @@ export default function FormalizacaoPage() {
     inscricaoEstadual: '',
     atividadeEmpresa: '',
     cnaePrincipal: '',
+    empresaEndereco: '',
+    empresaCidade: '',
+    empresaCep: '',
+    representanteNome: '',
+    representanteCargo: '',
+    representanteCpf: '',
+    representanteRg: '',
+    periodoInicio: '',
+    periodoFim: '',
   });
 
   // Campos do PER/DCOMP
@@ -76,6 +85,7 @@ export default function FormalizacaoPage() {
     periodoCredito: '',
     codigoReceitaDebito: '',
     periodoDebito: '',
+    numeroPER: '', // Vincular DCOMP ao PER (se ja transmitiu o PER)
   });
 
   const apiBase = typeof window !== 'undefined'
@@ -486,6 +496,90 @@ export default function FormalizacaoPage() {
                   placeholder="4639-7/99"
                 />
               </div>
+              <div className="md:col-span-2 border-t border-gray-200 pt-4 mt-2">
+                <p className="text-xs font-semibold text-gray-600 mb-2">Dados da Empresa / Representante (opcional)</p>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs text-gray-500 mb-1 block">Endereco da Empresa</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={sefazFields.empresaEndereco}
+                  onChange={e => setSefazFields(p => ({ ...p, empresaEndereco: e.target.value }))}
+                  placeholder="Rua, numero, bairro, cidade/UF"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Cidade</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={sefazFields.empresaCidade}
+                  onChange={e => setSefazFields(p => ({ ...p, empresaCidade: e.target.value }))}
+                  placeholder="Sao Paulo"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">CEP</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={sefazFields.empresaCep}
+                  onChange={e => setSefazFields(p => ({ ...p, empresaCep: e.target.value }))}
+                  placeholder="01310-100"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Representante Legal</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={sefazFields.representanteNome}
+                  onChange={e => setSefazFields(p => ({ ...p, representanteNome: e.target.value }))}
+                  placeholder="Nome do socio/diretor"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Cargo do Representante</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={sefazFields.representanteCargo}
+                  onChange={e => setSefazFields(p => ({ ...p, representanteCargo: e.target.value }))}
+                  placeholder="Socio-Administrador"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">CPF do Representante</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={sefazFields.representanteCpf}
+                  onChange={e => setSefazFields(p => ({ ...p, representanteCpf: e.target.value }))}
+                  placeholder="000.000.000-00"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">RG do Representante</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={sefazFields.representanteRg}
+                  onChange={e => setSefazFields(p => ({ ...p, representanteRg: e.target.value }))}
+                  placeholder="12.345.678-9"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Periodo Inicio</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={sefazFields.periodoInicio}
+                  onChange={e => setSefazFields(p => ({ ...p, periodoInicio: e.target.value }))}
+                  placeholder="01/2020"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Periodo Fim</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={sefazFields.periodoFim}
+                  onChange={e => setSefazFields(p => ({ ...p, periodoFim: e.target.value }))}
+                  placeholder="12/2024"
+                />
+              </div>
             </div>
             <button
               onClick={handleGenerateSefaz}
@@ -542,6 +636,16 @@ export default function FormalizacaoPage() {
       {/* PER/DCOMP TAB */}
       {activeTab === 'perdcomp' && (
         <div className="space-y-6">
+          {/* Sequencia correta PER -> DCOMP -> DCTFWeb */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p className="text-sm font-bold text-blue-900 mb-2">SEQUENCIA CORRETA DE TRANSMISSAO</p>
+            <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+              <li><strong>1. PER</strong> (Pedido de Ressarcimento) — cria o credito</li>
+              <li><strong>2. DCOMP(s)</strong> vinculada(s) ao PER — referenciar o numero do PER no campo abaixo</li>
+              <li><strong>3. DCTFWeb retificada</strong> — apos transmissao das DCOMPs</li>
+            </ol>
+          </div>
+
           {/* Analysis selector */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold text-gray-900 mb-3">Selecionar Analise</h3>
@@ -633,6 +737,16 @@ export default function FormalizacaoPage() {
                   onChange={e => setPerdcompFields(p => ({ ...p, periodoDebito: e.target.value }))}
                   placeholder="01/2025"
                 />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Numero do PER (se DCOMP vinculada)</label>
+                <input
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  value={perdcompFields.numeroPER}
+                  onChange={e => setPerdcompFields(p => ({ ...p, numeroPER: e.target.value }))}
+                  placeholder="Ex: 12345678901234567890"
+                />
+                <p className="text-xs text-gray-400 mt-0.5">Preencher quando a DCOMP referencia um PER ja transmitido</p>
               </div>
             </div>
             <button

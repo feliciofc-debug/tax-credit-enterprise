@@ -246,6 +246,13 @@ const CARF_JURISPRUDENCIA: Record<string, string[]> = {
   INSS: [
     'CARF Acordao 2401-008.765 (4a Camara/1a Turma, 2021): "O terco constitucional de ferias, o aviso previo indenizado e os primeiros 15 dias de afastamento por doenca possuem natureza indenizatoria e nao integram a base de calculo das contribuicoes previdenciarias patronais, conforme Temas 985 STF e 478 STJ"',
   ],
+  FGTS: [
+    'Sumula 305 TST: "O aviso previo indenizado nao integra a base de calculo para fins de incidencia do FGTS"',
+    'Jurisprudencia consolidada TST/TRTs: terco constitucional de ferias e verbas indenizatorias nao integram base do FGTS (Lei 8.036/90, Art. 15)',
+  ],
+  RAT: [
+    'CARF e CRPS: decisões sobre enquadramento em CNAE e FAP (Fator Acidentário de Prevenção)',
+  ],
   ICMS: [
     'CARF Acordao 3201-005.543 (2a Camara/1a Turma, 2019): "Saldo credor de ICMS decorrente de diferenca de aliquotas entre entradas e saidas configura acumulo estrutural, devendo ser ressarcido conforme art. 25, par. 1 da LC 87/96"',
   ],
@@ -257,15 +264,17 @@ function getJurisprudenciaCARF(creditos: Array<{ tributo: string; descricaoTese:
 
   for (const c of creditos) {
     const tributoUpper = c.tributo.toUpperCase().replace(/[^A-Z]/g, '');
-    let key = 'PIS';
-    if (tributoUpper.includes('COFINS')) key = 'COFINS';
+    let key: string | null = null;
+    if (tributoUpper.includes('FGTS')) key = 'FGTS';
+    else if (tributoUpper.includes('RAT') || tributoUpper.includes('FAP')) key = 'RAT';
+    else if (tributoUpper.includes('COFINS')) key = 'COFINS';
     else if (tributoUpper.includes('PIS')) key = 'PIS';
     else if (tributoUpper.includes('IRPJ')) key = 'IRPJ';
     else if (tributoUpper.includes('CSLL')) key = 'CSLL';
     else if (tributoUpper.includes('INSS') || tributoUpper.includes('PREVIDENCI')) key = 'INSS';
     else if (tributoUpper.includes('ICMS')) key = 'ICMS';
 
-    const acordaos = CARF_JURISPRUDENCIA[key] || [];
+    const acordaos = key ? (CARF_JURISPRUDENCIA[key] || []) : [];
     for (const a of acordaos) {
       if (!cited.has(a)) {
         cited.add(a);
@@ -327,9 +336,66 @@ export function generatePerdcompDocument(params: PerdcompDocumentParams): string
   ).join('\n\n');
 
   const jurisprudenciaCAFR = getJurisprudenciaCARF(params.creditos);
+  const isFGTS = params.codigoReceitaDebito?.toUpperCase().includes('GRRF') ||
+    params.codigoReceitaDebito?.toUpperCase().includes('CAIXA') ||
+    params.creditos.every(c => (c.tributo || '').toUpperCase().includes('FGTS'));
+
+  const secao5FGTS = `=============================================================================
+5. ORIENTACOES PARA RESTITUICAO VIA CAIXA ECONOMICA FEDERAL (FGTS)
+=============================================================================
+
+O FGTS NAO se compensa via PER/DCOMP. A restituicao e feita junto a Caixa Economica Federal.
+
+5.1. PROCEDIMENTO CORRETO:
+a) Protocolar pedido administrativo de restituicao junto a Caixa Economica Federal
+b) Anexar: GFIP/eSocial retificada, demonstrativo de calculo, folha de pagamento analitica
+c) Se indeferido: acao judicial contra a CEF na Justica Federal
+d) Compensar valores restituidos com FGTS vincendo via GRRF (Guia de Recolhimento do FGTS)
+
+5.2. DOCUMENTACAO NECESSARIA:
+- GFIP/eSocial dos periodos com retificacao dos valores de FGTS
+- Demonstrativo de calculo das verbas indenizatorias excluidas
+- Folha de pagamento analitica
+- Procuração com poderes para representar perante a CEF`;
+
+  const secao5PERDCOMP = `=============================================================================
+5. ORIENTACOES PARA PREENCHIMENTO DO PER/DCOMP WEB
+=============================================================================
+
+5.1. ACESSO:
+- Portal e-CAC (https://cav.receita.fazenda.gov.br)
+- Certificado digital e-CNPJ tipo A1 ou A3 (conta gov.br nivel Ouro)
+- Menu: Restituicao e Compensacao > PER/DCOMP Web > Criar Novo Pedido
+
+5.2. PREENCHIMENTO:
+
+   | Campo PER/DCOMP            | Valor                              |
+   |----------------------------|--------------------------------------|
+   | Tipo de Documento          | ${params.tipoDocumento}              |
+   | Tipo de Credito            | ${params.tipoCreditoPerdcomp}        |
+   | Qualificacao               | Outra Qualificacao                   |
+   | Periodo Apuracao Credito   | ${params.periodoCredito}             |
+   | Valor Credito Original     | R$ ${formatNumber(params.valorTotal)}|
+   | Codigo Receita Debito      | ${params.codigoReceitaDebito}        |
+   | Periodo Debito             | ${params.periodoDebito}              |
+
+5.3. PROCEDIMENTO:
+a) Criar pedido com os dados acima
+b) Anexar este Parecer Tecnico como documento suporte
+c) Anexar demonstrativo de calculo (planilha Excel com detalhamento)
+d) Transmitir e salvar recibo (protocolo e numero da PER/DCOMP)
+e) Registrar na DCTF a compensacao efetuada
+
+5.4. RETIFICACAO DE OBRIGACOES ACESSORIAS (OBRIGATORIO):
+- EFD Contribuicoes: retificar periodos para refletir creditos apurados
+- DCTF: incluir compensacao declarada
+- ECF: ajustar base de calculo quando aplicavel
+- GFIP/eSocial: retificar quando envolver contribuicoes previdenciarias`;
+
+  const secao5 = isFGTS ? secao5FGTS : secao5PERDCOMP;
 
   return `=============================================================================
-PARECER TECNICO — SUPORTE A DECLARACAO DE COMPENSACAO (PER/DCOMP)
+PARECER TECNICO — SUPORTE A ${isFGTS ? 'RESTITUICAO DE FGTS VIA CEF' : 'DECLARACAO DE COMPENSACAO (PER/DCOMP)'}
 MEMORIAL DESCRITIVO DE CREDITO TRIBUTARIO
 =============================================================================
 
@@ -338,15 +404,13 @@ CNPJ: ${params.cnpj}
 PARECER N.: ${numeroParecer}
 DATA: ${dataAtual}
 PROTOCOLO TAXCREDIT: ${params.protocoloPlataforma}
-CLASSIFICACAO: CONFIDENCIAL — USO EXCLUSIVO PARA INSTRUCAO DE PER/DCOMP
+CLASSIFICACAO: CONFIDENCIAL — USO EXCLUSIVO PARA ${isFGTS ? 'INSTRUCAO DE PEDIDO DE RESTITUICAO FGTS' : 'INSTRUCAO DE PER/DCOMP'}
 
 =============================================================================
 1. OBJETO E ESCOPO
 =============================================================================
 
-O presente Parecer Tecnico tem por objetivo instruir e fundamentar a(s)
-Declaracao(oes) de Compensacao a serem transmitidas via PER/DCOMP Web
-(IN RFB 2.055/2021), relativas aos creditos tributarios federais
+O presente Parecer Tecnico tem por objetivo instruir e fundamentar ${isFGTS ? 'o pedido de restituicao de FGTS junto a Caixa Economica Federal' : 'a(s) Declaracao(oes) de Compensacao a serem transmitidas via PER/DCOMP Web (IN RFB 2.055/2021)'}, relativ${isFGTS ? 'o' : 'as'} aos creditos tributarios federais
 identificados por meio de analise documental, escrituracao fiscal digital
 e cruzamento com legislacao vigente e jurisprudencia consolidada.
 
@@ -354,7 +418,7 @@ Este documento serve como suporte tecnico para:
 a) Fundamentacao da natureza e origem dos creditos;
 b) Demonstracao da memoria de calculo;
 c) Comprovacao de nao utilizacao previa;
-d) Instrucao para preenchimento correto da PER/DCOMP;
+d) ${isFGTS ? 'Instrucao para protocolo junto a CEF' : 'Instrucao para preenchimento correto da PER/DCOMP'};
 e) Base documental para eventual fiscalizacao ou auditoria.
 
 =============================================================================
@@ -406,39 +470,7 @@ d) As obrigacoes acessorias (EFD Contribuicoes, DCTF, ECF, GFIP/eSocial)
 e) O contribuinte mantera a guarda dos documentos comprobatorios pelo
    prazo minimo de 5 (cinco) anos, contados da data da transmissao.
 
-=============================================================================
-5. ORIENTACOES PARA PREENCHIMENTO DO PER/DCOMP WEB
-=============================================================================
-
-5.1. ACESSO:
-- Portal e-CAC (https://cav.receita.fazenda.gov.br)
-- Certificado digital e-CNPJ tipo A1 ou A3 (conta gov.br nivel Ouro)
-- Menu: Restituicao e Compensacao > PER/DCOMP Web > Criar Novo Pedido
-
-5.2. PREENCHIMENTO:
-
-   | Campo PER/DCOMP            | Valor                              |
-   |----------------------------|--------------------------------------|
-   | Tipo de Documento          | ${params.tipoDocumento}              |
-   | Tipo de Credito            | ${params.tipoCreditoPerdcomp}        |
-   | Qualificacao               | Outra Qualificacao                   |
-   | Periodo Apuracao Credito   | ${params.periodoCredito}             |
-   | Valor Credito Original     | R$ ${formatNumber(params.valorTotal)}|
-   | Codigo Receita Debito      | ${params.codigoReceitaDebito}        |
-   | Periodo Debito             | ${params.periodoDebito}              |
-
-5.3. PROCEDIMENTO:
-a) Criar pedido com os dados acima
-b) Anexar este Parecer Tecnico como documento suporte
-c) Anexar demonstrativo de calculo (planilha Excel com detalhamento)
-d) Transmitir e salvar recibo (protocolo e numero da PER/DCOMP)
-e) Registrar na DCTF a compensacao efetuada
-
-5.4. RETIFICACAO DE OBRIGACOES ACESSORIAS (OBRIGATORIO):
-- EFD Contribuicoes: retificar periodos para refletir creditos apurados
-- DCTF: incluir compensacao declarada
-- ECF: ajustar base de calculo quando aplicavel
-- GFIP/eSocial: retificar quando envolver contribuicoes previdenciarias
+${secao5}
 
 =============================================================================
 6. PRAZOS E OBSERVACOES
@@ -1197,13 +1229,6 @@ const TRIBUTO_CONFIG: Record<GrupoTributo, {
   },
 };
 
-const ICMS_KEYWORDS = [
-  'ICMS', 'ICMS-ST', 'ICMS-IMPORTACAO', 'ICMS IMPORTACAO',
-  'SALDO CREDOR', 'SUBSTITUICAO TRIBUTARIA', 'TUSD', 'TUST',
-  'ENERGIA ELETRICA', 'CREDITO ACUMULADO', 'TRANSFERENCIA ENTRE FILIAIS',
-  'ADC 49', 'LEI KANDIR', 'DIFAL',
-];
-
 export function classifyOpportunity(op: any): ClassifiedOpportunity {
   const text = JSON.stringify(op).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const tributo = (op.tributo || '').toUpperCase();
@@ -1211,7 +1236,8 @@ export function classifyOpportunity(op: any): ClassifiedOpportunity {
 
   let grupo: GrupoTributo = 'OUTROS';
 
-  if (ICMS_KEYWORDS.some(k => text.includes(k)) || tributo.includes('ICMS')) {
+  // CRITICO: Usar APENAS tributo para ICMS. Tese do Seculo (PIS/COFINS que exclui ICMS da base) e FEDERAL, nao estadual.
+  if (tributo.includes('ICMS')) {
     grupo = 'ICMS';
   } else if (tributo === 'PIS' || tributo.includes('PIS-IMPORT') || (tipo.includes('PIS') && !tipo.includes('COFINS'))) {
     grupo = 'PIS';
@@ -1229,11 +1255,9 @@ export function classifyOpportunity(op: any): ClassifiedOpportunity {
     grupo = 'INSS';
   } else if (tributo === 'FGTS' || tipo.includes('FGTS')) {
     grupo = 'FGTS';
-  } else if (text.includes('ICMS') || text.includes('SALDO CREDOR')) {
-    grupo = 'ICMS';
-  } else if (text.includes('PIS')) {
+  } else if (text.includes('PIS') && !tributo.includes('ICMS')) {
     grupo = 'PIS';
-  } else if (text.includes('COFINS')) {
+  } else if (text.includes('COFINS') && !tributo.includes('ICMS')) {
     grupo = 'COFINS';
   }
 

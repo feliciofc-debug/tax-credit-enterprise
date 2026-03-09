@@ -490,6 +490,17 @@ export default function AdminViabilidadePage() {
                 </div>
               </div>
 
+              {/* Alerta Reforma Tributaria */}
+              <div className="px-6 py-4 bg-amber-50 border-b-2 border-amber-200">
+                <p className="text-sm font-bold text-amber-800 mb-2">JANELA DE RECUPERACAO — REFORMA TRIBUTARIA</p>
+                <ul className="text-xs text-amber-900 space-y-1 list-disc list-inside">
+                  <li>Creditos de PIS/COFINS: recuperar ANTES da extincao em 2027</li>
+                  <li>Creditos de ICMS/ISS: recuperar ANTES da extincao progressiva (2029-2033)</li>
+                  <li>Teses pacificadas (Tema 69, 985, 478, 72): executar AGORA — janela fechando</li>
+                  <li>Prazo decadencial: ultimos 5 anos de cada tributo</li>
+                </ul>
+              </div>
+
               {/* Resumo Executivo */}
               {fullResult.resumoExecutivo && (
                 <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
