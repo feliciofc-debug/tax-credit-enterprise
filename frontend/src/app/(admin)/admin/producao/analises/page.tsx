@@ -63,6 +63,12 @@ interface AnalysisDetail {
   partnerName?: string;
   source?: string;
   createdAt?: string;
+  demonstrativo?: {
+    totalReal?: number;
+    totalHipotese?: number;
+    extratoBancarioHtml?: string;
+    extratoHtml?: string;
+  };
 }
 
 /* ============================================================
@@ -301,9 +307,9 @@ export default function AdminAnalisesPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Analises Realizadas</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Análises Realizadas</h1>
           <p className="text-gray-500 mt-1">
-            Todas as analises de viabilidade e extratos completos
+            Visão abrangente de hipóteses — oportunidades estimadas pela IA
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -356,6 +362,15 @@ export default function AdminAnalisesPage() {
               Voltar para lista
             </button>
             <div className="flex gap-2">
+              <a
+                href="/admin/producao/extratos"
+                className="flex items-center gap-2 px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 text-sm font-medium transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                Extratos (créditos reais SPED)
+              </a>
               <button
                 onClick={handlePrint}
                 className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm font-medium transition-colors"
@@ -363,7 +378,7 @@ export default function AdminAnalisesPage() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
-                Imprimir
+                Imprimir Relatório
               </button>
               <button
                 onClick={handlePrint}
@@ -372,12 +387,13 @@ export default function AdminAnalisesPage() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Salvar PDF
+                Salvar Relatório (PDF)
               </button>
             </div>
           </div>
 
-          {/* Extrato visual na tela */}
+          {/* Relatório — visão abrangente de hipóteses */}
+          <>
           <div className="bg-white border-2 border-indigo-200 rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-6 py-5 text-white">
@@ -389,8 +405,20 @@ export default function AdminAnalisesPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-extrabold">{fmt(detail.estimatedCredit)}</p>
-                  <p className="text-indigo-200 text-xs">Total Estimado de Recuperação</p>
+                  {detail.demonstrativo && (detail.demonstrativo.totalReal ?? 0) > 0 ? (
+                    <>
+                      <p className="text-3xl font-extrabold">{fmt(detail.demonstrativo.totalReal!)}</p>
+                      <p className="text-indigo-200 text-xs">Valor REAL (comprovado no SPED)</p>
+                      {(detail.demonstrativo.totalHipotese ?? 0) > 0 && (
+                        <p className="text-indigo-300 text-xs mt-1">+ {fmt(detail.demonstrativo.totalHipotese!)} estimativa IA</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-extrabold">{fmt(detail.estimatedCredit)}</p>
+                      <p className="text-indigo-200 text-xs">Total Estimado (análise IA)</p>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap gap-4 mt-3 text-xs text-indigo-200">
@@ -754,6 +782,7 @@ export default function AdminAnalisesPage() {
               <span>{detail.createdAt ? new Date(detail.createdAt).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</span>
             </div>
           </div>
+          </>
         </div>
       )}
 
