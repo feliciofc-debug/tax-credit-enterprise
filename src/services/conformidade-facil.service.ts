@@ -31,12 +31,15 @@ export interface ConformidadeFacilResult<T = unknown> {
 export class ConformidadeFacilService {
   private client: AxiosInstance | null = null;
   private config: ConformidadeFacilConfig | null = null;
+  private initDone = false;
 
   constructor() {
-    this.init();
+    // Lazy init — não executa na carga do módulo (evita crash no startup)
   }
 
   private init(): void {
+    if (this.initDone) return;
+    this.initDone = true;
     const passphrase = process.env.CONFORMIDADE_FACIL_CERT_PASSWORD;
     const certPathEnv = process.env.CONFORMIDADE_FACIL_CERT_PATH;
 
@@ -95,6 +98,7 @@ export class ConformidadeFacilService {
   }
 
   isAvailable(): boolean {
+    this.init();
     return this.client !== null;
   }
 
@@ -106,6 +110,7 @@ export class ConformidadeFacilService {
     codigoCST?: string,
     nomeCST?: string
   ): Promise<ConformidadeFacilResult<ClassTribItem[]>> {
+    this.init();
     if (!this.client) {
       return { success: false, disabled: true, error: 'API Conformidade Fácil não configurada (certificado ausente)' };
     }
@@ -128,6 +133,7 @@ export class ConformidadeFacilService {
    * Consulta Crédito Presumido
    */
   async consultarCredPresumido(): Promise<ConformidadeFacilResult<unknown>> {
+    this.init();
     if (!this.client) {
       return { success: false, disabled: true, error: 'API Conformidade Fácil não configurada' };
     }
@@ -146,6 +152,7 @@ export class ConformidadeFacilService {
    * Consulta Anexos
    */
   async consultarAnexos(): Promise<ConformidadeFacilResult<unknown>> {
+    this.init();
     if (!this.client) {
       return { success: false, disabled: true, error: 'API Conformidade Fácil não configurada' };
     }
@@ -164,6 +171,7 @@ export class ConformidadeFacilService {
    * Consulta Indicadores dos Locais de Operação
    */
   async consultarIndOper(): Promise<ConformidadeFacilResult<unknown>> {
+    this.init();
     if (!this.client) {
       return { success: false, disabled: true, error: 'API Conformidade Fácil não configurada' };
     }

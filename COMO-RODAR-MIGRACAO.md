@@ -19,7 +19,19 @@ Você tem **duas opções**. A **Opção 1** é mais simples (só copiar e colar
 
 ### Passo 3: Colar o código
 
-1. Abra o arquivo no seu computador:
+**Migração 1 — TeseJurisprudencia** (se ainda não rodou):
+1. Abra: `prisma\migrations\20260224_add_tese_jurisprudencia\migration.sql`
+
+**Migração 2 — ViabilityAnalysis** (se o dashboard der HTTP 500):
+1. Cole e execute no Supabase:
+   ```sql
+   ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "authorizedByNames" TEXT;
+   ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "authorizedByCargos" TEXT;
+   ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "interviewData" TEXT;
+   ALTER TABLE "ViabilityAnalysis" ADD COLUMN IF NOT EXISTS "dataSources" TEXT;
+   ```
+
+2. Para a migração 1, abra o arquivo no seu computador:
    ```
    C:\Users\usuario\tax-credit-enterprise\prisma\migrations\20260224_add_tese_jurisprudencia\migration.sql
    ```
