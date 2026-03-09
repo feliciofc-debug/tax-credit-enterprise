@@ -25,6 +25,7 @@ import thesisRoutes from './routes/thesis.routes';
 import procurationRoutes from './routes/procuration.routes';
 import byceoRoutes from './routes/byceo.routes';
 import jurisprudenciaRoutes from './routes/jurisprudencia.routes';
+import conformidadeFacilRoutes from './routes/conformidade-facil.routes';
 
 dotenv.config();
 
@@ -167,6 +168,7 @@ app.use('/api/thesis', thesisRoutes);
 app.use('/api/procuration', procurationRoutes);
 app.use('/api/v1/byceo', byceoRoutes);
 app.use('/api/jurisprudencia', jurisprudenciaRoutes);
+app.use('/api/conformidade-facil', conformidadeFacilRoutes);
 
 // Error handling
 app.use(errorHandler);
