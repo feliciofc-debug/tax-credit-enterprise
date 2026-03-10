@@ -10,6 +10,15 @@ import { logger } from '../utils/logger';
 const CFOP_IMPORTACAO = ['3102', '3101', '3103', '2102', '2101', '2103'];
 const CFOP_SAIDA_TRIBUTADA = ['5102', '5101', '6102', '6101', '5104', '6104'];
 
+/**
+ * Crédito PIS/COFINS só existe sobre ENTRADAS (compras, insumos, importação).
+ * CFOPs que começam com 1, 2 ou 3 são entradas; 5, 6, 7 são saídas.
+ */
+function isCfopEntrada(cfop: string): boolean {
+  const first = cfop.charAt(0);
+  return first === '1' || first === '2' || first === '3';
+}
+
 export interface DemonstrativoItem {
   tributo: string;
   ponto: string;
@@ -93,14 +102,14 @@ export function buildDemonstrativo(
     const cfopBreakdown = sped.resumo?.cfopBreakdown || [];
 
     if (operacoesExtrato.length > 0) {
-      // Extrato detalhado: uma linha por operação (C190)
       for (const op of operacoesExtrato) {
+        if (!isCfopEntrada(op.cfop)) continue;
         const totalOp = (op.vlPis || 0) + (op.vlCofins || 0);
         if (totalOp > 0) {
           itens.push({
             tributo: 'PIS/COFINS',
             ponto: getDescricaoCfop(op.cfop),
-            situacaoIdentificada: `Operação CFOP ${op.cfop} — período ${periodo}`,
+            situacaoIdentificada: `Crédito sobre entrada CFOP ${op.cfop} — período ${periodo}`,
             periodo,
             baseCalculo: op.vlOpr,
             vlrPis: op.vlPis,
@@ -108,20 +117,20 @@ export function buildDemonstrativo(
             total: totalOp,
             baseLegal: getBaseLegalCfop(op.cfop),
             tipo: 'real',
-            observacao: 'Registro C190 SPED EFD Fiscal',
+            observacao: 'Registro C190 SPED EFD Fiscal (operação de entrada)',
             referenciaSped: `C190 ${op.cfop} ${periodo}`,
           });
         }
       }
     } else {
-      // Fallback: agregado por CFOP
       for (const cf of cfopBreakdown) {
+        if (!isCfopEntrada(cf.cfop)) continue;
         const totalCf = (cf.vlPis || 0) + (cf.vlCofins || 0);
         if (totalCf > 0) {
           itens.push({
             tributo: 'PIS/COFINS',
             ponto: getDescricaoCfop(cf.cfop),
-            situacaoIdentificada: `Crédito sobre operações CFOP ${cf.cfop} — período ${periodo}`,
+            situacaoIdentificada: `Crédito sobre entrada CFOP ${cf.cfop} — período ${periodo}`,
             periodo,
             baseCalculo: cf.vlOpr,
             vlrPis: cf.vlPis,
@@ -129,7 +138,7 @@ export function buildDemonstrativo(
             total: totalCf,
             baseLegal: getBaseLegalCfop(cf.cfop),
             tipo: 'real',
-            observacao: 'Dado extraído dos registros C100/C190 do SPED EFD Fiscal',
+            observacao: 'Registros C100/C190 SPED EFD Fiscal (operação de entrada)',
             referenciaSped: `C100/C190 ${cf.cfop} ${periodo}`,
           });
         }
