@@ -7,6 +7,10 @@ import { getOperatorPartnerId } from '../utils/operator';
 import { claudeService } from '../services/claude.service';
 import { documentProcessor } from '../services/documentProcessor.service';
 import { zipProcessor } from '../services/zipProcessor.service';
+import { buildDemonstrativo, formatDemonstrativoTexto, formatExtratoPorOperacaoHtml, formatExtratoBancarioHtml } from '../services/demonstrativo.service';
+import type { ZipProcessResult } from '../services/zipProcessor.service';
+
+export type ZipResultForDemo = ZipProcessResult;
 
 const router = Router();
 
@@ -37,12 +41,12 @@ async function processUploadedFiles(files: Express.Multer.File[]) {
   let anyOcrUsed = false;
   let overallQuality: 'high' | 'medium' | 'low' = 'high';
   let zipInfo: any = null;
+  let lastZipResult: import('./viability.routes').ZipResultForDemo | null = null;
 
   for (const file of files) {
     const ext = file.originalname.toLowerCase().split('.').pop();
 
     try {
-      // Se for ZIP, usar o zipProcessor especial (com SPED parser)
       if (ext === 'zip') {
         logger.info(`Processando ZIP: ${file.originalname} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
         const zipResult = await zipProcessor.processUpload(file.buffer, file.originalname, file.mimetype);
@@ -50,20 +54,24 @@ async function processUploadedFiles(files: Express.Multer.File[]) {
         totalPages += zipResult.resumo.processados;
         overallQuality = zipResult.speds.length > 0 ? 'high' : 'medium';
         zipInfo = zipResult.resumo;
-
-        // Se ZIP contém dados da empresa, logar
+        if (zipResult.speds.length > 0) lastZipResult = zipResult;
         if (zipResult.empresa) {
           logger.info(`ZIP empresa identificada: ${zipResult.empresa.nome} | CNPJ: ${zipResult.empresa.cnpj}`);
         }
       }
-      // Se for TXT, verificar se é SPED antes de processar normalmente
       else if (ext === 'txt') {
         const zipResult = await zipProcessor.processUpload(file.buffer, file.originalname, file.mimetype);
         combinedText += zipProcessor.buildCombinedText(zipResult);
         totalPages += 1;
-        if (zipResult.speds.length > 0) overallQuality = 'high';
+        if (zipResult.speds.length > 0) {
+          overallQuality = 'high';
+          if (!lastZipResult) lastZipResult = zipResult;
+          else {
+            lastZipResult.speds.push(...zipResult.speds);
+            if (zipResult.empresa && !lastZipResult.empresa) lastZipResult.empresa = zipResult.empresa;
+          }
+        }
       }
-      // Demais arquivos: usar o documentProcessor existente (com OCR)
       else {
         const processed = await documentProcessor.processDocument(
           file.buffer,
@@ -81,7 +89,7 @@ async function processUploadedFiles(files: Express.Multer.File[]) {
     }
   }
 
-  return { combinedText, totalPages, anyOcrUsed, overallQuality, zipInfo };
+  return { combinedText, totalPages, anyOcrUsed, overallQuality, zipInfo, zipResult: lastZipResult };
 }
 
 // ============================================================
@@ -523,13 +531,15 @@ router.get('/admin-analyses', authenticateToken, async (req: Request, res: Respo
       try { oportunidades = a.opportunities ? JSON.parse(a.opportunities) : []; } catch {}
       try { alertas = a.risks ? JSON.parse(a.risks) : []; } catch {}
 
-      // Detect HPC source from aiSummary JSON
+      let hasExtrato = false;
+      // Detect HPC source and demonstrativo from aiSummary JSON
       if (a.aiSummary) {
         try {
           const parsed = JSON.parse(a.aiSummary);
           if (parsed && typeof parsed === 'object' && parsed.resumoExecutivo !== undefined) {
             aiSummaryDisplay = parsed.resumoExecutivo || '';
             source = parsed.source || 'platform';
+            hasExtrato = !!(parsed.demonstrativo?.extratoBancarioHtml || parsed.demonstrativo?.extratoHtml);
           }
         } catch {}
       }
@@ -550,6 +560,7 @@ router.get('/admin-analyses', authenticateToken, async (req: Request, res: Respo
         status: a.status,
         source,
         hasFullAnalysis: oportunidades.length > 0,
+        hasExtrato,
         partnerId: a.partnerId,
         partnerName: a.partner?.company || a.partner?.name || 'Admin direto',
         partner: a.partner ? {
@@ -656,6 +667,8 @@ router.get('/admin-analysis/:id', authenticateToken, async (req: Request, res: R
       }
     }
 
+    const demonstrativo = aiParsed?.demonstrativo || null;
+
     return res.json({
       success: true,
       data: {
@@ -680,6 +693,7 @@ router.get('/admin-analysis/:id', authenticateToken, async (req: Request, res: R
         partnerName: viability.partner?.company || viability.partner?.name || 'Admin direto',
         source,
         createdAt: viability.createdAt,
+        demonstrativo,
       },
     });
   } catch (error: any) {
@@ -752,10 +766,12 @@ router.post('/:id/admin-full-analysis', authenticateToken, upload.array('documen
     // Preparar texto: novos arquivos ou texto do quick score
     let combinedText = '';
 
+    let zipResultForDemo: ZipProcessResult | null = null;
+
     if (files && files.length > 0) {
-      const { combinedText: newText } = await processUploadedFiles(files);
+      const { combinedText: newText, zipResult: zr } = await processUploadedFiles(files);
       combinedText = newText;
-      // Salvar texto extraído para não perder
+      zipResultForDemo = zr;
       await prisma.viabilityAnalysis.update({
         where: { id },
         data: { docsText: combinedText },
@@ -798,9 +814,8 @@ router.post('/:id/admin-full-analysis', authenticateToken, upload.array('documen
     // FIRE-AND-FORGET: iniciar análise em background
     // O resultado será salvo no banco; frontend faz polling
     // ====================================================
-    runFullAnalysisInBackground(id, combinedText, documentType || 'dre', companyInfo);
+    runFullAnalysisInBackground(id, combinedText, documentType || 'dre', companyInfo, zipResultForDemo);
 
-    // Responder IMEDIATAMENTE — não esperar o Claude
     return res.json({
       success: true,
       status: 'analyzing',
@@ -824,9 +839,9 @@ function runFullAnalysisInBackground(
   viabilityId: string,
   combinedText: string,
   documentType: string,
-  companyInfo: { name: string; cnpj?: string; regime?: 'lucro_real' | 'lucro_presumido' | 'simples'; sector?: string }
+  companyInfo: { name: string; cnpj?: string; regime?: 'lucro_real' | 'lucro_presumido' | 'simples'; sector?: string },
+  zipResult?: ZipProcessResult | null
 ): void {
-  // Executar sem await — roda em background
   (async () => {
     try {
       const analysis = await claudeService.analyzeDocument(
@@ -837,7 +852,46 @@ function runFullAnalysisInBackground(
 
       const scoreLabel = analysis.score >= 85 ? 'excelente' : analysis.score >= 70 ? 'bom' : analysis.score >= 50 ? 'medio' : analysis.score >= 30 ? 'baixo' : 'inviavel';
 
-      const aiSummaryJson = JSON.stringify({
+      let demonstrativoData: any = null;
+      let estimatedCredit = analysis.valorTotalEstimado;
+
+      if (zipResult && zipResult.speds && zipResult.speds.length > 0) {
+        try {
+          const demo = buildDemonstrativo(zipResult, analysis);
+          const extratoHtml = formatExtratoBancarioHtml(demo);
+          const extratoOperacaoHtml = formatExtratoPorOperacaoHtml(demo);
+          const extratoTexto = formatDemonstrativoTexto(demo);
+
+          demonstrativoData = {
+            itens: demo.itens,
+            totalReal: demo.totalReal,
+            totalHipotese: demo.totalHipotese,
+            totalGeral: demo.totalGeral,
+            empresa: demo.empresa,
+            periodoAnalisado: demo.periodoAnalisado,
+            resumoReal: demo.resumoReal,
+            resumoHipotese: demo.resumoHipotese,
+            extratoBancarioHtml: extratoHtml,
+            extratoOperacaoHtml: extratoOperacaoHtml,
+            extratoTexto: extratoTexto,
+          };
+
+          if (demo.totalReal > 0) {
+            estimatedCredit = demo.totalReal;
+            logger.info(`[BACKGROUND] Using SPED real total R$ ${demo.totalReal.toFixed(2)} instead of AI estimate R$ ${analysis.valorTotalEstimado.toFixed(2)}`);
+
+            const capAi = demo.totalReal * 2;
+            if (analysis.valorTotalEstimado > capAi) {
+              logger.warn(`[BACKGROUND] AI total R$ ${analysis.valorTotalEstimado.toFixed(2)} exceeds 2x SPED real (R$ ${capAi.toFixed(2)}). Capping.`);
+              analysis.valorTotalEstimado = Math.round(demo.totalReal * 1.5);
+            }
+          }
+        } catch (demoErr: any) {
+          logger.warn(`[BACKGROUND] Demonstrativo build failed: ${demoErr.message}`);
+        }
+      }
+
+      const aiSummaryObj: any = {
         resumoExecutivo: analysis.resumoExecutivo || '',
         fundamentacaoGeral: analysis.fundamentacaoGeral || '',
         periodoAnalisado: analysis.periodoAnalisado || 'Últimos 5 anos',
@@ -845,9 +899,12 @@ function runFullAnalysisInBackground(
         riscoGeral: analysis.riscoGeral || '',
         recomendacoes: analysis.recomendacoes || [],
         source: 'platform',
-      });
+      };
+      if (demonstrativoData) {
+        aiSummaryObj.demonstrativo = demonstrativoData;
+      }
+      const aiSummaryJson = JSON.stringify(aiSummaryObj);
 
-      // Reconnect — connection may drop during long Claude analysis
       await prisma.$disconnect();
       await prisma.$connect();
 
@@ -856,7 +913,7 @@ function runFullAnalysisInBackground(
         data: {
           viabilityScore: analysis.score,
           scoreLabel,
-          estimatedCredit: analysis.valorTotalEstimado,
+          estimatedCredit,
           opportunities: JSON.stringify(analysis.oportunidades),
           aiSummary: aiSummaryJson,
           risks: JSON.stringify(analysis.alertas),
@@ -867,11 +924,12 @@ function runFullAnalysisInBackground(
       logger.info(`[BACKGROUND] Full analysis COMPLETED for ${viabilityId}`, {
         score: analysis.score,
         opportunities: analysis.oportunidades.length,
-        totalEstimated: analysis.valorTotalEstimado,
+        totalEstimated: estimatedCredit,
+        hasDemonstrativo: !!demonstrativoData,
+        totalReal: demonstrativoData?.totalReal || 0,
       });
     } catch (err: any) {
       logger.error(`[BACKGROUND] Full analysis FAILED for ${viabilityId}:`, err.message);
-      // Marcar como falha no banco para o frontend saber
       await prisma.viabilityAnalysis.update({
         where: { id: viabilityId },
         data: {

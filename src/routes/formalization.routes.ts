@@ -73,6 +73,15 @@ router.post('/generate-sefaz', authenticateToken, async (req: Request, res: Resp
       opportunities = JSON.parse(analysis.opportunities || '[]');
     } catch {}
 
+    // Parse demonstrativo from aiSummary for real SPED values
+    let demoItens: any[] = [];
+    try {
+      const aiParsed = JSON.parse(analysis.aiSummary || '{}');
+      if (aiParsed?.demonstrativo?.itens) {
+        demoItens = aiParsed.demonstrativo.itens.filter((i: any) => i.tipo === 'real');
+      }
+    } catch {}
+
     // Classificar oportunidades e filtrar apenas ICMS (competencia estadual)
     const classified = classifyAllOpportunities(opportunities);
     const estaduais = classified.filter(c => c.competencia === 'estadual');
@@ -84,12 +93,21 @@ router.post('/generate-sefaz', authenticateToken, async (req: Request, res: Resp
       });
     }
 
-    const teses = estaduais.map(c => ({
-      descricao: c.original.tese || c.original.titulo || c.original.description || 'Oportunidade ICMS',
-      valor: c.original.valorEstimado || c.original.valor || c.original.estimated_value || 0,
-      fundamentacao: c.original.fundamentacaoLegal || c.original.base_legal || c.original.fundamentacao || 'Legislacao estadual vigente',
-      periodo: c.original.periodo || c.original.period || 'Conforme documentacao anexa',
-    }));
+    const demoEstadual = demoItens.filter((i: any) => i.tributo === 'ICMS');
+
+    const teses = demoEstadual.length > 0
+      ? demoEstadual.map((i: any) => ({
+          descricao: i.situacaoIdentificada || i.ponto || 'Credito ICMS comprovado',
+          valor: i.total || 0,
+          fundamentacao: i.baseLegal || 'Legislacao estadual vigente',
+          periodo: i.periodo || 'Conforme documentacao anexa',
+        }))
+      : estaduais.map(c => ({
+          descricao: c.original.tese || c.original.titulo || c.original.description || 'Oportunidade ICMS',
+          valor: c.original.valorEstimado || c.original.valor || c.original.estimated_value || 0,
+          fundamentacao: c.original.fundamentacaoLegal || c.original.base_legal || c.original.fundamentacao || 'Legislacao estadual vigente',
+          periodo: c.original.periodo || c.original.period || 'Conforme documentacao anexa',
+        }));
 
     const valorEstadual = teses.reduce((sum, t) => sum + t.valor, 0);
     const protocoloPlataforma = `TCE-${new Date().getFullYear()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
@@ -195,6 +213,15 @@ router.post('/generate-perdcomp', authenticateToken, async (req: Request, res: R
       opportunities = JSON.parse(analysis.opportunities || '[]');
     } catch {}
 
+    // Parse demonstrativo from aiSummary for real SPED values
+    let demoItens: any[] = [];
+    try {
+      const aiParsed = JSON.parse(analysis.aiSummary || '{}');
+      if (aiParsed?.demonstrativo?.itens) {
+        demoItens = aiParsed.demonstrativo.itens.filter((i: any) => i.tipo === 'real');
+      }
+    } catch {}
+
     const classified = classifyAllOpportunities(opportunities);
     const federais = classified.filter(c => c.competencia === 'federal');
 
@@ -204,6 +231,8 @@ router.post('/generate-perdcomp', authenticateToken, async (req: Request, res: R
         error: 'Nenhuma oportunidade federal encontrada. Creditos de ICMS devem ser formalizados via Requerimento SEFAZ, nao via PER/DCOMP.',
       });
     }
+
+    const demoFederal = demoItens.filter((i: any) => i.tributo !== 'ICMS');
 
     // Gerar PER/DCOMPs separados por grupo de tributo
     const gruposFederais = new Map<string, typeof federais>();
@@ -218,15 +247,32 @@ router.post('/generate-perdcomp', authenticateToken, async (req: Request, res: R
 
     for (const [grupo, items] of gruposFederais) {
       const config = items[0];
-      const creditos = items.map(c => ({
-        tributo: `${c.grupoTributo} — ${c.original.tese || c.original.titulo || 'Credito identificado'}`,
-        tipoCredito: c.naturezaCredito,
-        periodo: c.original.periodo || periodoCredito || '[Periodo de apuracao]',
-        valorOriginal: c.original.valorEstimado || c.original.valor || 0,
-        valorAtualizado: (c.original.valorEstimado || c.original.valor || 0) * 1.08,
-        baseLegal: c.fundamentacaoFederal + (c.original.fundamentacaoLegal ? ` | ${c.original.fundamentacaoLegal}` : ''),
-        descricaoTese: c.original.tese || c.original.titulo || c.original.description || 'Oportunidade identificada',
-      }));
+
+      const demoGrupo = demoFederal.filter((i: any) =>
+        (grupo === 'PIS/COFINS' && /pis|cofins/i.test(i.tributo)) ||
+        (grupo === 'IRPJ' && /irpj/i.test(i.tributo)) ||
+        (grupo === 'CSLL' && /csll/i.test(i.tributo))
+      );
+
+      const creditos = demoGrupo.length > 0
+        ? demoGrupo.map((i: any) => ({
+            tributo: `${grupo} — ${i.ponto || i.situacaoIdentificada || 'Credito comprovado'}`,
+            tipoCredito: config.naturezaCredito,
+            periodo: i.periodo || periodoCredito || '[Periodo de apuracao]',
+            valorOriginal: i.total || 0,
+            valorAtualizado: (i.total || 0) * 1.08,
+            baseLegal: i.baseLegal || config.fundamentacaoFederal,
+            descricaoTese: i.situacaoIdentificada || i.ponto || 'Credito comprovado no SPED',
+          }))
+        : items.map(c => ({
+            tributo: `${c.grupoTributo} — ${c.original.tese || c.original.titulo || 'Credito identificado'}`,
+            tipoCredito: c.naturezaCredito,
+            periodo: c.original.periodo || periodoCredito || '[Periodo de apuracao]',
+            valorOriginal: c.original.valorEstimado || c.original.valor || 0,
+            valorAtualizado: (c.original.valorEstimado || c.original.valor || 0) * 1.08,
+            baseLegal: c.fundamentacaoFederal + (c.original.fundamentacaoLegal ? ` | ${c.original.fundamentacaoLegal}` : ''),
+            descricaoTese: c.original.tese || c.original.titulo || c.original.description || 'Oportunidade identificada',
+          }));
       const valorGrupo = creditos.reduce((sum, c) => sum + c.valorOriginal, 0);
 
       const doc = generatePerdcompDocument({
@@ -316,6 +362,31 @@ router.post('/generate-kit', authenticateToken, async (req: Request, res: Respon
     if (opportunities.length === 0) {
       return res.status(400).json({ success: false, error: 'Nenhuma oportunidade encontrada na analise' });
     }
+
+    // Enrich opportunities with real SPED values when demonstrativo exists
+    try {
+      const aiParsed = JSON.parse(analysis.aiSummary || '{}');
+      if (aiParsed?.demonstrativo?.itens) {
+        const reais = (aiParsed.demonstrativo.itens as any[]).filter((i: any) => i.tipo === 'real');
+        for (const op of opportunities) {
+          const tributoOp = (op.tributo || '').toLowerCase();
+          const matching = reais.filter((r: any) => {
+            const tributoR = (r.tributo || '').toLowerCase();
+            return (tributoOp.includes('pis') && tributoR.includes('pis')) ||
+                   (tributoOp.includes('cofins') && tributoR.includes('cofins')) ||
+                   (tributoOp.includes('icms') && tributoR.includes('icms')) ||
+                   (tributoOp === tributoR);
+          });
+          if (matching.length > 0) {
+            const realTotal = matching.reduce((s: number, m: any) => s + (m.total || 0), 0);
+            if (realTotal > 0) {
+              op.valorEstimado = realTotal;
+              op._fonteValor = 'SPED';
+            }
+          }
+        }
+      }
+    } catch {}
 
     const kitParams: FormalizationKitParams = {
       opportunities,

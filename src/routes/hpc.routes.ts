@@ -8,6 +8,8 @@ import { prisma } from '../utils/prisma';
 import { getOperatorPartnerId } from '../utils/operator';
 import { hpcGateway } from '../services/hpc-gateway.service';
 import { claudeService } from '../services/claude.service';
+import { zipProcessor } from '../services/zipProcessor.service';
+import { buildDemonstrativo, formatDemonstrativoTexto, formatExtratoPorOperacaoHtml, formatExtratoBancarioHtml } from '../services/demonstrativo.service';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
 import pdfParse from 'pdf-parse';
@@ -50,6 +52,17 @@ function sanitizeUtf8(text: string): string {
 function isSpedContent(text: string): boolean {
   const lines = text.split('\n').slice(0, 20);
   return lines.some(l => /^\|[0-9A-Z]{4}\|/.test(l.trim()));
+}
+
+/** Extrai período (YYYYMM) do registro |0000| para ordenação determinística */
+function getSpedPeriod(buf: Buffer): string {
+  const text = bufferToString(buf.subarray(0, Math.min(buf.length, 3000)));
+  const lines = text.split('\n').slice(0, 25);
+  const line0000 = lines.find(l => l.trim().startsWith('|0000|'));
+  if (!line0000) return '000000';
+  const fields = line0000.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1);
+  const dtFim = fields[4] || ''; // DTA_FIM formato YYYYMMDD
+  return dtFim.substring(0, 6) || '000000';
 }
 
 const MAX_PDFS = 5;
@@ -129,8 +142,23 @@ function extractFilesFromUploads(
     }
   }
 
-  logger.info(`[HPC] Total extraido: ${(totalExtracted / 1024 / 1024).toFixed(1)}MB em ${extracted.length} arquivo(s)`);
-  return extracted;
+  // Ordenar SPEDs por período (mais recentes primeiro) para garantir determinismo
+  // com o mesmo ZIP — evita resultados diferentes por ordem de tamanho de arquivo
+  const speds: typeof extracted = [];
+  const others: typeof extracted = [];
+  for (const f of extracted) {
+    const preview = bufferToString(f.buffer.subarray(0, Math.min(f.buffer.length, 2000)));
+    if (isSpedContent(preview)) speds.push(f);
+    else others.push(f);
+  }
+  speds.sort((a, b) => getSpedPeriod(b.buffer).localeCompare(getSpedPeriod(a.buffer)));
+  const ordered = [...speds, ...others];
+  if (speds.length > 1) {
+    logger.info(`[HPC] SPEDs ordenados por periodo (${speds.length} arquivos)`);
+  }
+
+  logger.info(`[HPC] Total extraido: ${(totalExtracted / 1024 / 1024).toFixed(1)}MB em ${ordered.length} arquivo(s)`);
+  return ordered;
 }
 
 async function extractPdfText(buffer: Buffer, filename: string): Promise<string> {
@@ -236,6 +264,7 @@ router.get('/job/:jobId', authenticateToken, async (req: Request, res: Response)
         pipeline: aiData.pipeline || 'unknown',
         timing: aiData.timing || { hpcProcessingMs: 0, claudeAnalysisMs: 0, totalMs: elapsed },
         hpc: aiData.hpc || { arquivosProcessados: 0, resultados: [], erros: [] },
+        demonstrativo: aiData.demonstrativo || null,
         authorizedByNames: aiData.authorizedByNames || record.authorizedByNames || null,
         authorizedByCargos: aiData.authorizedByCargos || record.authorizedByCargos || null,
         dataSources: aiData.dataSources || [],
@@ -357,19 +386,71 @@ async function runAnalysis(
   };
 
   try {
-    // STEP 1: Extract files
-    setProgress('Extraindo arquivos do ZIP...');
-    const extractedFiles = extractFilesFromUploads(files);
+    let extractedFiles: { buffer: Buffer; originalname: string; mimetype: string }[] = [];
+    let textoParaClaude = '';
+    let pipeline = '';
+    let hpcData: any = null;
 
-    const spedFiles: typeof extractedFiles = [];
-    const otherFiles: typeof extractedFiles = [];
-    for (const f of extractedFiles) {
-      const preview = bufferToString(f.buffer.subarray(0, Math.min(f.buffer.length, 2000)));
-      if (isSpedContent(preview)) spedFiles.push(f);
-      else otherFiles.push(f);
+    // STEP 0: ZIP único → usar zipProcessor (mesma lógica da viabilidade, determinístico)
+    const isSingleZip = files.length === 1 && files[0].originalname.toLowerCase().endsWith('.zip');
+    let zipResult: Awaited<ReturnType<typeof zipProcessor.processUpload>> | null = null;
+    if (isSingleZip) {
+      setProgress('Processando ZIP com zipProcessor (fluxo unificado)...');
+      zipResult = await zipProcessor.processUpload(files[0].buffer, files[0].originalname, files[0].mimetype);
+      textoParaClaude = zipProcessor.buildCombinedText(zipResult);
+      extractedFiles = zipResult.documentos.map((d: any) => ({
+        buffer: Buffer.from(String(d.conteudo || ''), 'utf8'),
+        originalname: d.nome,
+        mimetype: 'text/plain',
+      }));
+      pipeline = 'zipProcessor-unificado';
+      setProgress(`${zipResult.speds.length} SPED(s) + ${zipResult.demonstrativos.length + zipResult.nfes.length + zipResult.outros.length} outros processados`);
     }
 
-    setProgress(`${extractedFiles.length} arquivo(s) extraidos (${spedFiles.length} SPED, ${otherFiles.length} outros)`);
+    // STEP 1: Extract files (quando não é ZIP único)
+    if (!isSingleZip) {
+      setProgress('Extraindo arquivos do ZIP...');
+      extractedFiles = extractFilesFromUploads(files);
+    }
+
+    const spedFiles = extractedFiles.filter(f => {
+      const preview = bufferToString(f.buffer.subarray(0, Math.min(f.buffer.length, 2000)));
+      return isSpedContent(preview);
+    });
+    const otherFiles = extractedFiles.filter(f => !spedFiles.includes(f));
+
+    if (!isSingleZip) {
+      setProgress(`${extractedFiles.length} arquivo(s) extraidos (${spedFiles.length} SPED, ${otherFiles.length} outros)`);
+    }
+
+    // STEP 1b: Se não temos zipResult mas temos SPEDs, processar via zipProcessor para gerar demonstrativo/extrato
+    if (!zipResult && spedFiles.length > 0) {
+      setProgress(`Processando ${spedFiles.length} SPED(s) para demonstrativo e extrato...`);
+      const zipResults = await Promise.all(
+        spedFiles.map(f => zipProcessor.processUpload(f.buffer, f.originalname, f.mimetype))
+      );
+      const allSpeds = zipResults.flatMap(r => r.speds);
+      if (allSpeds.length > 0) {
+        const firstSped = allSpeds[0] as { empresa: string; cnpj: string; ie: string; uf: string; fantasia?: string };
+        zipResult = {
+          empresa: { nome: firstSped.empresa, cnpj: firstSped.cnpj, ie: firstSped.ie, uf: firstSped.uf, fantasia: firstSped.fantasia || '' },
+          documentos: zipResults.flatMap(r => r.documentos),
+          speds: allSpeds,
+          nfes: zipResults.flatMap(r => r.nfes),
+          demonstrativos: zipResults.flatMap(r => r.demonstrativos),
+          contratos: zipResults.flatMap(r => r.contratos),
+          outros: zipResults.flatMap(r => r.outros),
+          resumo: {
+            totalArquivos: allSpeds.length,
+            processados: allSpeds.length,
+            ignorados: 0,
+            erros: zipResults.flatMap(r => r.resumo.erros),
+            tiposEncontrados: ['sped'],
+          },
+        };
+        setProgress(`Demonstrativo disponivel: ${allSpeds.length} SPED(s) processados`);
+      }
+    }
 
     let interviewParsed: Record<string, string> | undefined;
     try {
@@ -380,8 +461,16 @@ async function runAnalysis(
 
     // Build dataSources for transparency in report
     const dataSourcesArr: { tipo: string; descricao: string }[] = [];
-    if (spedFiles.length > 0) {
-      dataSourcesArr.push({ tipo: 'SPED', descricao: `${spedFiles.length} arquivo(s) EFD Fiscal/Contribuições` });
+    if (zipResult) {
+      if (zipResult.speds.length > 0) {
+        dataSourcesArr.push({ tipo: 'SPED', descricao: `${zipResult.speds.length} arquivo(s) EFD Fiscal/Contribuições` });
+      }
+      if (zipResult.demonstrativos.length > 0) dataSourcesArr.push({ tipo: 'Demonstrativo', descricao: 'Demonstrativos fiscais' });
+      if (zipResult.nfes.length > 0) dataSourcesArr.push({ tipo: 'NFe', descricao: 'Notas fiscais' });
+    } else {
+      if (spedFiles.length > 0) {
+        dataSourcesArr.push({ tipo: 'SPED', descricao: `${spedFiles.length} arquivo(s) EFD Fiscal/Contribuições` });
+      }
     }
     const hasDarf = extractedFiles.some(f => /darfs?|comprovante|arrecadacao/i.test(f.originalname));
     const hasPerdcomp = extractedFiles.some(f => /perdcomp|per.?dcomp|recibo.*compensacao/i.test(f.originalname));
@@ -403,12 +492,8 @@ async function runAnalysis(
       interviewData: interviewParsed,
     };
 
-    let textoParaClaude = '';
-    let hpcData: any = null;
-    let pipeline = '';
-
-    // STEP 2: HPC for SPED files
-    if (spedFiles.length > 0) {
+    // STEP 2: HPC for SPED files (pular quando ZIP único — já temos texto do zipProcessor)
+    if (!isSingleZip && spedFiles.length > 0) {
       setProgress(`Processando ${spedFiles.length} SPED no motor HPC...`);
       const health = await hpcGateway.healthCheck();
       if (health) {
@@ -454,6 +539,35 @@ async function runAnalysis(
       return;
     }
 
+    // STEP 3b: Quando temos SPED processado, injetar valores extraídos para coerência da IA
+    if (zipResult && zipResult.speds.length > 0) {
+      const linhas: string[] = [];
+      linhas.push('\n\n=== DADOS EXTRAÍDOS DO SPED (valores determinísticos — USE COMO REFERÊNCIA para valorEstimado) ===');
+      let totalRealSped = 0;
+      for (const sped of zipResult.speds) {
+        const s = sped as { periodo?: { fim?: string }; resumo?: { saldoCredor?: number; cfopBreakdown?: { cfop: string; vlOpr: number; vlPis: number; vlCofins: number }[]; operacoesExtrato?: { cfop: string; vlOpr: number; vlPis: number; vlCofins: number }[] } };
+        const periodo = s.periodo?.fim || 'N/D';
+        const saldo = s.resumo?.saldoCredor ?? 0;
+        if (saldo > 0) {
+          linhas.push(`ICMS Saldo credor: período ${periodo} = R$ ${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+          totalRealSped += saldo;
+        }
+        const ops = s.resumo?.operacoesExtrato || s.resumo?.cfopBreakdown || [];
+        for (const op of ops) {
+          const tot = (op.vlPis || 0) + (op.vlCofins || 0);
+          if (tot > 0) {
+            linhas.push(`PIS/COFINS CFOP ${op.cfop}: período ${periodo} = R$ ${tot.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+            totalRealSped += tot;
+          }
+        }
+      }
+      if (totalRealSped > 0) {
+        linhas.push(`TOTAL REAL EXTRAÍDO DO SPED: R$ ${totalRealSped.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+        linhas.push('=== Use estes valores como base. Não extrapole. ===\n');
+        textoParaClaude = linhas.join('\n') + '\n' + textoParaClaude;
+      }
+    }
+
     // STEP 4: Claude analysis
     setProgress(`Analise juridica com IA em andamento (${(textoParaClaude.length / 1000).toFixed(0)}K caracteres)...`);
     const claudeStart = Date.now();
@@ -479,6 +593,20 @@ async function runAnalysis(
     const totalMs = Date.now() - startTime;
     const hpcMs = hpcData?.tempoTotalMs || 0;
 
+    // Demonstrativo cálculo por cálculo (real vs hipótese) — quando temos ZIP processado
+    let demonstrativo: any = null;
+    if (zipResult && zipResult.speds.length > 0) {
+      try {
+        demonstrativo = buildDemonstrativo(zipResult, analysis);
+        demonstrativo.textoFormatado = formatDemonstrativoTexto(demonstrativo);
+        demonstrativo.extratoHtml = formatExtratoPorOperacaoHtml(demonstrativo);
+        demonstrativo.extratoBancarioHtml = formatExtratoBancarioHtml(demonstrativo);
+        setProgress(`Demonstrativo gerado: ${demonstrativo.itens.filter((i: any) => i.tipo === 'real').length} itens reais, ${demonstrativo.itens.filter((i: any) => i.tipo === 'hipotese').length} hipóteses`);
+      } catch (demoErr: any) {
+        logger.warn(`[HPC-JOB ${jobId}] Demonstrativo falhou: ${demoErr.message}`);
+      }
+    }
+
     const aiSummaryJson = JSON.stringify({
       resumoExecutivo: analysis.resumoExecutivo || '',
       fundamentacaoGeral: analysis.fundamentacaoGeral || '',
@@ -497,10 +625,33 @@ async function runAnalysis(
         totalMs,
       },
       hpc: hpcData || { arquivosProcessados: 0, resultados: [], erros: [] },
+      demonstrativo: demonstrativo ? {
+        itens: demonstrativo.itens,
+        totalReal: demonstrativo.totalReal,
+        totalHipotese: demonstrativo.totalHipotese,
+        totalGeral: demonstrativo.totalGeral,
+        resumoReal: demonstrativo.resumoReal,
+        resumoHipotese: demonstrativo.resumoHipotese,
+        textoFormatado: demonstrativo.textoFormatado,
+        extratoHtml: demonstrativo.extratoHtml,
+        extratoBancarioHtml: demonstrativo.extratoBancarioHtml,
+      } : null,
     });
 
     await prisma.$disconnect();
     await prisma.$connect();
+
+    let estimatedCredit = analysis.valorTotalEstimado;
+    if (demonstrativo && demonstrativo.totalReal > 0) {
+      estimatedCredit = demonstrativo.totalReal;
+      logger.info(`[HPC-JOB ${jobId}] Using SPED real total R$ ${demonstrativo.totalReal.toFixed(2)} instead of AI estimate R$ ${analysis.valorTotalEstimado.toFixed(2)}`);
+
+      const capAi = demonstrativo.totalReal * 2;
+      if (analysis.valorTotalEstimado > capAi) {
+        logger.warn(`[HPC-JOB ${jobId}] AI total R$ ${analysis.valorTotalEstimado.toFixed(2)} exceeds 2x SPED real. Capping.`);
+        analysis.valorTotalEstimado = Math.round(demonstrativo.totalReal * 1.5);
+      }
+    }
 
     await prisma.viabilityAnalysis.update({
       where: { id: jobId },
@@ -508,7 +659,7 @@ async function runAnalysis(
         docsText: sanitizeUtf8(textoParaClaude.substring(0, 50000)),
         viabilityScore: analysis.score,
         scoreLabel,
-        estimatedCredit: analysis.valorTotalEstimado,
+        estimatedCredit,
         opportunities: sanitizeUtf8(JSON.stringify(analysis.oportunidades)),
         aiSummary: sanitizeUtf8(aiSummaryJson),
         risks: sanitizeUtf8(JSON.stringify(analysis.alertas || [])),
@@ -518,7 +669,7 @@ async function runAnalysis(
     });
 
     jobProgress.delete(jobId);
-    logger.info(`[HPC-JOB ${jobId}] CONCLUIDO em ${totalMs}ms — score: ${analysis.score}, valor: ${analysis.valorTotalEstimado}`);
+    logger.info(`[HPC-JOB ${jobId}] CONCLUIDO em ${totalMs}ms — score: ${analysis.score}, valor: ${estimatedCredit} (AI original: ${analysis.valorTotalEstimado})`);
 
   } catch (error: any) {
     const elapsed = Date.now() - startTime;

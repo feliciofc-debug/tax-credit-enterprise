@@ -904,6 +904,7 @@ SE UMA OPORTUNIDADE NÃO ATINGIR ESTE NÍVEL DE DETALHE, O RELATÓRIO SERÁ RECU
 ## REGRAS DE QUALIDADE E CONSISTÊNCIA — SEGUIR RIGOROSAMENTE
 
 ### CONSISTÊNCIA DE VALORES — REGRA MAIS IMPORTANTE:
+O MESMO documento SEMPRE deve gerar os MESMOS valores. Valores que variam entre execuções (ex: R$ 500.000 em uma análise e R$ 980.000 em outra com o mesmo ZIP) são INACEITÁVEIS e prejudicam a credibilidade do relatório.
 Mesmos dados de entrada DEVEM gerar os MESMOS valores de saída. Para garantir isso:
 - Use APENAS valores que aparecem EXPLICITAMENTE no documento. NÃO invente valores.
 - Se um saldo credor aparece como R$ 97.174,49, use R$ 97.174,49 — não arredonde para R$ 175.000 ou R$ 350.000.
@@ -1115,11 +1116,11 @@ SE UMA OPORTUNIDADE NÃO ATINGIR ESTE NÍVEL, O RELATÓRIO SERÁ RECUSADO.
 
 REGRA 2 — CONSISTÊNCIA: Use APENAS valores do documento. Cada estimativa deve ter a conta explícita.
 
-REGRA 3 — CONSERVADORISMO: Arredonde para BAIXO. Aplique desconto de 25% em projeções.
+REGRA 3 — CONSERVADORISMO OBRIGATÓRIO: Seja CONSERVADOR em TODOS os valores. Arredonde SEMPRE para BAIXO. Aplique desconto de 30% sobre qualquer projeção. Valores superestimados destroem a credibilidade do relatório perante advogados e contadores. É MUITO MELHOR subestimar do que superestimar. Nenhuma oportunidade individual deve ultrapassar R$ 500.000 sem dados comprobatórios inequívocos.
 
-REGRA 4 — UNIDADES: Verifique R$ vs R$ mil. Reporte em reais cheios.
+REGRA 4 — UNIDADES: Verifique R$ vs R$ mil com EXTREMO CUIDADO. Reporte em reais cheios (R$, nunca R$ mil). Se o documento usa "R$ mil", multiplique por 1000.
 
-REGRA 5 — SEM DADOS = SEM ESTIMATIVA: Sem folha de pagamento, NÃO estime INSS.
+REGRA 5 — SEM DADOS = SEM ESTIMATIVA: Sem folha de pagamento, NÃO estime INSS. Sem dado concreto, NÃO invente valor.
 
 REGRA 6 — IRPJ/CSLL OBRIGATÓRIO PARA LUCRO REAL: O relatório DEVE incluir pelo menos 1 oportunidade de IRPJ ou CSLL:
 - Se houver registros C197 → TESE 4.1: ajustes C197 × 34%, probabilidade 45-55%
@@ -1384,10 +1385,9 @@ Responda em JSON: {"viable": true/false, "score": 0-100, "summary": "resumo em 2
 
     const totalC197 = c197Values.reduce((a, b) => a + b, 0);
 
-    if (c197Count > 0 || totalC197 > 0) {
-      const valorBeneficio = totalC197 > 0 ? totalC197 : 50000;
-      const valorIrpjCsll = Math.floor((valorBeneficio * 0.34) / 1000) * 1000;
-      const valorFinal = Math.max(valorIrpjCsll, 5000);
+    if (c197Count > 0 && totalC197 > 0) {
+      const valorIrpjCsll = Math.round(totalC197 * 0.34 * 0.75);
+      const valorFinal = Math.min(valorIrpjCsll, 500_000);
 
       result.oportunidades.push({
         tipo: 'Exclusão de benefícios fiscais de ICMS da base do IRPJ/CSLL (LC 160/2017)',
@@ -1427,8 +1427,8 @@ Responda em JSON: {"viable": true/false, "score": 0-100, "summary": "resumo em 2
         .reduce((sum, op) => sum + op.valorEstimado, 0);
 
       const selicAnual = 0.1075;
-      const valorSelic = Math.floor((totalCreditos * selicAnual * 3 * 0.34) / 1000) * 1000;
-      const valorFinalSelic = Math.max(valorSelic, 3000);
+      const valorSelic = Math.round(totalCreditos * selicAnual * 2 * 0.34 * 0.75);
+      const valorFinalSelic = Math.min(Math.max(valorSelic, 1000), 200_000);
 
       result.oportunidades.push({
         tipo: 'Exclusão da SELIC sobre repetição de indébito da base do IRPJ/CSLL (Tema 1.079 STF)',
@@ -1521,16 +1521,21 @@ Responda em JSON: {"viable": true/false, "score": 0-100, "summary": "resumo em 2
         valorTotalEstimado = somaOportunidades;
       }
 
-      // VALIDAÇÃO DE SANIDADE: alertar se valores parecem em unidade errada
-      // Se uma única oportunidade > R$ 50M, provavelmente há erro de unidade
+      // VALIDAÇÃO DE SANIDADE: corrigir valores em unidade errada e aplicar cap conservador
       for (const op of oportunidades) {
         if (op.valorEstimado > 50_000_000) {
-          logger.warn(`Oportunidade "${op.tipo}" com valor suspeito: R$ ${op.valorEstimado.toLocaleString('pt-BR')} — possível erro de unidade monetária`);
-          // Adicionar alerta nos dados
+          logger.warn(`Oportunidade "${op.tipo}" com valor suspeito: R$ ${op.valorEstimado.toLocaleString('pt-BR')} — dividindo por 1000 (provável erro R$ mil vs R$)`);
+          op.valorEstimado = Math.round(op.valorEstimado / 1000);
           if (!parsed.alertas) parsed.alertas = [];
-          parsed.alertas.push(`ATENÇÃO: O valor de R$ ${op.valorEstimado.toLocaleString('pt-BR')} para "${op.tipo}" pode conter erro de unidade. Revise manualmente.`);
+          parsed.alertas.push(`Valor de "${op.tipo}" ajustado automaticamente (possível erro de unidade R$ mil).`);
+        }
+        if (op.valorEstimado > 5_000_000) {
+          logger.warn(`Oportunidade "${op.tipo}" cap aplicado: R$ ${op.valorEstimado.toLocaleString('pt-BR')} → R$ 5.000.000`);
+          op.valorEstimado = 5_000_000;
         }
       }
+
+      valorTotalEstimado = oportunidades.reduce((sum: number, op: any) => sum + (op.valorEstimado || 0), 0);
 
       return {
         oportunidades,
