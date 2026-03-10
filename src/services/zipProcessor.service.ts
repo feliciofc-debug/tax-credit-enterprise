@@ -38,6 +38,21 @@ export interface SpedDocument extends ProcessedDocument {
   resumo: SpedResumo;
 }
 
+export interface CfopBreakdown {
+  cfop: string;
+  vlOpr: number;
+  vlPis: number;
+  vlCofins: number;
+}
+
+/** Uma operação individual (C190) para extrato detalhado por operação */
+export interface OperacaoExtrato {
+  cfop: string;
+  vlOpr: number;
+  vlPis: number;
+  vlCofins: number;
+}
+
 interface SpedResumo {
   totalEntradas: number;
   totalSaidas: number;
@@ -48,6 +63,9 @@ interface SpedResumo {
   saldoAnterior: number;
   numNfes: number;
   operacoes: SpedOperacao[];
+  cfopBreakdown?: CfopBreakdown[];
+  /** Operações individuais (uma por C190) para extrato detalhado */
+  operacoesExtrato?: OperacaoExtrato[];
 }
 
 interface SpedOperacao {
@@ -316,6 +334,42 @@ class ZipProcessorService {
     const e116Records: string[][] = [];
     const p0150Records: string[][] = [];
 
+    // Para demonstrativo e extrato por operação: C100→C190 (distribuir PIS/COFINS por CFOP)
+    let lastC100Pis = 0;
+    let lastC100Cofins = 0;
+    const c190Temp: { cfop: string; vlOpr: number }[] = [];
+    const cfopMap = new Map<string, { vlOpr: number; vlPis: number; vlCofins: number }>();
+    const operacoesExtrato: OperacaoExtrato[] = [];
+
+    const PIS_RATE = 0.0165;
+    const COFINS_RATE = 0.0760;
+
+    const flushC190ToCfop = () => {
+      if (c190Temp.length === 0) return;
+      const totalOpr = c190Temp.reduce((s, x) => s + x.vlOpr, 0);
+      if (totalOpr <= 0) return;
+      const hasC100PisCofins = lastC100Pis > 0 || lastC100Cofins > 0;
+      for (const r of c190Temp) {
+        let vlPis: number;
+        let vlCofins: number;
+        if (hasC100PisCofins) {
+          const frac = r.vlOpr / totalOpr;
+          vlPis = lastC100Pis * frac;
+          vlCofins = lastC100Cofins * frac;
+        } else {
+          vlPis = r.vlOpr * PIS_RATE;
+          vlCofins = r.vlOpr * COFINS_RATE;
+        }
+        const existing = cfopMap.get(r.cfop) || { vlOpr: 0, vlPis: 0, vlCofins: 0 };
+        existing.vlOpr += r.vlOpr;
+        existing.vlPis += vlPis;
+        existing.vlCofins += vlCofins;
+        cfopMap.set(r.cfop, existing);
+        operacoesExtrato.push({ cfop: r.cfop, vlOpr: r.vlOpr, vlPis, vlCofins });
+      }
+      c190Temp.length = 0;
+    };
+
     for (const line of lines) {
       const fields = line.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1);
       if (!fields[0]) continue;
@@ -341,6 +395,7 @@ class ZipProcessorService {
           break;
 
         case 'C100': {
+          flushC190ToCfop();
           const indOper = fields[1]; // 0=entrada, 1=saida
           const numDoc = fields[7] || '';
           const vlDoc = this.parseDecimal(fields[11]);
@@ -348,6 +403,8 @@ class ZipProcessorService {
           const vlIcms = this.parseDecimal(fields[21]);
           const vlPis = this.parseDecimal(fields[25]);
           const vlCofins = this.parseDecimal(fields[26]);
+          lastC100Pis = vlPis;
+          lastC100Cofins = vlCofins;
 
           if (vlDoc > 0) {
             sped.resumo.numNfes++;
@@ -369,9 +426,13 @@ class ZipProcessorService {
           break;
         }
 
-        case 'C190':
+        case 'C190': {
           c190Records.push(fields);
+          const cfop = fields[2] || '';
+          const vlOpr = this.parseDecimal(fields[4] || '');
+          if (cfop && vlOpr > 0) c190Temp.push({ cfop, vlOpr });
           break;
+        }
 
         case 'E110':
           sped.resumo.icmsDebitos = this.parseDecimal(fields[1]);
@@ -389,6 +450,16 @@ class ZipProcessorService {
           e116Records.push(fields);
           break;
       }
+    }
+    flushC190ToCfop();
+
+    if (cfopMap.size > 0) {
+      sped.resumo.cfopBreakdown = Array.from(cfopMap.entries())
+        .map(([cfop, v]) => ({ cfop, vlOpr: v.vlOpr, vlPis: v.vlPis, vlCofins: v.vlCofins }))
+        .filter(x => x.vlOpr > 0 || x.vlPis > 0 || x.vlCofins > 0);
+    }
+    if (operacoesExtrato.length > 0) {
+      sped.resumo.operacoesExtrato = operacoesExtrato.filter(x => x.vlOpr > 0 || x.vlPis > 0 || x.vlCofins > 0);
     }
 
     // Montar texto formatado para o Claude

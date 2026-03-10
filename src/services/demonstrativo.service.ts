@@ -138,46 +138,56 @@ export function buildDemonstrativo(
 
     // 1.3 Fallback: PIS/COFINS por NF (C100) ou total entradas quando não há C190
     if (operacoesExtrato.length === 0 && cfopBreakdown.length === 0) {
+      const PIS_RATE = 0.0165;
+      const COFINS_RATE = 0.0760;
       const entradas = (sped.resumo?.operacoes || []).filter(o => o.tipo === 'ENTRADA');
       if (entradas.length > 0) {
+        let addedAny = false;
         for (const op of entradas) {
-          const totalOp = (op.pis || 0) + (op.cofins || 0);
+          const hasPisCofins = (op.pis || 0) > 0 || (op.cofins || 0) > 0;
+          const vlPis = hasPisCofins ? (op.pis || 0) : op.valor * PIS_RATE;
+          const vlCofins = hasPisCofins ? (op.cofins || 0) : op.valor * COFINS_RATE;
+          const totalOp = vlPis + vlCofins;
           if (totalOp > 0) {
+            addedAny = true;
             itens.push({
               tributo: 'PIS/COFINS',
               ponto: `NF ${op.nf}`,
               situacaoIdentificada: `Crédito NF ${op.nf} — período ${periodo}`,
               periodo,
               baseCalculo: op.valor,
-              vlrPis: op.pis || 0,
-              vlrCofins: op.cofins || 0,
+              vlrPis: vlPis,
+              vlrCofins: vlCofins,
               total: totalOp,
               baseLegal: 'Lei 10.637/02 e 10.833/03 | Crédito sobre insumos e importação',
               tipo: 'real',
-              observacao: 'Registro C100 SPED EFD Fiscal',
+              observacao: hasPisCofins
+                ? 'Registro C100 SPED EFD Fiscal'
+                : 'Base C100 SPED EFD Fiscal — PIS 1,65% e COFINS 7,60% (regime não-cumulativo)',
               referenciaSped: `C100 NF ${op.nf} ${periodo}`,
             });
           }
         }
-      }
-      if (itens.filter(i => i.tributo === 'PIS/COFINS' && i.periodo === periodo).length === 0) {
-        const totalPis = entradas.reduce((s, o) => s + (o.pis || 0), 0);
-        const totalCofins = entradas.reduce((s, o) => s + (o.cofins || 0), 0);
-        if (totalPis > 0 || totalCofins > 0) {
-          itens.push({
-            tributo: 'PIS/COFINS',
-            ponto: 'Crédito sobre entradas',
-            situacaoIdentificada: `Crédito PIS/COFINS entradas — período ${periodo}`,
-            periodo,
-            baseCalculo: entradas.reduce((s, o) => s + (o.valor || 0), 0),
-            vlrPis: totalPis,
-            vlrCofins: totalCofins,
-            total: totalPis + totalCofins,
-            baseLegal: 'Lei 10.637/02 e 10.833/03 | Crédito sobre insumos e importação',
-            tipo: 'real',
-            observacao: 'Dado extraído dos registros C100 do SPED',
-            referenciaSped: `C100 ${periodo}`,
-          });
+        if (!addedAny) {
+          const totalBase = entradas.reduce((s, o) => s + (o.valor || 0), 0);
+          if (totalBase > 0) {
+            const vlPis = totalBase * PIS_RATE;
+            const vlCofins = totalBase * COFINS_RATE;
+            itens.push({
+              tributo: 'PIS/COFINS',
+              ponto: 'Crédito sobre entradas',
+              situacaoIdentificada: `Crédito PIS/COFINS entradas — período ${periodo}`,
+              periodo,
+              baseCalculo: totalBase,
+              vlrPis: vlPis,
+              vlrCofins: vlCofins,
+              total: vlPis + vlCofins,
+              baseLegal: 'Lei 10.637/02 e 10.833/03 | Crédito sobre insumos e importação',
+              tipo: 'real',
+              observacao: 'Base C100 SPED EFD Fiscal — PIS 1,65% e COFINS 7,60% (regime não-cumulativo)',
+              referenciaSped: `C100 ${periodo}`,
+            });
+          }
         }
       }
     }
