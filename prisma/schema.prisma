@@ -610,3 +610,61 @@ model Procuration {
   @@index([partnerId])
   @@index([status])
 }
+
+// ========================================
+// Simples Recovery — Recuperação Simples Nacional
+// ========================================
+
+model SimplesAnalysis {
+  id               String    @id @default(cuid())
+  cnpj             String
+  companyName      String
+  regime           String    @default("simples_nacional")
+  
+  totalRecuperavel   Float   @default(0)
+  totalMonofasico    Float   @default(0)
+  totalIcmsSt        Float   @default(0)
+  totalOutros        Float   @default(0)
+  
+  periodoInicio    String?
+  periodoFim       String?
+  mesesAnalisados  Int       @default(0)
+  
+  totalNfes        Int       @default(0)
+  totalItens       Int       @default(0)
+  
+  resumoJson       Json?
+  status           String    @default("completed")
+  
+  items            SimplesRecoveryItem[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  @@index([cnpj])
+  @@index([createdAt])
+}
+
+model SimplesRecoveryItem {
+  id              String   @id @default(cuid())
+  analysisId      String
+  analysis        SimplesAnalysis @relation(fields: [analysisId], references: [id])
+  
+  tipo            String   // monofasico_pis, monofasico_cofins, icms_st, outro
+  tributo         String   // PIS, COFINS, ICMS
+  ncm             String?
+  descricaoProduto String?
+  
+  baseCalculo     Float    @default(0)
+  aliquotaDas     Float    @default(0)
+  valorPagoIndevido Float  @default(0)
+  valorRecuperavel  Float  @default(0)
+  
+  competencia     String?
+  baseLegal       String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([analysisId])
+  @@index([tipo])
+  @@index([ncm])
+}

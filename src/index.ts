@@ -27,6 +27,7 @@ import byceoRoutes from './routes/byceo.routes';
 import jurisprudenciaRoutes from './routes/jurisprudencia.routes';
 import conformidadeFacilRoutes from './routes/conformidade-facil.routes';
 import complianceRoutes from './routes/compliance.routes';
+import simplesRoutes from './routes/simples.routes';
 
 dotenv.config();
 
@@ -171,6 +172,7 @@ app.use('/api/v1/byceo', byceoRoutes);
 app.use('/api/jurisprudencia', jurisprudenciaRoutes);
 app.use('/api/conformidade-facil', conformidadeFacilRoutes);
 app.use('/api/compliance', complianceRoutes);
+app.use('/api/simples', simplesRoutes);
 
 // Error handling
 app.use(errorHandler);
