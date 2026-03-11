@@ -598,6 +598,7 @@ async function runAnalysis(
 
     // Demonstrativo cálculo por cálculo (real vs hipótese) — quando temos ZIP processado
     let demonstrativo: any = null;
+    let extratoCruzadoHtml: string | null = null;
     if (zipResult && zipResult.speds.length > 0) {
       try {
         demonstrativo = buildDemonstrativo(zipResult, analysis);
@@ -607,6 +608,19 @@ async function runAnalysis(
         setProgress(`Demonstrativo gerado: ${demonstrativo.itens.filter((i: any) => i.tipo === 'real').length} itens reais, ${demonstrativo.itens.filter((i: any) => i.tipo === 'hipotese').length} hipóteses`);
       } catch (demoErr: any) {
         logger.warn(`[HPC-JOB ${jobId}] Demonstrativo falhou: ${demoErr.message}`);
+      }
+
+      // Extrato Cruzado Contábil (estilo Allinko) — quando temos ECD
+      if (zipResult.ecds && zipResult.ecds.length > 0) {
+        try {
+          const { executarCruzamento, formatExtratoCruzadoHtml } = await import('../services/cruzamentoContabil.service');
+          const efdContrib = zipResult.efdContribs?.[0] || undefined;
+          const cruzamento = executarCruzamento(zipResult.ecds[0], efdContrib);
+          extratoCruzadoHtml = formatExtratoCruzadoHtml(cruzamento);
+          setProgress(`Extrato cruzado: ${cruzamento.totalContasElegiveis} contas | R$ ${cruzamento.totalCreditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
+        } catch (cruzErr: any) {
+          logger.warn(`[HPC-JOB ${jobId}] Cruzamento contábil falhou: ${cruzErr.message}`);
+        }
       }
     }
 
@@ -638,6 +652,7 @@ async function runAnalysis(
         textoFormatado: demonstrativo.textoFormatado,
         extratoHtml: demonstrativo.extratoHtml,
         extratoBancarioHtml: demonstrativo.extratoBancarioHtml,
+        extratoCruzadoHtml: extratoCruzadoHtml || null,
       } : null,
     });
 

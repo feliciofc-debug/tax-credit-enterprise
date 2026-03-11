@@ -40,6 +40,7 @@ interface AnalysisDetail {
     extratoBancarioHtml?: string;
     extratoHtml?: string;
     extratoOperacaoHtml?: string;
+    extratoCruzadoHtml?: string;
     itens?: Array<{
       tributo: string;
       ponto: string;
@@ -67,10 +68,13 @@ export default function AdminExtratosPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'sped'>('all');
+  const [extratoTab, setExtratoTab] = useState<'fiscal' | 'cruzado'>('fiscal');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const handlePrint = () => {
-    const html = detail?.demonstrativo?.extratoBancarioHtml || detail?.demonstrativo?.extratoHtml;
+    const fiscalHtml = detail?.demonstrativo?.extratoBancarioHtml || detail?.demonstrativo?.extratoHtml;
+    const cruzadoHtml = detail?.demonstrativo?.extratoCruzadoHtml;
+    const html = extratoTab === 'cruzado' && cruzadoHtml ? cruzadoHtml : fiscalHtml;
     if (!html) return;
     const w = window.open('', '_blank', 'width=1000,height=800');
     if (!w) return;
@@ -128,7 +132,7 @@ export default function AdminExtratosPage() {
       iframe.removeEventListener('load', onLoad);
       resizeObserver.disconnect();
     };
-  }, [detail]);
+  }, [detail, extratoTab]);
 
   const completedAnalyses = analyses.filter(a => a.hasFullAnalysis);
   const filtered = completedAnalyses.filter(a => {
@@ -143,7 +147,9 @@ export default function AdminExtratosPage() {
   const totalComExtrato = completedAnalyses.filter(a => a.hasExtrato).length;
   const totalSemExtrato = completedAnalyses.length - totalComExtrato;
 
-  const extratoHtml = detail?.demonstrativo?.extratoBancarioHtml || detail?.demonstrativo?.extratoHtml;
+  const extratoFiscalHtml = detail?.demonstrativo?.extratoBancarioHtml || detail?.demonstrativo?.extratoHtml;
+  const extratoCruzadoHtml = detail?.demonstrativo?.extratoCruzadoHtml;
+  const activeExtratoHtml = extratoTab === 'cruzado' && extratoCruzadoHtml ? extratoCruzadoHtml : extratoFiscalHtml;
   const hasRealData = (detail?.demonstrativo?.totalReal ?? 0) > 0;
 
   return (
@@ -210,7 +216,7 @@ export default function AdminExtratosPage() {
               </svg>
               Voltar para lista
             </button>
-            {extratoHtml && (
+            {activeExtratoHtml && (
               <button
                 onClick={handlePrint}
                 className="flex items-center gap-2 px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 text-sm font-medium transition-colors"
@@ -258,13 +264,47 @@ export default function AdminExtratosPage() {
             </div>
           )}
 
+          {/* Tab Switcher */}
+          {(extratoFiscalHtml || extratoCruzadoHtml) && (
+            <div className="flex bg-white border border-gray-300 rounded-xl overflow-hidden mb-4">
+              <button
+                onClick={() => setExtratoTab('fiscal')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                  extratoTab === 'fiscal' ? 'bg-green-700 text-white' : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Extrato Fiscal (SPED EFD)
+              </button>
+              <button
+                onClick={() => setExtratoTab('cruzado')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                  extratoTab === 'cruzado'
+                    ? 'bg-purple-700 text-white'
+                    : extratoCruzadoHtml
+                      ? 'text-gray-600 hover:bg-gray-50'
+                      : 'text-gray-300 cursor-not-allowed'
+                }`}
+                disabled={!extratoCruzadoHtml}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+                Extrato Cruzado Contábil (ECD)
+                {!extratoCruzadoHtml && <span className="text-[10px] opacity-60 ml-1">(sem ECD)</span>}
+              </button>
+            </div>
+          )}
+
           {/* Extrato Render */}
-          <div className="bg-white border-2 border-green-200 rounded-xl shadow-lg overflow-hidden">
-            {extratoHtml ? (
+          <div className={`bg-white border-2 rounded-xl shadow-lg overflow-hidden ${extratoTab === 'cruzado' ? 'border-purple-200' : 'border-green-200'}`}>
+            {activeExtratoHtml ? (
               <div className="p-1">
                 <iframe
                   ref={iframeRef}
-                  srcDoc={extratoHtml}
+                  srcDoc={activeExtratoHtml}
                   title="Extrato de Créditos Tributários"
                   className="w-full border-0"
                   style={{ minHeight: 600 }}

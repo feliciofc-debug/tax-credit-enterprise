@@ -130,6 +130,51 @@ export interface EcfData {
   textoFormatado: string;
 }
 
+/** Conta contábil do plano de contas (I050) */
+export interface ContaContabil {
+  codigo: string;
+  descricao: string;
+  /** COD_NAT: 01=Ativo, 02=Passivo, 03=PL, 04=Receita, 05=Despesa/Custo, 09=Outros */
+  natureza: string;
+  /** 'A' = Analítica (detail), 'S' = Sintética (group) */
+  indCta: string;
+  nivel: number;
+  contaSuperior: string;
+}
+
+/** Movimento de uma conta em um período (I155) */
+export interface MovimentoConta {
+  codCta: string;
+  descricao: string;
+  natureza: string;
+  ano: number;
+  dtIni: string;
+  dtFin: string;
+  vlDeb: number;
+  vlCred: number;
+  vlSldIni: number;
+  vlSldFin: number;
+  indDcFin: string;
+}
+
+/** Agregação anual de uma conta */
+export interface ContaAnual {
+  codCta: string;
+  descricao: string;
+  natureza: string;
+  anos: Array<{
+    ano: number;
+    baseCalculo: number;
+    vlPis: number;
+    vlCofins: number;
+    totalCreditos: number;
+  }>;
+  totalBase: number;
+  totalPis: number;
+  totalCofins: number;
+  totalCreditos: number;
+}
+
 /** ECD — Escrituração Contábil Digital */
 export interface EcdData {
   tipo: 'ecd';
@@ -137,9 +182,11 @@ export interface EcdData {
   cnpj: string;
   periodo: { inicio: string; fim: string };
   /** I050 — Plano de contas */
-  planoContas: Array<{ codigo: string; descricao: string; natureza: string }>;
+  planoContas: ContaContabil[];
   /** I155 — Saldos periódicos (balancete) */
   saldos: Array<{ conta: string; descricao: string; saldoInicial: number; debitos: number; creditos: number; saldoFinal: number }>;
+  /** Movimentos detalhados por conta + período */
+  movimentosDetalhados: MovimentoConta[];
   totalAtivo: number;
   totalPassivo: number;
   receitaBruta: number;
@@ -797,13 +844,18 @@ Lucro Real: R$ ${fmt(data.lucroReal)}
       periodo: { ...sped.periodo },
       planoContas: [],
       saldos: [],
+      movimentosDetalhados: [],
       totalAtivo: 0,
       totalPassivo: 0,
       receitaBruta: 0,
       textoFormatado: '',
     };
 
-    const contasMap = new Map<string, string>();
+    // Maps for cross-referencing
+    const contasMap = new Map<string, ContaContabil>();
+    let currentPeriodDtIni = '';
+    let currentPeriodDtFin = '';
+    let currentPeriodAno = 0;
 
     for (const line of lines) {
       const fields = line.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1);
@@ -812,63 +864,121 @@ Lucro Real: R$ ${fmt(data.lucroReal)}
 
       switch (reg) {
         case 'I050': {
-          // Plano de contas: DT_ALT | COD_NAT | IND_CTA | NIVEL | COD_CTA | COD_CTA_SUP | CTA
+          // I050: DT_ALT | COD_NAT | IND_CTA | NIVEL | COD_CTA | COD_CTA_SUP | CTA
           const codigo = fields[5] || fields[4] || '';
           const descricao = fields[7] || fields[6] || '';
           const natureza = fields[2] || '';
-          if (codigo && descricao) {
-            contasMap.set(codigo, descricao);
-            if (data.planoContas.length < 500) {
-              data.planoContas.push({ codigo, descricao, natureza });
-            }
+          const indCta = (fields[3] || 'A').toUpperCase();
+          const nivel = parseInt(fields[4] || '0', 10) || 0;
+          const contaSuperior = fields[6] || fields[5] || '';
+
+          if (codigo) {
+            const conta: ContaContabil = { codigo, descricao, natureza, indCta, nivel, contaSuperior };
+            contasMap.set(codigo, conta);
+            data.planoContas.push(conta);
+          }
+          break;
+        }
+        case 'I150': {
+          // I150: DT_INI | DT_FIN — defines the period for subsequent I155 records
+          currentPeriodDtIni = fields[1] || '';
+          currentPeriodDtFin = fields[2] || '';
+          // Extract year from DT_FIN (DDMMYYYY)
+          if (currentPeriodDtFin.length === 8) {
+            currentPeriodAno = parseInt(currentPeriodDtFin.substring(4, 8), 10);
+          } else if (currentPeriodDtIni.length === 8) {
+            currentPeriodAno = parseInt(currentPeriodDtIni.substring(4, 8), 10);
           }
           break;
         }
         case 'I155': {
-          // Saldos periódicos: COD_CTA | COD_CCUS | VL_SLD_INI | IND_DC_INI | VL_DEB | VL_CRED | VL_SLD_FIN | IND_DC_FIN
-          const conta = fields[1] || '';
-          const saldoInicial = this.parseDecimal(fields[3]);
-          const debitos = this.parseDecimal(fields[5]);
-          const creditos = this.parseDecimal(fields[6]);
-          const saldoFinal = this.parseDecimal(fields[7]);
-          const descricao = contasMap.get(conta) || conta;
+          // I155: COD_CTA | COD_CCUS | VL_SLD_INI | IND_DC_INI | VL_DEB | VL_CRED | VL_SLD_FIN | IND_DC_FIN
+          const codCta = fields[1] || '';
+          const vlSldIni = this.parseDecimal(fields[3]);
+          const vlDeb = this.parseDecimal(fields[5]);
+          const vlCred = this.parseDecimal(fields[6]);
+          const vlSldFin = this.parseDecimal(fields[7]);
+          const indDcFin = fields[8] || '';
+          const contaInfo = contasMap.get(codCta);
+          const descricao = contaInfo?.descricao || codCta;
+          const natureza = contaInfo?.natureza || '';
 
-          if (saldoFinal > 0 || debitos > 0 || creditos > 0) {
-            data.saldos.push({ conta, descricao, saldoInicial, debitos, creditos, saldoFinal });
+          // Only store analítica (detail) accounts with actual movement
+          if ((vlDeb > 0 || vlCred > 0) && contaInfo?.indCta !== 'S') {
+            data.movimentosDetalhados.push({
+              codCta,
+              descricao,
+              natureza,
+              ano: currentPeriodAno,
+              dtIni: currentPeriodDtIni,
+              dtFin: currentPeriodDtFin,
+              vlDeb,
+              vlCred,
+              vlSldIni,
+              vlSldFin,
+              indDcFin,
+            });
           }
 
-          // Heuristic: identify key balances by account description
+          if (vlSldFin > 0 || vlDeb > 0 || vlCred > 0) {
+            data.saldos.push({ conta: codCta, descricao, saldoInicial: vlSldIni, debitos: vlDeb, creditos: vlCred, saldoFinal: vlSldFin });
+          }
+
           const descLower = descricao.toLowerCase();
-          if (descLower.includes('ativo') && !descLower.includes('passivo') && saldoFinal > data.totalAtivo) {
-            data.totalAtivo = saldoFinal;
+          if (descLower.includes('ativo') && !descLower.includes('passivo') && vlSldFin > data.totalAtivo) {
+            data.totalAtivo = vlSldFin;
           }
-          if (descLower.includes('passivo') && saldoFinal > data.totalPassivo) {
-            data.totalPassivo = saldoFinal;
+          if (descLower.includes('passivo') && vlSldFin > data.totalPassivo) {
+            data.totalPassivo = vlSldFin;
           }
-          if ((descLower.includes('receita bruta') || descLower.includes('receita operacional')) && saldoFinal > data.receitaBruta) {
-            data.receitaBruta = saldoFinal;
+          if ((descLower.includes('receita bruta') || descLower.includes('receita operacional')) && vlSldFin > data.receitaBruta) {
+            data.receitaBruta = vlSldFin;
           }
           break;
         }
       }
     }
 
+    // Aggregate movimentos by account + year for summary
+    const contaAnoMap = new Map<string, Map<number, { vlDeb: number; vlCred: number }>>();
+    for (const mov of data.movimentosDetalhados) {
+      if (!contaAnoMap.has(mov.codCta)) contaAnoMap.set(mov.codCta, new Map());
+      const anoMap = contaAnoMap.get(mov.codCta)!;
+      if (!anoMap.has(mov.ano)) anoMap.set(mov.ano, { vlDeb: 0, vlCred: 0 });
+      const entry = anoMap.get(mov.ano)!;
+      entry.vlDeb += mov.vlDeb;
+      entry.vlCred += mov.vlCred;
+    }
+
     const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const uniqueAccounts = new Set(data.movimentosDetalhados.map(m => m.codCta));
+    const despesaContas = data.movimentosDetalhados.filter(m => m.natureza === '04' || m.natureza === '05');
+    const uniqueDespesas = new Set(despesaContas.map(m => m.codCta));
+
     data.textoFormatado = `
 === ECD — ESCRITURAÇÃO CONTÁBIL DIGITAL ===
 Empresa: ${data.empresa} | CNPJ: ${sped.cnpj}
 Período: ${data.periodo.inicio} a ${data.periodo.fim}
 Plano de contas: ${data.planoContas.length} contas
-Saldos periódicos: ${data.saldos.length} registros
+Contas com movimento: ${uniqueAccounts.size}
+Contas de despesa/custo: ${uniqueDespesas.size}
+Movimentos detalhados: ${data.movimentosDetalhados.length} registros
 
 --- INDICADORES ---
 Total Ativo: R$ ${fmt(data.totalAtivo)}
 Total Passivo: R$ ${fmt(data.totalPassivo)}
 Receita Bruta: R$ ${fmt(data.receitaBruta)}
 
---- MAIORES SALDOS (top 20) ---
-${data.saldos.sort((a, b) => b.saldoFinal - a.saldoFinal).slice(0, 20).map(s => `${s.conta} ${s.descricao}: R$ ${fmt(s.saldoFinal)}`).join('\n')}
+--- CONTAS DE DESPESA/CUSTO (top 30 por valor) ---
+${Array.from(uniqueDespesas).map(codCta => {
+  const info = contasMap.get(codCta);
+  const anoMap = contaAnoMap.get(codCta);
+  const totalDeb = anoMap ? Array.from(anoMap.values()).reduce((s, v) => s + v.vlDeb, 0) : 0;
+  return { codCta, desc: info?.descricao || codCta, totalDeb };
+}).sort((a, b) => b.totalDeb - a.totalDeb).slice(0, 30).map(c => `${c.codCta} ${c.desc}: R$ ${fmt(c.totalDeb)}`).join('\n')}
 `.trim();
+
+    logger.info(`[ECD] ${data.planoContas.length} contas | ${uniqueAccounts.size} com movimento | ${uniqueDespesas.size} despesas/custos | ${data.movimentosDetalhados.length} registros I155`);
 
     return data;
   }

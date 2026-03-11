@@ -862,6 +862,19 @@ function runFullAnalysisInBackground(
           const extratoOperacaoHtml = formatExtratoPorOperacaoHtml(demo);
           const extratoTexto = formatDemonstrativoTexto(demo);
 
+          let extratoCruzadoHtml: string | null = null;
+          if (zipResult.ecds && zipResult.ecds.length > 0) {
+            try {
+              const { executarCruzamento, formatExtratoCruzadoHtml } = await import('../services/cruzamentoContabil.service');
+              const efdContrib = zipResult.efdContribs?.[0] || undefined;
+              const cruzamento = executarCruzamento(zipResult.ecds[0], efdContrib);
+              extratoCruzadoHtml = formatExtratoCruzadoHtml(cruzamento);
+              logger.info(`[BACKGROUND] Cruzamento contábil: ${cruzamento.totalContasElegiveis} contas | R$ ${cruzamento.totalCreditos.toFixed(2)}`);
+            } catch (cruzErr: any) {
+              logger.warn(`[BACKGROUND] Cruzamento contábil falhou: ${cruzErr.message}`);
+            }
+          }
+
           demonstrativoData = {
             itens: demo.itens,
             totalReal: demo.totalReal,
@@ -874,6 +887,7 @@ function runFullAnalysisInBackground(
             extratoBancarioHtml: extratoHtml,
             extratoOperacaoHtml: extratoOperacaoHtml,
             extratoTexto: extratoTexto,
+            extratoCruzadoHtml: extratoCruzadoHtml,
           };
 
           if (demo.totalReal > 0) {
