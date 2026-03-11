@@ -1,5 +1,6 @@
 // src/index.ts
 
+import { execSync } from 'child_process';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -7,6 +8,18 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
+
+// Sincronizar schema do banco antes de tudo
+try {
+  logger.info('[DB] Sincronizando schema do banco de dados...');
+  execSync('npx prisma db push --skip-generate --accept-data-loss', {
+    stdio: 'inherit',
+    timeout: 30000,
+  });
+  logger.info('[DB] Schema sincronizado com sucesso');
+} catch (err: any) {
+  logger.warn('[DB] Falha ao sincronizar schema (pode já estar atualizado):', err.message);
+}
 
 // Rotas
 import batchRoutes from './routes/batch.routes';
