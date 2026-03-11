@@ -264,8 +264,8 @@ export default function AdminExtratosPage() {
             </div>
           )}
 
-          {/* Tab Switcher */}
-          {(extratoFiscalHtml || extratoCruzadoHtml) && (
+          {/* Tab Switcher — só aparece quando ambos extratos existem */}
+          {extratoFiscalHtml && extratoCruzadoHtml && (
             <div className="flex bg-white border border-gray-300 rounded-xl overflow-hidden mb-4">
               <button
                 onClick={() => setExtratoTab('fiscal')}
@@ -281,19 +281,13 @@ export default function AdminExtratosPage() {
               <button
                 onClick={() => setExtratoTab('cruzado')}
                 className={`flex-1 px-4 py-3 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  extratoTab === 'cruzado'
-                    ? 'bg-purple-700 text-white'
-                    : extratoCruzadoHtml
-                      ? 'text-gray-600 hover:bg-gray-50'
-                      : 'text-gray-300 cursor-not-allowed'
+                  extratoTab === 'cruzado' ? 'bg-purple-700 text-white' : 'text-gray-600 hover:bg-gray-50'
                 }`}
-                disabled={!extratoCruzadoHtml}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                 </svg>
                 Extrato Cruzado Contábil (ECD)
-                {!extratoCruzadoHtml && <span className="text-[10px] opacity-60 ml-1">(sem ECD)</span>}
               </button>
             </div>
           )}
