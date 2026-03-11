@@ -247,7 +247,7 @@ export default function JurisprudenciaPage() {
             )}
           </div>
 
-          {!items ? (
+          {listData === undefined ? (
             <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse"/>)}</div>
           ) : list.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
@@ -411,7 +411,7 @@ function CreateFormModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Resultado *</label>
-            <select value={form.resultado} onChange={e => setForm({ ...form, resultado: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" required>
+            <select value={form.resultado} onChange={e => setForm({ ...form, resultado: e.target.value as 'FAVORAVEL' | 'DESFAVORAVEL' | 'PARCIAL' | 'NEUTRO' })} className="w-full px-3 py-2 border rounded-lg text-sm" required>
               <option value="FAVORAVEL">FAVORAVEL</option>
               <option value="DESFAVORAVEL">DESFAVORAVEL</option>
               <option value="PARCIAL">PARCIAL</option>
@@ -512,7 +512,7 @@ function EditFormModal({
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Resultado *</label>
-            <select value={form.resultado} onChange={e => setForm({ ...form, resultado: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" required>
+            <select value={form.resultado} onChange={e => setForm({ ...form, resultado: e.target.value as 'FAVORAVEL' | 'DESFAVORAVEL' | 'PARCIAL' | 'NEUTRO' })} className="w-full px-3 py-2 border rounded-lg text-sm" required>
               <option value="FAVORAVEL">FAVORAVEL</option>
               <option value="DESFAVORAVEL">DESFAVORAVEL</option>
               <option value="PARCIAL">PARCIAL</option>

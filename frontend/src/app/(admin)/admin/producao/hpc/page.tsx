@@ -47,12 +47,37 @@ interface AnalysisOportunidade {
   passosPraticos: string[];
 }
 
+interface DemonstrativoItem {
+  tributo: string;
+  ponto: string;
+  situacaoIdentificada: string;
+  periodo: string;
+  baseCalculo: number;
+  vlrPis: number;
+  vlrCofins: number;
+  total: number;
+  baseLegal: string;
+  tipo: 'real' | 'hipotese';
+  observacao?: string;
+}
+
 interface FullAnalysisResult {
   savedId?: string | null;
   saveError?: string | null;
   pipeline?: string;
   timing?: { hpcProcessingMs?: number; claudeAnalysisMs?: number; totalMs?: number };
   hpc?: { arquivosProcessados?: number; resultados?: HPCResult[]; erros?: string[] };
+  demonstrativo?: {
+    itens: DemonstrativoItem[];
+    totalReal: number;
+    totalHipotese: number;
+    totalGeral: number;
+    resumoReal: string;
+    resumoHipotese: string;
+    textoFormatado?: string;
+    extratoHtml?: string;
+    extratoBancarioHtml?: string;
+  } | null;
   authorizedByNames?: string | null;
   authorizedByCargos?: string | null;
   dataSources?: { tipo: string; descricao: string }[];
@@ -385,6 +410,32 @@ details[open]{background:white}
 <div class="extrato-print">${content}</div>
 </body>
 </html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
+  };
+
+  const handlePrintExtratoPorOperacao = () => {
+    const extratoHtml = fullResult?.demonstrativo?.extratoHtml;
+    if (!extratoHtml) return;
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) return;
+    w.document.write(extratoHtml);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
+  };
+
+  const [extratoModalOpen, setExtratoModalOpen] = useState(false);
+  const [abaAtiva, setAbaAtiva] = useState<'relatorio' | 'extrato'>('relatorio');
+
+  const handleVerExtrato = () => setExtratoModalOpen(true);
+  const handleSalvarExtrato = () => {
+    const html = fullResult?.demonstrativo?.extratoBancarioHtml || fullResult?.demonstrativo?.extratoHtml;
+    if (!html) return;
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) return;
+    w.document.write(html);
     w.document.close();
     w.focus();
     setTimeout(() => w.print(), 400);
@@ -874,7 +925,80 @@ details[open]{background:white}
             </div>
           )}
 
-          {/* EXTRATO — Mesmo template da plataforma original */}
+          {/* Abas RELATÓRIO | EXTRATO — sempre visíveis */}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+            <button
+              onClick={() => setAbaAtiva('relatorio')}
+              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${abaAtiva === 'relatorio' ? 'bg-white shadow text-indigo-700' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Relatório
+            </button>
+            <button
+              onClick={() => setAbaAtiva('extrato')}
+              className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${abaAtiva === 'extrato' ? 'bg-white shadow text-green-700' : 'text-gray-600 hover:text-gray-900'}`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              Extrato Bancário
+              {(fullResult.demonstrativo?.extratoBancarioHtml || fullResult.demonstrativo?.extratoHtml) && (
+                <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">disponível</span>
+              )}
+            </button>
+          </div>
+
+          {/* Conteúdo da aba EXTRATO */}
+          {abaAtiva === 'extrato' && (
+            <div className="bg-white border-2 border-green-200 rounded-xl shadow-lg overflow-hidden">
+              {(fullResult.demonstrativo?.extratoBancarioHtml || fullResult.demonstrativo?.extratoHtml) ? (
+                <>
+                  <div className="bg-green-700 px-6 py-4 text-white flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold">EXTRATO BANCÁRIO DISCRIMINADO</h2>
+                      <p className="text-green-100 text-sm mt-0.5">Formato aceito pela fazenda (RFB/SEFAZ) — valores confirmados no SPED</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={handleVerExtrato} className="px-4 py-2 bg-white text-green-800 rounded-lg hover:bg-green-50 text-sm font-medium">
+                        Ver em tela cheia
+                      </button>
+                      <button onClick={handleSalvarExtrato} className="px-4 py-2 bg-green-900 text-white rounded-lg hover:bg-green-950 text-sm font-medium flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        Salvar Extrato (PDF)
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-4 border-t border-green-100">
+                    <iframe
+                      srcDoc={fullResult.demonstrativo.extratoBancarioHtml || fullResult.demonstrativo.extratoHtml}
+                      title="Extrato Bancário"
+                      className="w-full border border-gray-200 rounded-lg"
+                      style={{ minHeight: 450 }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">Extrato ainda não disponível</h3>
+                  <p className="text-gray-600 text-sm max-w-md mx-auto mb-4">
+                    O extrato bancário discriminado é gerado quando há arquivos SPED processados. Envie um ZIP com SPEDs EFD Fiscal (.txt) para ver o extrato no formato aceito pela fazenda.
+                  </p>
+                  <p className="text-xs text-gray-500">Valores encontrados | Referência SPED (E110, C190) | Defesa embasada na tese</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Conteúdo da aba RELATÓRIO */}
+          {abaAtiva === 'relatorio' && (
+          <>
           <div ref={extratoRef} className="bg-white border-2 border-indigo-200 rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-6 py-5 text-white">
@@ -886,8 +1010,20 @@ details[open]{background:white}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-extrabold">{formatCurrency(fullResult.analysis.valorTotalEstimado)}</p>
-                  <p className="text-indigo-200 text-xs">Total Estimado de Recuperacao</p>
+                  {fullResult.demonstrativo && fullResult.demonstrativo.totalReal > 0 ? (
+                    <>
+                      <p className="text-3xl font-extrabold">{formatCurrency(fullResult.demonstrativo.totalReal)}</p>
+                      <p className="text-indigo-200 text-xs">Valor REAL (comprovado no SPED)</p>
+                      {fullResult.demonstrativo.totalHipotese > 0 && (
+                        <p className="text-indigo-300 text-xs mt-1">+ {formatCurrency(fullResult.demonstrativo.totalHipotese)} hipotese (estimativa IA)</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-extrabold">{formatCurrency(fullResult.analysis.valorTotalEstimado)}</p>
+                      <p className="text-indigo-200 text-xs">Total Estimado (analise IA)</p>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap gap-4 mt-3 text-xs text-indigo-200">
@@ -1072,6 +1208,72 @@ details[open]{background:white}
               </div>
             )}
 
+            {/* DEMONSTRATIVO CÁLCULO POR CÁLCULO — Real vs Hipótese */}
+            {fullResult.demonstrativo && fullResult.demonstrativo.itens?.length > 0 && (
+              <div className="px-6 py-4 border-t-2 border-indigo-300 bg-indigo-50/50">
+                <p className="text-sm font-bold text-indigo-900 mb-2">
+                  DEMONSTRATIVO CÁLCULO POR CÁLCULO — Real (comprovado) vs Hipótese (estimado)
+                </p>
+                <p className="text-xs text-indigo-700 mb-3">
+                  {fullResult.demonstrativo.resumoReal}
+                  {fullResult.demonstrativo.resumoHipotese && (
+                    <span className="block mt-1 text-amber-700">{fullResult.demonstrativo.resumoHipotese}</span>
+                  )}
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-indigo-100 text-indigo-800 text-xs uppercase">
+                        <th className="px-2 py-2 text-left font-semibold">Tipo</th>
+                        <th className="px-2 py-2 text-left font-semibold">Tributo</th>
+                        <th className="px-2 py-2 text-left font-semibold">Ponto</th>
+                        <th className="px-2 py-2 text-left font-semibold">Período</th>
+                        <th className="px-2 py-2 text-right font-semibold">Base</th>
+                        <th className="px-2 py-2 text-right font-semibold">PIS</th>
+                        <th className="px-2 py-2 text-right font-semibold">COFINS</th>
+                        <th className="px-2 py-2 text-right font-semibold">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-indigo-100">
+                      {fullResult.demonstrativo.itens.map((item, i) => (
+                        <tr key={i} className={item.tipo === 'real' ? 'bg-green-50' : 'bg-amber-50'}>
+                          <td className="px-2 py-2">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${item.tipo === 'real' ? 'bg-green-200 text-green-800' : 'bg-amber-200 text-amber-800'}`}>
+                              {item.tipo === 'real' ? 'REAL' : 'HIPÓTESE'}
+                            </span>
+                          </td>
+                          <td className="px-2 py-2 font-medium">{item.tributo}</td>
+                          <td className="px-2 py-2 text-xs">{item.ponto}</td>
+                          <td className="px-2 py-2 text-xs">{item.periodo}</td>
+                          <td className="px-2 py-2 text-right font-mono text-xs">{formatCurrency(item.baseCalculo)}</td>
+                          <td className="px-2 py-2 text-right font-mono text-xs">{formatCurrency(item.vlrPis)}</td>
+                          <td className="px-2 py-2 text-right font-mono text-xs">{formatCurrency(item.vlrCofins)}</td>
+                          <td className="px-2 py-2 text-right font-bold text-green-700">{formatCurrency(item.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-indigo-100 font-bold">
+                        <td className="px-2 py-3" colSpan={4}>Total REAL (comprovado)</td>
+                        <td colSpan={3}></td>
+                        <td className="px-2 py-3 text-right text-green-800">{formatCurrency(fullResult.demonstrativo.totalReal)}</td>
+                      </tr>
+                      <tr className="bg-amber-100 font-bold">
+                        <td className="px-2 py-2" colSpan={4}>Total HIPÓTESE (estimado)</td>
+                        <td colSpan={3}></td>
+                        <td className="px-2 py-2 text-right text-amber-800">{formatCurrency(fullResult.demonstrativo.totalHipotese)}</td>
+                      </tr>
+                      <tr className="bg-indigo-200 font-bold">
+                        <td className="px-2 py-3" colSpan={4}>TOTAL GERAL</td>
+                        <td colSpan={3}></td>
+                        <td className="px-2 py-3 text-right text-indigo-900">{formatCurrency(fullResult.demonstrativo.totalGeral)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Recomendacoes e Alertas */}
             {((fullResult.analysis.recomendacoes?.length || 0) > 0 || (fullResult.analysis.alertas?.length || 0) > 0) && (
               <div className="px-6 py-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1125,7 +1327,7 @@ details[open]{background:white}
           </div>
 
           {/* HPC Details (collapsed) */}
-          {fullResult.hpc && (fullResult.hpc.arquivosProcessados > 0 || (fullResult.hpc.resultados?.length || 0) > 0) && (
+          {fullResult.hpc && ((fullResult.hpc.arquivosProcessados ?? 0) > 0 || (fullResult.hpc.resultados?.length || 0) > 0) && (
             <details className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <summary className="px-5 py-4 cursor-pointer hover:bg-gray-50 font-semibold text-gray-900 text-sm">
                 Detalhes do Parse HPC ({fullResult.hpc?.arquivosProcessados || 0} arquivo(s))
@@ -1143,8 +1345,8 @@ details[open]{background:white}
             </details>
           )}
 
-          {/* Print button */}
-          <div className="flex gap-3 justify-end">
+          {/* Print buttons */}
+          <div className="flex gap-3 justify-end flex-wrap">
             <button
               onClick={handlePrintExtrato}
               className="px-5 py-2.5 bg-indigo-700 text-white rounded-lg hover:bg-indigo-800 text-sm font-medium flex items-center gap-2"
@@ -1152,8 +1354,40 @@ details[open]{background:white}
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
-              Imprimir / Salvar PDF
+              Salvar Relatório (PDF)
             </button>
+          </div>
+          </>
+          )}
+        </div>
+      )}
+
+      {/* Modal Ver Extrato — formato bancário separado */}
+      {extratoModalOpen && fullResult?.demonstrativo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setExtratoModalOpen(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col m-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b bg-green-700 text-white">
+              <h3 className="font-bold">EXTRATO BANCÁRIO DISCRIMINADO — Formato RFB/SEFAZ</h3>
+              <button onClick={() => setExtratoModalOpen(false)} className="p-1 hover:bg-green-600 rounded">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-2">
+              <iframe
+                srcDoc={fullResult.demonstrativo.extratoBancarioHtml || fullResult.demonstrativo.extratoHtml}
+                title="Extrato Bancário"
+                className="w-full border-0 min-h-[500px]"
+                style={{ height: '70vh' }}
+              />
+            </div>
+            <div className="px-4 py-3 border-t flex justify-end gap-2">
+              <button onClick={handleSalvarExtrato} className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 text-sm font-medium">
+                Salvar Extrato (PDF)
+              </button>
+              <button onClick={() => setExtratoModalOpen(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm font-medium">
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}

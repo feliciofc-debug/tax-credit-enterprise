@@ -232,7 +232,7 @@ export default function AdminExtratosPage() {
               <div>
                 <p className="text-green-800 font-semibold text-sm">Dados reais SPED — Extrato para formalização</p>
                 <p className="text-green-700 text-xs mt-1">
-                  Valores extraídos diretamente dos registros C100, C190 e E110 do SPED EFD Fiscal.
+                  Valores extraídos das escriturações digitais (EFD ICMS/IPI, EFD Contribuições, ECF, ECD conforme disponibilidade).
                   Este extrato pode ser apresentado à Receita Federal / SEFAZ.
                 </p>
                 <div className="mt-2 flex items-center gap-6 text-sm">
@@ -251,8 +251,8 @@ export default function AdminExtratosPage() {
               <div>
                 <p className="text-amber-800 font-semibold text-sm">Sem dados SPED processados</p>
                 <p className="text-amber-700 text-xs mt-1">
-                  Esta análise não possui arquivos SPED EFD Fiscal. Para gerar o extrato com valores reais,
-                  execute novamente a análise enviando um ZIP com os arquivos SPED.
+                  Esta análise não possui arquivos SPED processados. Para gerar o extrato com valores reais,
+                  execute novamente a análise enviando um ZIP com os arquivos SPED (EFD ICMS/IPI, EFD Contribuições, ECF, ECD).
                 </p>
               </div>
             </div>

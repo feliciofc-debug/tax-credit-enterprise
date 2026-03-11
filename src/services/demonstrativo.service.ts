@@ -2,7 +2,7 @@
 // Demonstrativo cálculo por cálculo — Real (dados SPED) vs Hipótese (estimativa)
 // Formato compatível com entrada na fazenda (RFB/SEFAZ)
 
-import { ZipProcessResult, SpedDocument } from './zipProcessor.service';
+import { ZipProcessResult, SpedDocument, EfdContribData, EcfData, EcdData } from './zipProcessor.service';
 import { TaxAnalysisResult } from './claude.service';
 import { logger } from '../utils/logger';
 
@@ -74,8 +74,21 @@ export function buildDemonstrativo(
   const itens: DemonstrativoItem[] = [];
   const periodos = new Set<string>();
 
-  // 1. DADOS REAIS — do SPED (por período, por CFOP)
+  // Deduplicar SPEDs por CNPJ+período (evita contar 2x se mesmo arquivo foi enviado)
+  const seenSpeds = new Set<string>();
+  const uniqueSpeds: SpedDocument[] = [];
   for (const sped of (zipResult.speds || []) as SpedDocument[]) {
+    const key = `${sped.cnpj || ''}|${sped.periodo?.inicio || ''}|${sped.periodo?.fim || ''}`;
+    if (seenSpeds.has(key)) {
+      logger.warn(`[DEMONSTRATIVO] SPED duplicado ignorado: ${key}`);
+      continue;
+    }
+    seenSpeds.add(key);
+    uniqueSpeds.push(sped);
+  }
+
+  // 1. DADOS REAIS — do SPED (por período, por CFOP)
+  for (const sped of uniqueSpeds) {
     const periodo = sped.periodo?.fim || sped.periodo?.inicio || 'N/D';
     periodos.add(periodo);
 
@@ -202,6 +215,206 @@ export function buildDemonstrativo(
     }
   }
 
+  // 1b. EFD CONTRIBUIÇÕES — PIS/COFINS reais (quando disponível, substitui estimativas)
+  const efdContribs = (zipResult.efdContribs || []) as EfdContribData[];
+  if (efdContribs.length > 0) {
+    for (const efd of efdContribs) {
+      const periodo = efd.periodo?.fim || efd.periodo?.inicio || 'N/D';
+      periodos.add(periodo);
+
+      // PIS saldo credor
+      if (efd.pisSaldoCredor > 0) {
+        itens.push({
+          tributo: 'PIS',
+          ponto: 'Saldo credor EFD Contribuições',
+          situacaoIdentificada: `Saldo credor PIS apurado — período ${periodo}`,
+          periodo,
+          baseCalculo: efd.pisTotalCredito,
+          vlrPis: efd.pisSaldoCredor,
+          vlrCofins: 0,
+          total: efd.pisSaldoCredor,
+          baseLegal: 'Lei 10.637/02 art. 3° | Regime não-cumulativo PIS',
+          tipo: 'real',
+          observacao: 'Registro M200 EFD Contribuições — valor real apurado',
+          referenciaSped: `M200 PIS ${periodo}`,
+        });
+      }
+
+      // COFINS saldo credor
+      if (efd.cofinsSaldoCredor > 0) {
+        itens.push({
+          tributo: 'COFINS',
+          ponto: 'Saldo credor EFD Contribuições',
+          situacaoIdentificada: `Saldo credor COFINS apurado — período ${periodo}`,
+          periodo,
+          baseCalculo: efd.cofinsTotalCredito,
+          vlrPis: 0,
+          vlrCofins: efd.cofinsSaldoCredor,
+          total: efd.cofinsSaldoCredor,
+          baseLegal: 'Lei 10.833/03 art. 3° | Regime não-cumulativo COFINS',
+          tipo: 'real',
+          observacao: 'Registro M600 EFD Contribuições — valor real apurado',
+          referenciaSped: `M600 COFINS ${periodo}`,
+        });
+      }
+
+      // Créditos detalhados PIS (M100)
+      for (const cred of efd.creditosPis) {
+        if (cred.vlCredito > 0) {
+          itens.push({
+            tributo: 'PIS',
+            ponto: `Crédito ${cred.descricao}`,
+            situacaoIdentificada: `Crédito PIS ${cred.descricao} — período ${periodo}`,
+            periodo,
+            baseCalculo: cred.vlCredito,
+            vlrPis: cred.vlCredito,
+            vlrCofins: 0,
+            total: cred.vlCredito,
+            baseLegal: 'Lei 10.637/02 art. 3° | Regime não-cumulativo',
+            tipo: 'real',
+            observacao: 'Registro M100 EFD Contribuições',
+            referenciaSped: `M100 ${cred.cstPis} ${periodo}`,
+          });
+        }
+      }
+
+      // Créditos detalhados COFINS (M500)
+      for (const cred of efd.creditosCofins) {
+        if (cred.vlCredito > 0) {
+          itens.push({
+            tributo: 'COFINS',
+            ponto: `Crédito ${cred.descricao}`,
+            situacaoIdentificada: `Crédito COFINS ${cred.descricao} — período ${periodo}`,
+            periodo,
+            baseCalculo: cred.vlCredito,
+            vlrPis: 0,
+            vlrCofins: cred.vlCredito,
+            total: cred.vlCredito,
+            baseLegal: 'Lei 10.833/03 art. 3° | Regime não-cumulativo',
+            tipo: 'real',
+            observacao: 'Registro M500 EFD Contribuições',
+            referenciaSped: `M500 ${cred.cstCofins} ${periodo}`,
+          });
+        }
+      }
+
+      // Demais créditos F100
+      for (const cred of efd.demaisCreditos) {
+        const totalCred = (cred.vlPis || 0) + (cred.vlCofins || 0);
+        if (totalCred > 0) {
+          itens.push({
+            tributo: 'PIS/COFINS',
+            ponto: `Demais créditos — ${cred.natureza}`,
+            situacaoIdentificada: `Crédito F100 ${cred.natureza} — período ${periodo}`,
+            periodo,
+            baseCalculo: cred.vlOpr,
+            vlrPis: cred.vlPis,
+            vlrCofins: cred.vlCofins,
+            total: totalCred,
+            baseLegal: 'Lei 10.637/02 e 10.833/03 | Demais créditos',
+            tipo: 'real',
+            observacao: 'Registro F100 EFD Contribuições — demais documentos',
+            referenciaSped: `F100 ${periodo}`,
+          });
+        }
+      }
+    }
+
+    // When EFD Contribuições provides real PIS/COFINS, remove estimated PIS/COFINS from EFD ICMS/IPI
+    const hasRealPisCofins = itens.some(i => i.tipo === 'real' && /^(PIS|COFINS|PIS\/COFINS)$/.test(i.tributo) && (i.observacao || '').includes('EFD Contribuições'));
+    if (hasRealPisCofins) {
+      const estimatedPisCofinsIdx: number[] = [];
+      itens.forEach((item, idx) => {
+        if (item.tipo === 'real' && /PIS|COFINS/.test(item.tributo) && (item.observacao || '').includes('SPED EFD Fiscal')) {
+          estimatedPisCofinsIdx.push(idx);
+        }
+      });
+      for (let i = estimatedPisCofinsIdx.length - 1; i >= 0; i--) {
+        itens.splice(estimatedPisCofinsIdx[i], 1);
+      }
+      logger.info(`[DEMONSTRATIVO] EFD Contribuições disponível — removidas ${estimatedPisCofinsIdx.length} estimativas PIS/COFINS do EFD ICMS/IPI`);
+    }
+  }
+
+  // 1c. ECF — IRPJ/CSLL reais
+  const ecfs = (zipResult.ecfs || []) as EcfData[];
+  if (ecfs.length > 0) {
+    for (const ecf of ecfs) {
+      const periodo = ecf.periodo?.fim || ecf.periodo?.inicio || 'N/D';
+      periodos.add(periodo);
+
+      // IRPJ retido (possível crédito a recuperar)
+      if (ecf.irpjRetido > 0 && ecf.irpjRetido >= ecf.irpjAPagar) {
+        const credito = ecf.irpjRetido - ecf.irpjAPagar;
+        if (credito > 0) {
+          itens.push({
+            tributo: 'IRPJ',
+            ponto: 'IRPJ retido na fonte a compensar',
+            situacaoIdentificada: `IRPJ retido (${fmt(ecf.irpjRetido)}) > devido (${fmt(ecf.irpjAPagar)}) — período ${periodo}`,
+            periodo,
+            baseCalculo: ecf.irpjRetido,
+            vlrPis: 0,
+            vlrCofins: 0,
+            total: credito,
+            baseLegal: 'RIR/2018 art. 932 | Compensação IRPJ retido',
+            tipo: 'real',
+            observacao: 'Registros N620/N660 ECF — IRPJ retido excedente',
+            referenciaSped: `N620/N660 IRPJ ${periodo}`,
+          });
+        }
+      }
+
+      // CSLL retida (possível crédito a recuperar)
+      if (ecf.csllRetido > 0 && ecf.csllRetido >= ecf.csllAPagar) {
+        const credito = ecf.csllRetido - ecf.csllAPagar;
+        if (credito > 0) {
+          itens.push({
+            tributo: 'CSLL',
+            ponto: 'CSLL retida na fonte a compensar',
+            situacaoIdentificada: `CSLL retida (${fmt(ecf.csllRetido)}) > devida (${fmt(ecf.csllAPagar)}) — período ${periodo}`,
+            periodo,
+            baseCalculo: ecf.csllRetido,
+            vlrPis: 0,
+            vlrCofins: 0,
+            total: credito,
+            baseLegal: 'Lei 10.833/03 art. 36 | Compensação CSLL retida',
+            tipo: 'real',
+            observacao: 'Registros N630 ECF — CSLL retida excedente',
+            referenciaSped: `N630 CSLL ${periodo}`,
+          });
+        }
+      }
+
+      // LALUR exclusões (potenciais créditos de IRPJ/CSLL)
+      if (ecf.exclusoes > 0 && ecf.lucroReal < ecf.lucroPrejuizoContabil) {
+        itens.push({
+          tributo: 'IRPJ/CSLL',
+          ponto: 'Exclusões LALUR — redução base tributável',
+          situacaoIdentificada: `Exclusões LALUR: R$ ${fmt(ecf.exclusoes)} — Lucro contábil: R$ ${fmt(ecf.lucroPrejuizoContabil)} → Lucro Real: R$ ${fmt(ecf.lucroReal)}`,
+          periodo,
+          baseCalculo: ecf.exclusoes,
+          vlrPis: 0,
+          vlrCofins: 0,
+          total: ecf.exclusoes * 0.34,
+          baseLegal: 'RIR/2018 art. 249-250 | LALUR Parte A — exclusões',
+          tipo: 'real',
+          observacao: 'Registro M300 ECF — economia fiscal sobre exclusões LALUR (IRPJ 25% + CSLL 9%)',
+          referenciaSped: `M300 LALUR ${periodo}`,
+        });
+      }
+    }
+  }
+
+  // 1d. ECD — indicadores contábeis (informativo, não gera crédito direto)
+  const ecds = (zipResult.ecds || []) as EcdData[];
+  if (ecds.length > 0) {
+    for (const ecd of ecds) {
+      const periodo = ecd.periodo?.fim || ecd.periodo?.inicio || 'N/D';
+      periodos.add(periodo);
+      logger.info(`[DEMONSTRATIVO] ECD ${periodo}: Ativo R$ ${fmt(ecd.totalAtivo)} | Passivo R$ ${fmt(ecd.totalPassivo)} | Receita R$ ${fmt(ecd.receitaBruta)} — ${ecd.saldos.length} contas`);
+    }
+  }
+
   // 2. HIPÓTESES — da análise IA (oportunidades sem documentação completa no SPED)
   for (const op of analysisResult.oportunidades || []) {
     const valor = op.valorEstimado || 0;
@@ -245,7 +458,7 @@ export function buildDemonstrativo(
     totalHipotese,
     totalGeral,
     resumoReal: totalReal > 0
-      ? `Valores comprovados nos documentos (SPED EFD): R$ ${fmt(totalReal)}. Demonstrativo cálculo por cálculo disponível.`
+      ? `Valores comprovados nos documentos (${efdContribs.length > 0 ? 'EFD Contribuições + ' : ''}${ecfs.length > 0 ? 'ECF + ' : ''}SPED EFD): R$ ${fmt(totalReal)}. Demonstrativo cálculo por cálculo disponível.`
       : 'Nenhum valor com documentação completa no período analisado.',
     resumoHipotese: totalHipotese > 0
       ? `Valores estimados (hipótese): R$ ${fmt(totalHipotese)}. Sujeitos a confirmação com documentação adicional.`
@@ -462,7 +675,7 @@ h1{font-size:16px;color:#1a365d}
 </style></head><body>
 <h1>EXTRATO DE CRÉDITOS TRIBUTÁRIOS</h1>
 ${demo.empresa ? `<p><strong>Empresa:</strong> ${empresaNome} &nbsp;|&nbsp; <strong>CNPJ:</strong> ${empresaCnpj}</p>` : ''}
-<div class="aviso"><strong>Nenhum valor com comprovação no SPED.</strong><br>Envie arquivos SPED EFD Fiscal para gerar o extrato discriminado com valores reais.</div>
+<div class="aviso"><strong>Nenhum valor com comprovação no SPED.</strong><br>Envie arquivos SPED (EFD ICMS/IPI, EFD Contribuições, ECF, ECD) para gerar o extrato discriminado com valores reais.</div>
 </body></html>`;
   }
 
@@ -621,7 +834,7 @@ ${demo.empresa ? `<p><strong>Empresa:</strong> ${empresaNome} &nbsp;|&nbsp; <str
   </div>
 
   <!-- SUMMARY TABLE -->
-  <h2>Resumo dos Créditos Identificados — Valores apurados do SPED EFD Fiscal</h2>
+  <h2>Resumo dos Créditos Identificados — Valores apurados das escriturações digitais</h2>
   <table>
     <thead><tr class="summary-header">
       <th>#</th><th>Tributo</th><th>Ponto / Operação</th><th>Registro</th><th>PIS</th><th>COFINS</th><th>Total</th>
@@ -639,12 +852,12 @@ ${demo.empresa ? `<p><strong>Empresa:</strong> ${empresaNome} &nbsp;|&nbsp; <str
 
   <!-- DETAIL TABLES -->
   <h2>Detalhamento por Operação — período a período</h2>
-  <p style="font-size:10px;color:#555;margin-bottom:12px;">Valores apurados e conciliados a partir dos registros C100, C190 e E110 do SPED EFD Fiscal.</p>
+  <p style="font-size:10px;color:#555;margin-bottom:12px;">Valores apurados e conciliados a partir dos registros SPED EFD Fiscal (C100, C190, E110), EFD Contribuições (M100, M200, M500, M600), ECF (N620, N630, M300) e ECD (I155), quando disponíveis.</p>
   ${detailSections}
 
   <!-- FOOTER -->
   <div class="footer">
-    <p><strong>Metodologia:</strong> Valores extraídos diretamente dos arquivos SPED EFD Fiscal, registros C100 (NFs), C190 (consolidação por CFOP) e E110 (apuração ICMS). Alíquotas de PIS (1,65%) e COFINS (7,60%) aplicadas conforme regime não-cumulativo (Leis 10.637/02 e 10.833/03).</p>
+    <p><strong>Metodologia:</strong> Valores extraídos diretamente das escriturações digitais: SPED EFD ICMS/IPI (C100, C190, E110), EFD Contribuições (M100/M200 PIS, M500/M600 COFINS), ECF (N620 IRPJ, N630 CSLL, M300 LALUR) e ECD (I155 Balancete), conforme disponibilidade dos arquivos. Alíquotas de PIS (1,65%) e COFINS (7,60%) aplicadas conforme regime não-cumulativo (Leis 10.637/02 e 10.833/03).</p>
     <p>Este extrato contém <strong>exclusivamente valores reais</strong> comprovados nos documentos fiscais digitais. Nenhuma estimativa ou projeção foi utilizada.</p>
     <p>Documento gerado pela plataforma TaxCredit Enterprise. <span class="confidencial">Uso confidencial.</span></p>
   </div>

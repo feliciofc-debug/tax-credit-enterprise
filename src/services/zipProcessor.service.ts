@@ -28,6 +28,8 @@ export interface ProcessedDocument {
 
 export interface SpedDocument extends ProcessedDocument {
   tipo: 'sped';
+  /** 'efd-icms' | 'efd-contribuicoes' | 'ecf' | 'ecd' | 'unknown' */
+  tipoSped?: string;
   versao: string;
   periodo: { inicio: string; fim: string };
   empresa: string;
@@ -36,6 +38,9 @@ export interface SpedDocument extends ProcessedDocument {
   uf: string;
   fantasia?: string;
   resumo: SpedResumo;
+  efdContrib?: EfdContribData;
+  ecf?: EcfData;
+  ecd?: EcdData;
 }
 
 export interface CfopBreakdown {
@@ -78,10 +83,76 @@ interface SpedOperacao {
   cofins: number;
 }
 
+/** EFD Contribuições — PIS/COFINS reais */
+export interface EfdContribData {
+  tipo: 'efd-contribuicoes';
+  empresa: string;
+  cnpj: string;
+  periodo: { inicio: string; fim: string };
+  /** M200 — Apuração PIS */
+  pisTotalCredito: number;
+  pisTotalDebito: number;
+  pisSaldoCredor: number;
+  /** M600 — Apuração COFINS */
+  cofinsTotalCredito: number;
+  cofinsTotalDebito: number;
+  cofinsSaldoCredor: number;
+  /** M100/M500 — Créditos detalhados */
+  creditosPis: Array<{ cstPis: string; vlCredito: number; descricao: string }>;
+  creditosCofins: Array<{ cstCofins: string; vlCredito: number; descricao: string }>;
+  /** F100 — Demais créditos */
+  demaisCreditos: Array<{ natureza: string; vlOpr: number; vlPis: number; vlCofins: number }>;
+  textoFormatado: string;
+}
+
+/** ECF — IRPJ/CSLL */
+export interface EcfData {
+  tipo: 'ecf';
+  empresa: string;
+  cnpj: string;
+  periodo: { inicio: string; fim: string };
+  formaApuracao: string;
+  /** N620 — IRPJ */
+  irpjBaseCalculo: number;
+  irpjDevido: number;
+  irpjRetido: number;
+  irpjAPagar: number;
+  /** N630 — CSLL */
+  csllBaseCalculo: number;
+  csllDevido: number;
+  csllRetido: number;
+  csllAPagar: number;
+  /** M300 — LALUR Parte A */
+  lucroPrejuizoContabil: number;
+  adicoes: number;
+  exclusoes: number;
+  lucroReal: number;
+  textoFormatado: string;
+}
+
+/** ECD — Escrituração Contábil Digital */
+export interface EcdData {
+  tipo: 'ecd';
+  empresa: string;
+  cnpj: string;
+  periodo: { inicio: string; fim: string };
+  /** I050 — Plano de contas */
+  planoContas: Array<{ codigo: string; descricao: string; natureza: string }>;
+  /** I155 — Saldos periódicos (balancete) */
+  saldos: Array<{ conta: string; descricao: string; saldoInicial: number; debitos: number; creditos: number; saldoFinal: number }>;
+  totalAtivo: number;
+  totalPassivo: number;
+  receitaBruta: number;
+  textoFormatado: string;
+}
+
 export interface ZipProcessResult {
   empresa: { nome: string; cnpj: string; ie: string; uf: string; fantasia: string } | null;
   documentos: ProcessedDocument[];
   speds: SpedDocument[];
+  efdContribs: EfdContribData[];
+  ecfs: EcfData[];
+  ecds: EcdData[];
   nfes: ProcessedDocument[];
   demonstrativos: ProcessedDocument[];
   contratos: ProcessedDocument[];
@@ -465,9 +536,341 @@ class ZipProcessorService {
     // Montar texto formatado para o Claude
     sped.conteudo = this.formatSpedForClaude(sped, c190Records, e111Records, e116Records, p0150Records);
 
-    logger.info(`SPED parsed: ${sped.empresa} | ${sped.periodo.inicio}-${sped.periodo.fim} | ${sped.resumo.numNfes} NFes | Saldo credor: R$ ${sped.resumo.saldoCredor.toLocaleString('pt-BR')}`);
+    // Detect SPED sub-type and parse extra data
+    const spedType = this.detectSpedType(lines);
+    sped.tipoSped = spedType;
+
+    if (spedType === 'efd-contribuicoes') {
+      sped.efdContrib = this.parseEfdContribuicoes(lines, sped);
+      sped.conteudo += '\n' + sped.efdContrib.textoFormatado;
+      logger.info(`EFD Contribuições parsed: ${sped.empresa} | PIS crédito: R$ ${sped.efdContrib.pisTotalCredito.toLocaleString('pt-BR')} | COFINS crédito: R$ ${sped.efdContrib.cofinsTotalCredito.toLocaleString('pt-BR')}`);
+    } else if (spedType === 'ecf') {
+      sped.ecf = this.parseEcf(lines, sped);
+      sped.conteudo += '\n' + sped.ecf.textoFormatado;
+      logger.info(`ECF parsed: ${sped.empresa} | IRPJ: R$ ${sped.ecf.irpjDevido.toLocaleString('pt-BR')} | CSLL: R$ ${sped.ecf.csllDevido.toLocaleString('pt-BR')}`);
+    } else if (spedType === 'ecd') {
+      sped.ecd = this.parseEcd(lines, sped);
+      sped.conteudo += '\n' + sped.ecd.textoFormatado;
+      logger.info(`ECD parsed: ${sped.empresa} | ${sped.ecd.saldos.length} contas | Receita bruta: R$ ${sped.ecd.receitaBruta.toLocaleString('pt-BR')}`);
+    } else {
+      logger.info(`SPED EFD ICMS/IPI parsed: ${sped.empresa} | ${sped.periodo.inicio}-${sped.periodo.fim} | ${sped.resumo.numNfes} NFes | Saldo credor: R$ ${sped.resumo.saldoCredor.toLocaleString('pt-BR')}`);
+    }
 
     return sped;
+  }
+
+  /**
+   * Detect SPED type by scanning for characteristic registers
+   */
+  private detectSpedType(lines: string[]): string {
+    let hasM = false, hasN = false, hasI050 = false, hasC100 = false, hasE110 = false;
+    const sample = lines.slice(0, Math.min(lines.length, 5000));
+    for (const line of sample) {
+      const reg = line.split('|')[1] || '';
+      if (reg === 'M100' || reg === 'M200' || reg === 'M500' || reg === 'M600') hasM = true;
+      if (reg === 'N620' || reg === 'N630' || reg === 'N660') hasN = true;
+      if (reg === 'I050' || reg === 'I155' || reg === 'I150') hasI050 = true;
+      if (reg === 'C100') hasC100 = true;
+      if (reg === 'E110') hasE110 = true;
+    }
+    if (hasM) return 'efd-contribuicoes';
+    if (hasN) return 'ecf';
+    if (hasI050 && !hasC100 && !hasE110) return 'ecd';
+    return 'efd-icms';
+  }
+
+  // ============================================================
+  // 3b. EFD CONTRIBUIÇÕES PARSER (PIS/COFINS)
+  // ============================================================
+
+  private parseEfdContribuicoes(lines: string[], sped: SpedDocument): EfdContribData {
+    const data: EfdContribData = {
+      tipo: 'efd-contribuicoes',
+      empresa: sped.empresa,
+      cnpj: sped.cnpj,
+      periodo: { ...sped.periodo },
+      pisTotalCredito: 0, pisTotalDebito: 0, pisSaldoCredor: 0,
+      cofinsTotalCredito: 0, cofinsTotalDebito: 0, cofinsSaldoCredor: 0,
+      creditosPis: [], creditosCofins: [], demaisCreditos: [],
+      textoFormatado: '',
+    };
+
+    for (const line of lines) {
+      const fields = line.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1);
+      if (!fields[0]) continue;
+      const reg = fields[0];
+
+      switch (reg) {
+        case 'M100': {
+          // Crédito PIS: COD_CRED | IND_CRED_ORI | VL_BC_PIS | ALIQ_PIS | ... | VL_CRED
+          const cst = fields[1] || '';
+          const vlCredito = this.parseDecimal(fields[7] || fields[6]);
+          if (vlCredito > 0) {
+            data.creditosPis.push({ cstPis: cst, vlCredito, descricao: `CST ${cst}` });
+          }
+          break;
+        }
+        case 'M200': {
+          // Apuração PIS: VL_TOT_CONT_NC_PER | VL_TOT_CRED_DESC | ... | VL_CONT_PER
+          data.pisTotalDebito += this.parseDecimal(fields[1]);
+          data.pisTotalCredito += this.parseDecimal(fields[5] || fields[4] || fields[3]);
+          data.pisSaldoCredor += this.parseDecimal(fields[9] || fields[8]);
+          break;
+        }
+        case 'M500': {
+          // Crédito COFINS: similar to M100
+          const cst = fields[1] || '';
+          const vlCredito = this.parseDecimal(fields[7] || fields[6]);
+          if (vlCredito > 0) {
+            data.creditosCofins.push({ cstCofins: cst, vlCredito, descricao: `CST ${cst}` });
+          }
+          break;
+        }
+        case 'M600': {
+          // Apuração COFINS: similar to M200
+          data.cofinsTotalDebito += this.parseDecimal(fields[1]);
+          data.cofinsTotalCredito += this.parseDecimal(fields[5] || fields[4] || fields[3]);
+          data.cofinsSaldoCredor += this.parseDecimal(fields[9] || fields[8]);
+          break;
+        }
+        case 'F100': {
+          // Demais documentos geradores de crédito
+          const vlOpr = this.parseDecimal(fields[7] || fields[6]);
+          const vlPis = this.parseDecimal(fields[9] || fields[8]);
+          const vlCofins = this.parseDecimal(fields[11] || fields[10]);
+          if (vlPis > 0 || vlCofins > 0) {
+            data.demaisCreditos.push({ natureza: fields[2] || 'Outros', vlOpr, vlPis, vlCofins });
+          }
+          break;
+        }
+      }
+    }
+
+    const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    data.textoFormatado = `
+=== EFD CONTRIBUIÇÕES (PIS/COFINS) ===
+Empresa: ${data.empresa} | CNPJ: ${sped.cnpj}
+Período: ${data.periodo.inicio} a ${data.periodo.fim}
+
+--- APURAÇÃO PIS ---
+Débitos (contribuição): R$ ${fmt(data.pisTotalDebito)}
+Créditos descontados: R$ ${fmt(data.pisTotalCredito)}
+Saldo credor: R$ ${fmt(data.pisSaldoCredor)}
+
+--- APURAÇÃO COFINS ---
+Débitos (contribuição): R$ ${fmt(data.cofinsTotalDebito)}
+Créditos descontados: R$ ${fmt(data.cofinsTotalCredito)}
+Saldo credor: R$ ${fmt(data.cofinsSaldoCredor)}
+
+--- CRÉDITOS PIS DETALHADOS (${data.creditosPis.length}) ---
+${data.creditosPis.slice(0, 20).map(c => `CST ${c.cstPis}: R$ ${fmt(c.vlCredito)}`).join('\n')}
+
+--- CRÉDITOS COFINS DETALHADOS (${data.creditosCofins.length}) ---
+${data.creditosCofins.slice(0, 20).map(c => `CST ${c.cstCofins}: R$ ${fmt(c.vlCredito)}`).join('\n')}
+
+--- DEMAIS CRÉDITOS F100 (${data.demaisCreditos.length}) ---
+${data.demaisCreditos.slice(0, 20).map(c => `${c.natureza}: PIS R$ ${fmt(c.vlPis)} | COFINS R$ ${fmt(c.vlCofins)}`).join('\n')}
+`.trim();
+
+    return data;
+  }
+
+  // ============================================================
+  // 3c. ECF PARSER (IRPJ/CSLL)
+  // ============================================================
+
+  private parseEcf(lines: string[], sped: SpedDocument): EcfData {
+    const data: EcfData = {
+      tipo: 'ecf',
+      empresa: sped.empresa,
+      cnpj: sped.cnpj,
+      periodo: { ...sped.periodo },
+      formaApuracao: '',
+      irpjBaseCalculo: 0, irpjDevido: 0, irpjRetido: 0, irpjAPagar: 0,
+      csllBaseCalculo: 0, csllDevido: 0, csllRetido: 0, csllAPagar: 0,
+      lucroPrejuizoContabil: 0, adicoes: 0, exclusoes: 0, lucroReal: 0,
+      textoFormatado: '',
+    };
+
+    for (const line of lines) {
+      const fields = line.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1);
+      if (!fields[0]) continue;
+      const reg = fields[0];
+
+      switch (reg) {
+        case '0010': {
+          // Parâmetros: FORMA_APUR | COD_QUALIF_PJ
+          data.formaApuracao = fields[4] || fields[3] || fields[2] || '';
+          break;
+        }
+        case 'N620': {
+          // Cálculo IRPJ: vários campos de base, adições, exclusões
+          // N620 layout: IND_PER | ... multiple value fields
+          const values = fields.slice(1).map(f => this.parseDecimal(f));
+          if (values.length >= 10) {
+            data.irpjBaseCalculo = Math.max(data.irpjBaseCalculo, values[9] || 0);
+          }
+          if (values.length >= 15) {
+            data.irpjDevido = Math.max(data.irpjDevido, values[14] || values[13] || 0);
+          }
+          break;
+        }
+        case 'N630': {
+          // Cálculo CSLL: similar a N620
+          const values = fields.slice(1).map(f => this.parseDecimal(f));
+          if (values.length >= 10) {
+            data.csllBaseCalculo = Math.max(data.csllBaseCalculo, values[9] || 0);
+          }
+          if (values.length >= 15) {
+            data.csllDevido = Math.max(data.csllDevido, values[14] || values[13] || 0);
+          }
+          break;
+        }
+        case 'N660': {
+          // IRPJ retido e a pagar
+          const values = fields.slice(1).map(f => this.parseDecimal(f));
+          if (values.length >= 3) {
+            data.irpjRetido = Math.max(data.irpjRetido, values[0] || 0);
+            data.irpjAPagar = Math.max(data.irpjAPagar, values[2] || values[1] || 0);
+          }
+          break;
+        }
+        case 'M300': {
+          // LALUR Parte A: IND_LAN | ... | VL_LAN
+          const vlLan = this.parseDecimal(fields[fields.length - 1]);
+          const tipo = (fields[1] || '').toUpperCase();
+          if (tipo === 'A') data.adicoes += vlLan;
+          else if (tipo === 'E') data.exclusoes += vlLan;
+          break;
+        }
+        case 'L200': {
+          // DRE — Demonstração do Resultado: IND_AJ | SLD_FIN
+          const sldFin = this.parseDecimal(fields[fields.length - 1]);
+          if (sldFin !== 0 && data.lucroPrejuizoContabil === 0) {
+            data.lucroPrejuizoContabil = sldFin;
+          }
+          break;
+        }
+      }
+    }
+
+    data.lucroReal = data.lucroPrejuizoContabil + data.adicoes - data.exclusoes;
+
+    const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    data.textoFormatado = `
+=== ECF — ESCRITURAÇÃO CONTÁBIL FISCAL ===
+Empresa: ${data.empresa} | CNPJ: ${sped.cnpj}
+Período: ${data.periodo.inicio} a ${data.periodo.fim}
+Forma de Apuração: ${data.formaApuracao || 'N/D'}
+
+--- IRPJ ---
+Base de cálculo: R$ ${fmt(data.irpjBaseCalculo)}
+IRPJ devido: R$ ${fmt(data.irpjDevido)}
+IRPJ retido: R$ ${fmt(data.irpjRetido)}
+IRPJ a pagar: R$ ${fmt(data.irpjAPagar)}
+
+--- CSLL ---
+Base de cálculo: R$ ${fmt(data.csllBaseCalculo)}
+CSLL devida: R$ ${fmt(data.csllDevido)}
+CSLL retida: R$ ${fmt(data.csllRetido)}
+CSLL a pagar: R$ ${fmt(data.csllAPagar)}
+
+--- LALUR (Lucro Real) ---
+Lucro/Prejuízo contábil: R$ ${fmt(data.lucroPrejuizoContabil)}
+Adições: R$ ${fmt(data.adicoes)}
+Exclusões: R$ ${fmt(data.exclusoes)}
+Lucro Real: R$ ${fmt(data.lucroReal)}
+`.trim();
+
+    return data;
+  }
+
+  // ============================================================
+  // 3d. ECD PARSER (Escrituração Contábil Digital)
+  // ============================================================
+
+  private parseEcd(lines: string[], sped: SpedDocument): EcdData {
+    const data: EcdData = {
+      tipo: 'ecd',
+      empresa: sped.empresa,
+      cnpj: sped.cnpj,
+      periodo: { ...sped.periodo },
+      planoContas: [],
+      saldos: [],
+      totalAtivo: 0,
+      totalPassivo: 0,
+      receitaBruta: 0,
+      textoFormatado: '',
+    };
+
+    const contasMap = new Map<string, string>();
+
+    for (const line of lines) {
+      const fields = line.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1);
+      if (!fields[0]) continue;
+      const reg = fields[0];
+
+      switch (reg) {
+        case 'I050': {
+          // Plano de contas: DT_ALT | COD_NAT | IND_CTA | NIVEL | COD_CTA | COD_CTA_SUP | CTA
+          const codigo = fields[5] || fields[4] || '';
+          const descricao = fields[7] || fields[6] || '';
+          const natureza = fields[2] || '';
+          if (codigo && descricao) {
+            contasMap.set(codigo, descricao);
+            if (data.planoContas.length < 500) {
+              data.planoContas.push({ codigo, descricao, natureza });
+            }
+          }
+          break;
+        }
+        case 'I155': {
+          // Saldos periódicos: COD_CTA | COD_CCUS | VL_SLD_INI | IND_DC_INI | VL_DEB | VL_CRED | VL_SLD_FIN | IND_DC_FIN
+          const conta = fields[1] || '';
+          const saldoInicial = this.parseDecimal(fields[3]);
+          const debitos = this.parseDecimal(fields[5]);
+          const creditos = this.parseDecimal(fields[6]);
+          const saldoFinal = this.parseDecimal(fields[7]);
+          const descricao = contasMap.get(conta) || conta;
+
+          if (saldoFinal > 0 || debitos > 0 || creditos > 0) {
+            data.saldos.push({ conta, descricao, saldoInicial, debitos, creditos, saldoFinal });
+          }
+
+          // Heuristic: identify key balances by account description
+          const descLower = descricao.toLowerCase();
+          if (descLower.includes('ativo') && !descLower.includes('passivo') && saldoFinal > data.totalAtivo) {
+            data.totalAtivo = saldoFinal;
+          }
+          if (descLower.includes('passivo') && saldoFinal > data.totalPassivo) {
+            data.totalPassivo = saldoFinal;
+          }
+          if ((descLower.includes('receita bruta') || descLower.includes('receita operacional')) && saldoFinal > data.receitaBruta) {
+            data.receitaBruta = saldoFinal;
+          }
+          break;
+        }
+      }
+    }
+
+    const fmt = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    data.textoFormatado = `
+=== ECD — ESCRITURAÇÃO CONTÁBIL DIGITAL ===
+Empresa: ${data.empresa} | CNPJ: ${sped.cnpj}
+Período: ${data.periodo.inicio} a ${data.periodo.fim}
+Plano de contas: ${data.planoContas.length} contas
+Saldos periódicos: ${data.saldos.length} registros
+
+--- INDICADORES ---
+Total Ativo: R$ ${fmt(data.totalAtivo)}
+Total Passivo: R$ ${fmt(data.totalPassivo)}
+Receita Bruta: R$ ${fmt(data.receitaBruta)}
+
+--- MAIORES SALDOS (top 20) ---
+${data.saldos.sort((a, b) => b.saldoFinal - a.saldoFinal).slice(0, 20).map(s => `${s.conta} ${s.descricao}: R$ ${fmt(s.saldoFinal)}`).join('\n')}
+`.trim();
+
+    return data;
   }
 
   // ============================================================
@@ -550,7 +953,20 @@ class ZipProcessorService {
     const content = (doc.conteudo || '').toLowerCase().substring(0, 500);
 
     if (doc.tipo === 'sped') {
-      result.speds.push(doc as SpedDocument);
+      const spedDoc = doc as SpedDocument;
+      result.speds.push(spedDoc);
+      if (spedDoc.efdContrib) {
+        result.efdContribs.push(spedDoc.efdContrib);
+        if (!result.resumo.tiposEncontrados.includes('efd-contribuicoes')) result.resumo.tiposEncontrados.push('efd-contribuicoes');
+      }
+      if (spedDoc.ecf) {
+        result.ecfs.push(spedDoc.ecf);
+        if (!result.resumo.tiposEncontrados.includes('ecf')) result.resumo.tiposEncontrados.push('ecf');
+      }
+      if (spedDoc.ecd) {
+        result.ecds.push(spedDoc.ecd);
+        if (!result.resumo.tiposEncontrados.includes('ecd')) result.resumo.tiposEncontrados.push('ecd');
+      }
     } else if (name.includes('demonstrativo') || (name.includes('icms') && doc.tipo === 'pdf')) {
       result.demonstrativos.push(doc);
     } else if (name.match(/^\d+\.pdf$/) || name.includes('nfe') || name.includes('nf-e') ||
@@ -579,12 +995,36 @@ class ZipProcessorService {
 
     // SPEDs (dados estruturados — prioridade máxima)
     if (result.speds.length > 0) {
-      text += `${'='.repeat(60)}\nSPED EFD FISCAL — DADOS ESTRUTURADOS\n${'='.repeat(60)}\n\n`;
+      text += `${'='.repeat(60)}\nSPED — DADOS ESTRUTURADOS\n${'='.repeat(60)}\n\n`;
       const sorted = [...result.speds].sort((a, b) =>
         ((a as SpedDocument).periodo?.inicio || '').localeCompare((b as SpedDocument).periodo?.inicio || '')
       );
       for (const sped of sorted) {
         text += sped.conteudo + '\n\n';
+      }
+    }
+
+    // EFD Contribuições (PIS/COFINS reais)
+    if (result.efdContribs.length > 0) {
+      text += `${'='.repeat(60)}\nEFD CONTRIBUIÇÕES — PIS/COFINS REAIS\n${'='.repeat(60)}\n\n`;
+      for (const efd of result.efdContribs) {
+        text += efd.textoFormatado + '\n\n';
+      }
+    }
+
+    // ECF (IRPJ/CSLL)
+    if (result.ecfs.length > 0) {
+      text += `${'='.repeat(60)}\nECF — IRPJ/CSLL\n${'='.repeat(60)}\n\n`;
+      for (const ecf of result.ecfs) {
+        text += ecf.textoFormatado + '\n\n';
+      }
+    }
+
+    // ECD (Contabilidade)
+    if (result.ecds.length > 0) {
+      text += `${'='.repeat(60)}\nECD — ESCRITURAÇÃO CONTÁBIL\n${'='.repeat(60)}\n\n`;
+      for (const ecd of result.ecds) {
+        text += ecd.textoFormatado + '\n\n';
       }
     }
 
@@ -630,6 +1070,9 @@ class ZipProcessorService {
       empresa: null,
       documentos: [],
       speds: [],
+      efdContribs: [],
+      ecfs: [],
+      ecds: [],
       nfes: [],
       demonstrativos: [],
       contratos: [],
