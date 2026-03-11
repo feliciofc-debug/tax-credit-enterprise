@@ -124,6 +124,9 @@ export default function LandingPage() {
             <Link href="#como-funciona" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors hidden sm:inline">
               Como Funciona
             </Link>
+            <Link href="/apresentacao" className="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors hidden sm:inline">
+              Apresentação Comercial
+            </Link>
             <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
               Entrar
             </Link>
@@ -351,6 +354,22 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-gray-50">
         <div className="max-w-6xl mx-auto px-6 py-12">
+          {/* Presentation Banner */}
+          <div className="mb-8 p-6 bg-gradient-to-r from-emerald-50 to-orange-50 border border-emerald-200 rounded-2xl">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Conheça nossa apresentação comercial completa</h3>
+                <p className="text-gray-600 text-sm mt-1">Recuperação de 5 anos + Compliance em Tempo Real com simulador de impacto financeiro</p>
+              </div>
+              <Link href="/apresentacao" className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-bold py-3 px-8 rounded-xl hover:from-emerald-500 hover:to-emerald-600 transition-all shadow-lg text-sm whitespace-nowrap">
+                Ver Apresentação
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </Link>
+            </div>
+          </div>
+
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-brand-700 rounded-lg flex items-center justify-center">
@@ -358,13 +377,18 @@ export default function LandingPage() {
               </div>
               <span className="font-bold text-gray-700 text-sm">Tax Credit Enterprise</span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <svg className="w-4 h-4 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-              </svg>
-              <a href="mailto:comercial@taxcreditenterprise.com" className="hover:text-brand-700 transition-colors font-medium">
-                comercial@taxcreditenterprise.com
-              </a>
+            <div className="flex items-center gap-6">
+              <Link href="/apresentacao" className="text-sm font-semibold text-emerald-600 hover:text-emerald-800 transition-colors">
+                Apresentação Comercial
+              </Link>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <svg className="w-4 h-4 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                </svg>
+                <a href="mailto:comercial@taxcreditenterprise.com" className="hover:text-brand-700 transition-colors font-medium">
+                  comercial@taxcreditenterprise.com
+                </a>
+              </div>
             </div>
             <p className="text-sm text-gray-500">
               © 2026 Tax Credit Enterprise. Todos os direitos reservados.
