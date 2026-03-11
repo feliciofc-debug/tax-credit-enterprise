@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc --skipLibCheck",
+    "build": "prisma generate && prisma db push --skip-generate && tsc --skipLibCheck",
     "start": "node dist/index.js",
     "test": "jest",
     "prisma:generate": "prisma generate",
