@@ -476,6 +476,112 @@ model TeseJurisprudencia {
 // ============================================
 // PROCURACOES
 // ============================================
+// ============================================
+// COMPLIANCE EM TEMPO REAL
+// ============================================
+model ComplianceMonitor {
+  id               String    @id @default(uuid())
+  
+  // Empresa monitorada
+  companyName      String
+  cnpj             String
+  regime           String?
+  sector           String?
+  
+  // Configuração
+  active           Boolean   @default(true)
+  autoAnalyze      Boolean   @default(true)
+  
+  // Contadores
+  totalUploads     Int       @default(0)
+  totalAlerts      Int       @default(0)
+  totalEconomia    Float     @default(0)
+  lastUploadAt     DateTime?
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  uploads          ComplianceUpload[]
+  alerts           ComplianceAlert[]
+  
+  @@unique([cnpj])
+  @@index([active])
+  @@index([cnpj])
+}
+
+model ComplianceUpload {
+  id               String    @id @default(uuid())
+  monitorId        String
+  monitor          ComplianceMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  
+  // Arquivo
+  fileName         String
+  fileSize         Int
+  spedType         String    // efd-icms, efd-contribuicoes, ecf, ecd
+  
+  // Período do SPED
+  periodoInicio    String?
+  periodoFim       String?
+  ano              Int?
+  mes              Int?
+  
+  // Resultado da análise
+  status           String    @default("pending") // pending, analyzing, completed, failed
+  totalCreditos    Float     @default(0)
+  totalDebitos     Float     @default(0)
+  alertasGerados   Int       @default(0)
+  resumoJson       String?   @db.Text
+  
+  processedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  
+  alerts           ComplianceAlert[]
+  
+  @@index([monitorId])
+  @@index([status])
+  @@index([ano, mes])
+}
+
+model ComplianceAlert {
+  id               String    @id @default(uuid())
+  monitorId        String
+  monitor          ComplianceMonitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  uploadId         String?
+  upload           ComplianceUpload? @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+  
+  // Classificação
+  severity         String    // critical, warning, info
+  category         String    // overpayment, missing_credit, wrong_rate, wrong_cfop, retention_excess, base_error
+  tributo          String    // ICMS, PIS, COFINS, IRPJ, CSLL
+  
+  // Detalhes
+  title            String
+  description      String    @db.Text
+  valorEnvolvido   Float     @default(0)
+  economiaEstimada Float     @default(0)
+  
+  // Fundamentação
+  baseLegal        String?   @db.Text
+  registroSped     String?
+  parecer          String?   @db.Text
+  
+  // Status do alerta
+  status           String    @default("new") // new, reviewed, accepted, dismissed, resolved
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  resolvedAt       DateTime?
+  
+  periodo          String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  @@index([monitorId])
+  @@index([severity])
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+}
+
 model Procuration {
   id               String    @id @default(cuid())
   contractId       String?
