@@ -668,3 +668,124 @@ model SimplesRecoveryItem {
   @@index([tipo])
   @@index([ncm])
 }
+
+// ========================================
+// Integrações ERP
+// ========================================
+
+model Integration {
+  id               String    @id @default(cuid())
+  cnpj             String
+  companyName      String
+  provider         String    // omie, oracle, sap, totvs, webhook
+  status           String    @default("active") // active, paused, error
+  
+  configJson       Json?     // credenciais (appKey/appSecret p/ Omie, etc)
+  comissaoPerc     Float     @default(0.175) // percentual comissao padrao
+  regime           String?   // simples, lucro_real, lucro_presumido
+  
+  totalEvents      Int       @default(0)
+  totalCreditos    Float     @default(0)
+  totalComissao    Float     @default(0)
+  lastSyncAt       DateTime?
+  lastEventAt      DateTime?
+  
+  apiKeys          ApiKey[]
+  logs             IntegrationLog[]
+  revenueEvents    RevenueEvent[]
+  
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  @@index([cnpj])
+  @@index([provider])
+  @@index([status])
+}
+
+model ApiKey {
+  id              String      @id @default(cuid())
+  integrationId   String
+  integration     Integration @relation(fields: [integrationId], references: [id])
+  
+  keyHash         String      @unique
+  keyPrefix       String      // primeiros 8 chars para identificacao
+  label           String?
+  
+  permissions     Json?       // ['upload', 'read']
+  rateLimitPerMin Int         @default(60)
+  
+  isActive        Boolean     @default(true)
+  lastUsedAt      DateTime?
+  usageCount      Int         @default(0)
+  
+  createdAt       DateTime    @default(now())
+  
+  @@index([keyHash])
+  @@index([integrationId])
+}
+
+model IntegrationLog {
+  id              String      @id @default(cuid())
+  integrationId   String
+  integration     Integration @relation(fields: [integrationId], references: [id])
+  
+  eventType       String      // webhook_received, sync_started, sync_completed, error
+  status          String      @default("success") // success, error, skipped
+  
+  fileName        String?
+  fileSize        Int?
+  payloadType     String?     // nfe_xml, sped_txt, zip, json
+  
+  itemsProcessed  Int         @default(0)
+  alertsGenerated Int         @default(0)
+  creditosFound   Float       @default(0)
+  
+  errorMessage    String?     @db.Text
+  processingMs    Int?
+  
+  createdAt       DateTime    @default(now())
+  
+  @@index([integrationId])
+  @@index([createdAt])
+  @@index([eventType])
+}
+
+// ========================================
+// Revenue Tracker
+// ========================================
+
+model RevenueEvent {
+  id              String       @id @default(cuid())
+  integrationId   String?
+  integration     Integration? @relation(fields: [integrationId], references: [id])
+  
+  cnpj            String
+  companyName     String
+  
+  eventType       String       // credit_found, alert_generated, recovery_identified
+  fonte           String       // compliance_rt, simples_recovery, recuperacao_5anos, manual
+  tributo         String       // PIS, COFINS, ICMS, IRPJ, CSLL
+  
+  valorCredito    Float        @default(0)
+  comissaoPerc    Float        @default(0.175)
+  comissaoValor   Float        @default(0)
+  
+  descricao       String?
+  metadata        Json?
+  
+  createdAt       DateTime     @default(now())
+  
+  @@index([integrationId])
+  @@index([cnpj])
+  @@index([fonte])
+  @@index([createdAt])
+}
+
+model RevenueConfig {
+  id                  String   @id @default(cuid())
+  comissaoPadraoPerc  Float    @default(0.175) // 17.5%
+  faturamentoGlobal   Float    @default(0) // faturamento acumulado Atom
+  metaMensal          Float    @default(0)
+  metaAnual           Float    @default(0)
+  updatedAt           DateTime @updatedAt
+}

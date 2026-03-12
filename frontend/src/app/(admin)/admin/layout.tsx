@@ -22,28 +22,24 @@ const menuItems = [
   { label: 'HPC Motor', href: '/admin/producao/hpc', section: 'producao', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { label: 'Compliance RT', href: '/admin/producao/compliance', section: 'compliance', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
   { label: 'Simples Recovery', href: '/admin/producao/simples', section: 'simples', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+  { label: 'Integrações ERP', href: '/admin/producao/integracoes', section: 'integracoes', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
+  { label: 'Revenue Tracker', href: '/admin/producao/revenue', section: 'revenue', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
 ] as const;
 
 function MenuLink({ item, active, open }: { item: typeof menuItems[number]; active: boolean; open: boolean }) {
   const section = item.section;
-  const colorActive = section === 'gestao' ? 'bg-emerald-50 text-emerald-700 font-semibold'
-    : section === 'compliance' ? 'bg-orange-50 text-orange-700 font-semibold'
-    : section === 'simples' ? 'bg-violet-50 text-violet-700 font-semibold'
-    : 'bg-indigo-50 text-indigo-700 font-semibold';
-  const colorIcon = section === 'gestao'
-    ? (active ? 'bg-emerald-100' : 'bg-gray-100')
-    : section === 'compliance'
-    ? (active ? 'bg-orange-100' : 'bg-gray-100')
-    : section === 'simples'
-    ? (active ? 'bg-violet-100' : 'bg-gray-100')
-    : (active ? 'bg-indigo-100' : 'bg-gray-100');
-  const colorSvg = section === 'gestao'
-    ? (active ? 'text-emerald-600' : 'text-gray-400')
-    : section === 'compliance'
-    ? (active ? 'text-orange-600' : 'text-gray-400')
-    : section === 'simples'
-    ? (active ? 'text-violet-600' : 'text-gray-400')
-    : (active ? 'text-indigo-600' : 'text-gray-400');
+  const sectionColors: Record<string, { active: string; icon: string; iconActive: string; svg: string; svgActive: string }> = {
+    gestao: { active: 'bg-emerald-50 text-emerald-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-emerald-100', svg: 'text-gray-400', svgActive: 'text-emerald-600' },
+    producao: { active: 'bg-indigo-50 text-indigo-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-indigo-100', svg: 'text-gray-400', svgActive: 'text-indigo-600' },
+    compliance: { active: 'bg-orange-50 text-orange-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-orange-100', svg: 'text-gray-400', svgActive: 'text-orange-600' },
+    simples: { active: 'bg-violet-50 text-violet-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-violet-100', svg: 'text-gray-400', svgActive: 'text-violet-600' },
+    integracoes: { active: 'bg-cyan-50 text-cyan-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-cyan-100', svg: 'text-gray-400', svgActive: 'text-cyan-600' },
+    revenue: { active: 'bg-green-50 text-green-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-green-100', svg: 'text-gray-400', svgActive: 'text-green-600' },
+  };
+  const sc = sectionColors[section] || sectionColors.producao;
+  const colorActive = sc.active;
+  const colorIcon = active ? sc.iconActive : sc.icon;
+  const colorSvg = active ? sc.svgActive : sc.svg;
 
   return (
     <Link
@@ -191,6 +187,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <p className="text-[10px] text-violet-500 uppercase tracking-widest px-3 py-2 font-bold">Simples Nacional</p>
               )}
               {menuItems.filter(i => i.section === 'simples').map(item => (
+                <MemoMenuLink key={item.href} item={item} active={isActive(item.href)} open={sidebarOpen} />
+              ))}
+            </div>
+
+            <div className="pt-2">
+              {sidebarOpen && (
+                <p className="text-[10px] text-cyan-500 uppercase tracking-widest px-3 py-2 font-bold">Integrações</p>
+              )}
+              {menuItems.filter(i => i.section === 'integracoes').map(item => (
+                <MemoMenuLink key={item.href} item={item} active={isActive(item.href)} open={sidebarOpen} />
+              ))}
+            </div>
+
+            <div className="pt-2">
+              {sidebarOpen && (
+                <p className="text-[10px] text-green-500 uppercase tracking-widest px-3 py-2 font-bold">Receita</p>
+              )}
+              {menuItems.filter(i => i.section === 'revenue').map(item => (
                 <MemoMenuLink key={item.href} item={item} active={isActive(item.href)} open={sidebarOpen} />
               ))}
             </div>

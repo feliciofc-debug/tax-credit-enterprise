@@ -41,6 +41,9 @@ import jurisprudenciaRoutes from './routes/jurisprudencia.routes';
 import conformidadeFacilRoutes from './routes/conformidade-facil.routes';
 import complianceRoutes from './routes/compliance.routes';
 import simplesRoutes from './routes/simples.routes';
+import webhookRoutes from './routes/webhook.routes';
+import integrationRoutes from './routes/integration.routes';
+import revenueRoutes from './routes/revenue.routes';
 
 dotenv.config();
 
@@ -186,6 +189,9 @@ app.use('/api/jurisprudencia', jurisprudenciaRoutes);
 app.use('/api/conformidade-facil', conformidadeFacilRoutes);
 app.use('/api/compliance', complianceRoutes);
 app.use('/api/simples', simplesRoutes);
+app.use('/api/webhook', webhookRoutes);
+app.use('/api/integrations', integrationRoutes);
+app.use('/api/revenue', revenueRoutes);
 
 // Error handling
 app.use(errorHandler);
