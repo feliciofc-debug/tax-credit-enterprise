@@ -127,9 +127,9 @@ export default function AdminAnalisesPage() {
           body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #1a1a1a;
-            padding: 20px;
-            font-size: 11px;
-            line-height: 1.5;
+            padding: 24px 28px;
+            font-size: 12px;
+            line-height: 1.6;
           }
           .header {
             background: linear-gradient(135deg, #4338ca, #7c3aed);
@@ -138,45 +138,49 @@ export default function AdminAnalisesPage() {
             border-radius: 12px;
             margin-bottom: 20px;
           }
-          .header h1 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
-          .header .company { font-size: 13px; opacity: 0.85; }
-          .header .total { font-size: 24px; font-weight: 800; text-align: right; }
-          .header .total-label { font-size: 10px; opacity: 0.7; text-align: right; }
+          .header h1 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+          .header .company { font-size: 14px; opacity: 0.85; }
+          .header .total { font-size: 26px; font-weight: 800; text-align: right; }
+          .header .total-label { font-size: 11px; opacity: 0.7; text-align: right; }
           .header-row { display: flex; justify-content: space-between; align-items: center; }
           .header-meta { display: flex; gap: 12px; margin-top: 8px; font-size: 10px; opacity: 0.7; }
-          .section { margin-bottom: 16px; }
+          .section { margin-bottom: 20px; }
           .section-title {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 700;
             color: #312e81;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
-            padding-bottom: 4px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
             border-bottom: 2px solid #e0e7ff;
           }
           .summary-box {
             background: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
+            padding: 14px 16px;
+            margin-bottom: 18px;
+            font-size: 12px;
+            line-height: 1.7;
           }
           table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
           th {
             background: #f1f5f9;
-            padding: 8px 10px;
+            padding: 10px 12px;
             text-align: left;
-            font-size: 10px;
+            font-size: 11px;
             text-transform: uppercase;
             color: #64748b;
             font-weight: 600;
             border-bottom: 2px solid #e2e8f0;
           }
           td {
-            padding: 8px 10px;
+            padding: 10px 12px;
             border-bottom: 1px solid #f1f5f9;
-            font-size: 11px;
+            font-size: 12px;
+            vertical-align: top;
+            line-height: 1.6;
           }
           tr:hover { background: #f8fafc; }
           .text-right { text-align: right; }
@@ -203,27 +207,27 @@ export default function AdminAnalisesPage() {
             background: #fafafa;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
             page-break-inside: avoid;
           }
-          .detail-block h4 { font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #1e1b4b; }
-          .detail-block p { font-size: 10px; color: #4b5563; margin-bottom: 4px; }
+          .detail-block h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #1e1b4b; }
+          .detail-block p { font-size: 11px; color: #4b5563; margin-bottom: 6px; line-height: 1.7; }
           .detail-block .label { font-weight: 600; color: #374151; }
-          .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
           .rec-alert-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
           .rec-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; }
           .alert-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; }
-          .rec-box h4 { color: #166534; font-size: 11px; font-weight: 600; margin-bottom: 6px; }
-          .alert-box h4 { color: #92400e; font-size: 11px; font-weight: 600; margin-bottom: 6px; }
-          .rec-box li, .alert-box li { font-size: 10px; margin-bottom: 3px; }
+          .rec-box h4 { color: #166534; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+          .alert-box h4 { color: #92400e; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+          .rec-box li, .alert-box li { font-size: 11px; margin-bottom: 4px; line-height: 1.6; }
           .footer {
-            margin-top: 24px;
-            padding-top: 12px;
+            margin-top: 28px;
+            padding-top: 14px;
             border-top: 1px solid #e2e8f0;
             display: flex;
             justify-content: space-between;
-            font-size: 9px;
+            font-size: 10px;
             color: #94a3b8;
           }
           @media print {
@@ -475,7 +479,7 @@ export default function AdminAnalisesPage() {
                           <td className="px-4 py-3 text-gray-400 font-mono">{String(i + 1).padStart(2, '0')}</td>
                           <td className="px-4 py-3">
                             <p className="font-medium text-gray-900">{op.tipo || ''}</p>
-                            <p className="text-gray-500 text-xs mt-0.5 line-clamp-2">{op.descricao || ''}</p>
+                            <p className="text-gray-600 text-xs mt-1 leading-relaxed whitespace-pre-line">{op.descricao || ''}</p>
                           </td>
                           <td className="px-4 py-3">
                             <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-1 rounded">{op.tributo || ''}</span>
@@ -690,8 +694,7 @@ export default function AdminAnalisesPage() {
                         <td>{String(i + 1).padStart(2, '0')}</td>
                         <td>
                           <strong>{op.tipo || ''}</strong>
-                          <br />
-                          <span style={{ fontSize: '9px', color: '#6b7280' }}>{op.descricao || ''}</span>
+                          <div style={{ fontSize: '11px', color: '#4b5563', marginTop: '4px', lineHeight: '1.7' }}>{op.descricao || ''}</div>
                         </td>
                         <td><span className="badge badge-indigo">{op.tributo || ''}</span></td>
                         <td className="text-right text-green">{fmt(op.valorEstimado)}</td>
