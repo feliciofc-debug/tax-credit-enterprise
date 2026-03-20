@@ -26,7 +26,7 @@ const upload = multer({
     }
   }),
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE_MB || '10') * 1024 * 1024,
+    fileSize: parseInt(process.env.MAX_FILE_SIZE_MB || '2048') * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
     const allowedMimes = [

@@ -5,9 +5,10 @@ import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { analyzeSimples, parseNFeXml, extractCompetencia, isMonofasico, NCM_TABLE } from '../services/simplesRecovery.service';
 import type { NFeItem } from '../services/simplesRecovery.service';
+import { diskUpload, getFileBuffer, cleanupFiles } from '../utils/upload';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+const upload = diskUpload;
 
 // POST /api/simples/analyze — Upload NFe XMLs + análise
 router.post('/analyze', upload.array('files', 50), async (req: Request, res: Response) => {
@@ -22,8 +23,9 @@ router.post('/analyze', upload.array('files', 50), async (req: Request, res: Res
     let totalNfes = 0;
 
     for (const file of files) {
+      const fileBuf = getFileBuffer(file);
       if (file.originalname.toLowerCase().endsWith('.zip')) {
-        const zip = await JSZip.loadAsync(file.buffer);
+        const zip = await JSZip.loadAsync(fileBuf);
         for (const [name, zipEntry] of Object.entries(zip.files)) {
           if (zipEntry.dir) continue;
           if (name.toLowerCase().endsWith('.xml')) {
@@ -36,7 +38,7 @@ router.post('/analyze', upload.array('files', 50), async (req: Request, res: Res
           }
         }
       } else if (file.originalname.toLowerCase().endsWith('.xml')) {
-        const content = file.buffer.toString('utf-8');
+        const content = fileBuf.toString('utf-8');
         const competencia = extractCompetencia(content);
         const items = parseNFeXml(content);
         items.forEach(it => { if (!it.competencia && competencia) it.competencia = competencia; });
@@ -109,6 +111,8 @@ router.post('/analyze', upload.array('files', 50), async (req: Request, res: Res
   } catch (err: any) {
     logger.error('[Simples] Erro na análise:', err.message);
     return res.status(500).json({ success: false, error: err.message });
+  } finally {
+    cleanupFiles(req.files as Express.Multer.File[]);
   }
 });
 

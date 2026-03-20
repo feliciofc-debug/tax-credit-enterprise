@@ -92,8 +92,8 @@ app.use(cors({
   maxAge: 86400,
 }));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // ==============================
 // Rate limiting por tipo de rota
@@ -206,13 +206,20 @@ if (!process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY === 'your_ap
   logger.warn('⚠️  ANTHROPIC_API_KEY nao configurada. Analise de viabilidade usara modo simulado.');
 }
 
-app.listen(PORT, () => {
+import { startTempCleanupJob } from './utils/upload';
+
+const server = app.listen(PORT, () => {
   logger.info(`Servidor na porta ${PORT}`);
   logger.info(`Ambiente: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`CORS: ${allowedOrigins.join(', ') || 'aberto (dev)'}`);
   logger.info(`Automacao de creditos: ATIVA`);
   logger.info(`HPC Gateway: ${process.env.HPC_GATEWAY_URL ? 'ATIVO (' + process.env.HPC_GATEWAY_URL + ')' : 'DESATIVADO'}`);
+  logger.info(`Upload: limite 2GB/arquivo, disk storage, cleanup a cada 30min`);
+  startTempCleanupJob();
 });
+server.timeout = 600000;
+server.keepAliveTimeout = 620000;
+server.headersTimeout = 660000;
 
 // Cron: varredura de jurisprudência (diária às 6h, quando habilitada)
 if (process.env.JURISPRUDENCIA_VARREDURA_CRON_ENABLED === 'true') {

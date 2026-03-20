@@ -8,10 +8,11 @@ import { PrismaClient } from '@prisma/client';
 import zipProcessor, { SpedDocument } from '../services/zipProcessor.service';
 import { ComplianceAnalyzer } from '../services/compliance.service';
 import { logger } from '../utils/logger';
+import { diskUpload, getFileBuffer, cleanupFiles } from '../utils/upload';
 
 const router = Router();
 const prisma = new PrismaClient();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+const upload = diskUpload;
 
 // ============================================================
 // GET /api/compliance/monitors — Lista monitores
@@ -88,7 +89,7 @@ router.post('/upload', upload.array('files', 50), async (req: Request, res: Resp
 
     for (const file of files) {
       try {
-        const zipResult = await zipProcessor.processUpload(file.buffer, file.originalname, file.mimetype);
+        const zipResult = await zipProcessor.processUpload(getFileBuffer(file), file.originalname, file.mimetype);
 
         for (const sped of zipResult.speds as SpedDocument[]) {
           const efdContrib = sped.efdContrib || undefined;
@@ -174,6 +175,8 @@ router.post('/upload', upload.array('files', 50), async (req: Request, res: Resp
   } catch (err: any) {
     logger.error(`[COMPLIANCE] Erro no upload: ${err.message}`);
     res.status(500).json({ success: false, error: err.message });
+  } finally {
+    cleanupFiles(req.files as Express.Multer.File[]);
   }
 });
 

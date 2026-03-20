@@ -14,22 +14,9 @@ export type ZipResultForDemo = ZipProcessResult;
 
 const router = Router();
 
-// Upload config — memoryStorage (buffer direto, sem salvar em disco)
-// Aceita ZIP (até 50MB) e arquivos individuais (até 10MB)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB para ZIPs
-  fileFilter: (_req, file, cb) => {
-    if (zipProcessor.isSupported(file.originalname)) {
-      cb(null, true);
-    } else {
-      cb(new Error(
-        `Tipo de arquivo não suportado: ${file.originalname}. ` +
-        `Extensões aceitas: ${zipProcessor.getSupportedExtensions().join(', ')}`
-      ));
-    }
-  },
-});
+import { diskUpload, getFileBuffer, cleanupFiles } from '../utils/upload';
+
+const upload = diskUpload;
 
 // ============================================================
 // HELPER: Processar documentos e extrair texto
@@ -47,9 +34,10 @@ async function processUploadedFiles(files: Express.Multer.File[]) {
     const ext = file.originalname.toLowerCase().split('.').pop();
 
     try {
+      const fileBuf = getFileBuffer(file);
       if (ext === 'zip') {
         logger.info(`Processando ZIP: ${file.originalname} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
-        const zipResult = await zipProcessor.processUpload(file.buffer, file.originalname, file.mimetype);
+        const zipResult = await zipProcessor.processUpload(fileBuf, file.originalname, file.mimetype);
         combinedText += zipProcessor.buildCombinedText(zipResult);
         totalPages += zipResult.resumo.processados;
         overallQuality = zipResult.speds.length > 0 ? 'high' : 'medium';
@@ -60,7 +48,7 @@ async function processUploadedFiles(files: Express.Multer.File[]) {
         }
       }
       else if (ext === 'txt') {
-        const zipResult = await zipProcessor.processUpload(file.buffer, file.originalname, file.mimetype);
+        const zipResult = await zipProcessor.processUpload(fileBuf, file.originalname, file.mimetype);
         combinedText += zipProcessor.buildCombinedText(zipResult);
         totalPages += 1;
         if (zipResult.speds.length > 0) {
@@ -74,7 +62,7 @@ async function processUploadedFiles(files: Express.Multer.File[]) {
       }
       else {
         const processed = await documentProcessor.processDocument(
-          file.buffer,
+          fileBuf,
           file.originalname,
           file.mimetype
         );

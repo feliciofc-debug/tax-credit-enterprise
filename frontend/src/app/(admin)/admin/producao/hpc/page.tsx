@@ -692,7 +692,7 @@ details[open]{background:white}
             onChange={e => setFiles(Array.from(e.target.files || []))}
             className="w-full max-w-xs mx-auto text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:bg-amber-500 file:text-white hover:file:bg-amber-600 cursor-pointer"
           />
-          <p className="text-xs text-gray-400 mt-2">Arquivos SPED (.txt), ZIP, PDF, Excel — até 100MB</p>
+          <p className="text-xs text-gray-400 mt-2">Arquivos SPED (.txt), ZIP, PDF, Excel — até 2GB por arquivo (suporta ZIPs com múltiplos SPEDs)</p>
         </div>
 
         {files.length > 0 && (

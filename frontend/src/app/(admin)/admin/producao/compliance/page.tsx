@@ -264,7 +264,7 @@ export default function CompliancePage() {
                 </svg>
               </div>
               <p className="text-lg font-semibold text-gray-900 mb-1">Arraste os arquivos SPED aqui</p>
-              <p className="text-sm text-gray-500 mb-3">ou clique para selecionar</p>
+              <p className="text-sm text-gray-500 mb-3">ou clique para selecionar — até 2GB por arquivo</p>
               <div className="flex items-center justify-center gap-3 text-xs text-gray-400">
                 <span className="bg-gray-100 px-2 py-1 rounded">.txt (SPED)</span>
                 <span className="bg-gray-100 px-2 py-1 rounded">.zip (múltiplos)</span>

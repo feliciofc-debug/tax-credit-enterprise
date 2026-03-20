@@ -4,9 +4,10 @@ import crypto from 'crypto';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { IntegrationProcessor } from '../services/integrationProcessor.service';
+import { diskUpload, getFileBuffer, cleanupFiles } from '../utils/upload';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 200 * 1024 * 1024 } });
+const upload = diskUpload;
 
 function hashKey(key: string): string {
   return crypto.createHash('sha256').update(key).digest('hex');
@@ -46,7 +47,7 @@ router.post('/:apiKey', upload.array('files', 50), async (req: Request, res: Res
 
     for (const file of files) {
       const r = await IntegrationProcessor.processFile(
-        file.buffer,
+        getFileBuffer(file),
         file.originalname,
         {
           id: integration.id,
@@ -74,6 +75,8 @@ router.post('/:apiKey', upload.array('files', 50), async (req: Request, res: Res
   } catch (err: any) {
     logger.error('[Webhook] Erro:', err.message);
     return res.status(500).json({ success: false, error: err.message });
+  } finally {
+    cleanupFiles(req.files as Express.Multer.File[]);
   }
 });
 

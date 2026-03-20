@@ -333,7 +333,7 @@ export default function ClientDashboardPage() {
               onChange={e => setFiles(Array.from(e.target.files || []))}
               className="w-full max-w-xs mx-auto text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
             />
-            <p className="text-xs text-gray-400 mt-2">PDF, Excel, SPED (.txt) ou ZIP — até 50MB</p>
+            <p className="text-xs text-gray-400 mt-2">PDF, Excel, SPED (.txt) ou ZIP — até 2GB por arquivo</p>
           </div>
 
           {files.length > 0 && (

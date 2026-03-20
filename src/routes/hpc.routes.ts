@@ -14,22 +14,11 @@ import multer from 'multer';
 import AdmZip from 'adm-zip';
 import pdfParse from 'pdf-parse';
 import crypto from 'crypto';
+import { diskUpload, getFileBuffer, cleanupFiles } from '../utils/upload';
 
 const router = Router();
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const ext = file.originalname.toLowerCase().split('.').pop();
-    const allowed = ['zip', 'txt', 'pdf', 'xlsx', 'xls', 'csv'];
-    if (ext && allowed.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Tipo nao suportado: ${file.originalname}. Aceitos: ${allowed.join(', ')}`));
-    }
-  },
-});
+const upload = diskUpload;
 
 // In-memory progress tracker (supplements DB state for real-time progress)
 const jobProgress = new Map<string, string>();
@@ -69,7 +58,7 @@ const MAX_PDFS = 5;
 const MAX_PDF_SIZE = 8 * 1024 * 1024; // 8MB per PDF
 const MAX_PDF_TEXT = 40000;
 const MAX_TOTAL_TEXT = 120000;
-const MAX_ZIP_EXTRACT = 50 * 1024 * 1024; // 50MB total extracted from ZIP
+const MAX_ZIP_EXTRACT = 2 * 1024 * 1024 * 1024; // 2GB total extracted from ZIP
 
 function extractFilesFromUploads(
   files: Express.Multer.File[]
@@ -78,15 +67,15 @@ function extractFilesFromUploads(
   let totalExtracted = 0;
 
   for (const file of files) {
+    const fileBuf = getFileBuffer(file);
     const ext = file.originalname.toLowerCase().split('.').pop();
 
     if (ext === 'zip') {
       try {
-        const zip = new AdmZip(file.buffer);
+        const zip = new AdmZip(fileBuf);
         const entries = zip.getEntries();
         logger.info(`[HPC] ZIP "${file.originalname}" contem ${entries.length} arquivo(s)`);
 
-        // Sort: SPED/txt first (small, high value), then PDFs by size ascending
         const sorted = [...entries].sort((a, b) => {
           const aExt = (a.entryName.split('.').pop() || '').toLowerCase();
           const bExt = (b.entryName.split('.').pop() || '').toLowerCase();
@@ -130,15 +119,12 @@ function extractFilesFromUploads(
           });
           totalExtracted += buf.length;
         }
-
-        // Free ZIP buffer from memory
-        file.buffer = Buffer.alloc(0);
       } catch (err: any) {
         logger.warn(`[HPC] Falha ao extrair ZIP "${file.originalname}": ${err.message}`);
       }
     } else {
-      extracted.push({ buffer: file.buffer, originalname: file.originalname, mimetype: file.mimetype });
-      totalExtracted += file.buffer.length;
+      extracted.push({ buffer: fileBuf, originalname: file.originalname, mimetype: file.mimetype });
+      totalExtracted += fileBuf.length;
     }
   }
 
@@ -396,7 +382,7 @@ async function runAnalysis(
     let zipResult: Awaited<ReturnType<typeof zipProcessor.processUpload>> | null = null;
     if (isSingleZip) {
       setProgress('Processando ZIP com zipProcessor (fluxo unificado)...');
-      zipResult = await zipProcessor.processUpload(files[0].buffer, files[0].originalname, files[0].mimetype);
+      zipResult = await zipProcessor.processUpload(getFileBuffer(files[0]), files[0].originalname, files[0].mimetype);
       textoParaClaude = zipProcessor.buildCombinedText(zipResult);
       extractedFiles = zipResult.documentos.map((d: any) => ({
         buffer: Buffer.from(String(d.conteudo || ''), 'utf8'),
@@ -703,6 +689,8 @@ async function runAnalysis(
       logger.error(`[HPC-JOB ${jobId}] Falha ao salvar erro no DB: ${dbErr.message}`);
     }
     jobProgress.delete(jobId);
+  } finally {
+    cleanupFiles(files);
   }
 }
 
@@ -710,8 +698,8 @@ async function runAnalysis(
 // POST /api/hpc/process-only
 // ============================================================
 router.post('/process-only', authenticateToken, upload.array('documents', 50), async (req: Request, res: Response) => {
+  const files = req.files as Express.Multer.File[];
   try {
-    const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, error: 'Envie pelo menos um arquivo' });
     }
@@ -722,6 +710,8 @@ router.post('/process-only', authenticateToken, upload.array('documents', 50), a
     return res.json({ success: true, pipeline: 'hpc-go-chapel-only', hpcResult });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
+  } finally {
+    cleanupFiles(files);
   }
 });
 
