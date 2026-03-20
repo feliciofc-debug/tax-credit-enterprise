@@ -789,3 +789,43 @@ model RevenueConfig {
   metaAnual           Float    @default(0)
   updatedAt           DateTime @updatedAt
 }
+
+// ============================================================
+// SERPRO — Conexão com Integra Contador (e-CAC)
+// ============================================================
+model SerproConnection {
+  id              String    @id @default(cuid())
+  cnpj            String
+  companyName     String
+  consumerKey     String
+  consumerSecret  String
+  certBase64      String?
+  certPassword    String?
+  status          String    @default("pending") // pending, active, error, expired
+  environment     String    @default("trial") // trial, production
+  lastSyncAt      DateTime?
+  lastError       String?
+  procuracaoOk    Boolean   @default(false)
+  logs            SerproLog[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  @@index([cnpj])
+  @@index([status])
+}
+
+model SerproLog {
+  id              String    @id @default(cuid())
+  connectionId    String
+  connection      SerproConnection @relation(fields: [connectionId], references: [id])
+  service         String
+  endpoint        String
+  statusCode      Int?
+  success         Boolean   @default(false)
+  responseData    Json?
+  errorMessage    String?
+  durationMs      Int?
+  createdAt       DateTime  @default(now())
+  @@index([connectionId])
+  @@index([service])
+  @@index([createdAt])
+}

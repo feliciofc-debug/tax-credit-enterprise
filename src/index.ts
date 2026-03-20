@@ -44,6 +44,7 @@ import simplesRoutes from './routes/simples.routes';
 import webhookRoutes from './routes/webhook.routes';
 import integrationRoutes from './routes/integration.routes';
 import revenueRoutes from './routes/revenue.routes';
+import serproRoutes from './routes/serpro.routes';
 
 dotenv.config();
 
@@ -192,6 +193,7 @@ app.use('/api/simples', simplesRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/revenue', revenueRoutes);
+app.use('/api/serpro', serproRoutes);
 
 // Error handling
 app.use(errorHandler);

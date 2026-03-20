@@ -24,6 +24,7 @@ const menuItems = [
   { label: 'Simples Recovery', href: '/admin/producao/simples', section: 'simples', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
   { label: 'Integrações ERP', href: '/admin/producao/integracoes', section: 'integracoes', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
   { label: 'Revenue Tracker', href: '/admin/producao/revenue', section: 'revenue', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { label: 'SERPRO / e-CAC', href: '/admin/producao/serpro', section: 'serpro', icon: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
 ] as const;
 
 function MenuLink({ item, active, open }: { item: typeof menuItems[number]; active: boolean; open: boolean }) {
@@ -35,6 +36,7 @@ function MenuLink({ item, active, open }: { item: typeof menuItems[number]; acti
     simples: { active: 'bg-violet-50 text-violet-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-violet-100', svg: 'text-gray-400', svgActive: 'text-violet-600' },
     integracoes: { active: 'bg-cyan-50 text-cyan-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-cyan-100', svg: 'text-gray-400', svgActive: 'text-cyan-600' },
     revenue: { active: 'bg-green-50 text-green-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-green-100', svg: 'text-gray-400', svgActive: 'text-green-600' },
+    serpro: { active: 'bg-amber-50 text-amber-700 font-semibold', icon: 'bg-gray-100', iconActive: 'bg-amber-100', svg: 'text-gray-400', svgActive: 'text-amber-600' },
   };
   const sc = sectionColors[section] || sectionColors.producao;
   const colorActive = sc.active;
@@ -205,6 +207,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <p className="text-[10px] text-green-500 uppercase tracking-widest px-3 py-2 font-bold">Receita</p>
               )}
               {menuItems.filter(i => i.section === 'revenue').map(item => (
+                <MemoMenuLink key={item.href} item={item} active={isActive(item.href)} open={sidebarOpen} />
+              ))}
+              {sidebarOpen && (
+                <p className="text-[10px] text-amber-500 uppercase tracking-widest px-3 py-2 font-bold">SERPRO / e-CAC</p>
+              )}
+              {menuItems.filter(i => i.section === 'serpro').map(item => (
                 <MemoMenuLink key={item.href} item={item} active={isActive(item.href)} open={sidebarOpen} />
               ))}
             </div>
