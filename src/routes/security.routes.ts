@@ -1,12 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { getBlockedIps, unblockIp, blockIp } from '../middleware/antiScraping';
+import { getBlockedIps, getAllTrackedIps, unblockIp, blockIp } from '../middleware/antiScraping';
 
 const router = Router();
 
 router.get('/dashboard', authenticateToken, async (_req: Request, res: Response) => {
   try {
     const suspiciousIps = getBlockedIps();
+    const allIps = getAllTrackedIps();
     const blocked = suspiciousIps.filter(i => i.record.blocked);
     const watching = suspiciousIps.filter(i => !i.record.blocked);
 
@@ -16,10 +17,11 @@ router.get('/dashboard', authenticateToken, async (_req: Request, res: Response)
         summary: {
           totalBlocked: blocked.length,
           totalWatching: watching.length,
-          totalTracked: suspiciousIps.length,
+          totalTracked: allIps.length,
         },
         blocked,
         watching,
+        allConnected: allIps.slice(0, 50),
       },
     });
   } catch (err: any) {

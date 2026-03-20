@@ -1,5 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
+import https from 'https';
 import { logger } from '../utils/logger';
+
+interface GeoInfo {
+  country: string;
+  region: string;
+  city: string;
+  isp: string;
+  org: string;
+  timezone: string;
+}
 
 interface RequestRecord {
   count: number;
@@ -9,6 +19,7 @@ interface RequestRecord {
   suspicionScore: number;
   blocked: boolean;
   userAgent: string;
+  geo?: GeoInfo;
 }
 
 const ipTracker = new Map<string, RequestRecord>();
@@ -120,7 +131,11 @@ export function antiScrapingMiddleware(req: Request, res: Response, next: NextFu
 
   if (newScore >= BLOCK_THRESHOLD) {
     record.blocked = true;
-    logger.warn(`[ANTI-SCRAPING] IP BLOQUEADO por comportamento suspeito: ${ip} (score=${newScore}, requests=${record.count}, endpoints=${record.endpoints.size}, ua=${record.userAgent})`);
+    if (!record.geo) {
+      lookupGeo(ip).then(geo => { if (geo) record.geo = geo; }).catch(() => {});
+    }
+    const geoStr = record.geo ? ` [${record.geo.city}, ${record.geo.region}, ${record.geo.country} — ISP: ${record.geo.isp}]` : '';
+    logger.warn(`[ANTI-SCRAPING] IP BLOQUEADO: ${ip}${geoStr} (score=${newScore}, requests=${record.count}, endpoints=${record.endpoints.size}, ua=${record.userAgent})`);
     res.status(429).json({
       success: false,
       error: 'Atividade incomum detectada. Acesso temporariamente suspenso.',
@@ -128,14 +143,54 @@ export function antiScrapingMiddleware(req: Request, res: Response, next: NextFu
     return;
   }
 
+  if (newScore >= 20 && !record.geo) {
+    lookupGeo(ip).then(geo => {
+      if (geo) record.geo = geo;
+    }).catch(() => {});
+  }
+
   if (newScore >= 40) {
-    logger.info(`[ANTI-SCRAPING] IP suspeito: ${ip} (score=${newScore}, requests=${record.count})`);
+    const geoStr = record.geo ? ` [${record.geo.city}, ${record.geo.region}, ${record.geo.country}]` : '';
+    logger.info(`[ANTI-SCRAPING] IP suspeito: ${ip}${geoStr} (score=${newScore}, requests=${record.count})`);
   }
 
   next();
 }
 
-export function getBlockedIps(): Array<{ ip: string; record: RequestRecord }> {
+const geoCache = new Map<string, GeoInfo>();
+
+async function lookupGeo(ip: string): Promise<GeoInfo | undefined> {
+  if (geoCache.has(ip)) return geoCache.get(ip);
+  if (ip === 'unknown' || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.')) return undefined;
+
+  try {
+    const data = await new Promise<string>((resolve, reject) => {
+      const req = https.get(`http://ip-api.com/json/${ip}?fields=country,regionName,city,isp,org,timezone`, (res) => {
+        let body = '';
+        res.on('data', chunk => { body += chunk; });
+        res.on('end', () => resolve(body));
+      });
+      req.on('error', reject);
+      req.setTimeout(3000, () => { req.destroy(); reject(new Error('timeout')); });
+    });
+    const parsed = JSON.parse(data);
+    if (parsed.country) {
+      const geo: GeoInfo = {
+        country: parsed.country || '',
+        region: parsed.regionName || '',
+        city: parsed.city || '',
+        isp: parsed.isp || '',
+        org: parsed.org || '',
+        timezone: parsed.timezone || '',
+      };
+      geoCache.set(ip, geo);
+      return geo;
+    }
+  } catch { /* geo lookup is best-effort */ }
+  return undefined;
+}
+
+export function getBlockedIps(): Array<{ ip: string; record: any }> {
   const result: Array<{ ip: string; record: any }> = [];
   ipTracker.forEach((record, ip) => {
     if (record.blocked || record.suspicionScore >= 30) {
@@ -149,11 +204,32 @@ export function getBlockedIps(): Array<{ ip: string; record: RequestRecord }> {
           suspicionScore: record.suspicionScore,
           blocked: record.blocked,
           userAgent: record.userAgent,
+          geo: record.geo || null,
         },
       });
     }
   });
   return result.sort((a, b) => b.record.suspicionScore - a.record.suspicionScore);
+}
+
+export function getAllTrackedIps(): Array<{ ip: string; record: any }> {
+  const result: Array<{ ip: string; record: any }> = [];
+  ipTracker.forEach((record, ip) => {
+    result.push({
+      ip,
+      record: {
+        count: record.count,
+        firstSeen: new Date(record.firstSeen).toISOString(),
+        lastSeen: new Date(record.lastSeen).toISOString(),
+        endpointCount: record.endpoints.size,
+        suspicionScore: record.suspicionScore,
+        blocked: record.blocked,
+        userAgent: record.userAgent,
+        geo: record.geo || null,
+      },
+    });
+  });
+  return result.sort((a, b) => b.record.count - a.record.count);
 }
 
 export function unblockIp(ip: string): boolean {

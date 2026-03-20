@@ -7,6 +7,7 @@ interface SecurityData {
   summary: { totalBlocked: number; totalWatching: number; totalTracked: number };
   blocked: Array<{ ip: string; record: any }>;
   watching: Array<{ ip: string; record: any }>;
+  allConnected: Array<{ ip: string; record: any }>;
 }
 
 export default function SegurancaPage() {
@@ -112,11 +113,20 @@ export default function SegurancaPage() {
                 {data!.blocked.map(item => (
                   <div key={item.ip} className="px-5 py-3 flex items-center justify-between">
                     <div>
-                      <span className="font-mono font-bold text-sm text-gray-900">{item.ip}</span>
-                      <span className="text-xs text-gray-400 ml-3">Score: {item.record.suspicionScore} | Requests: {item.record.count} | Endpoints: {item.record.endpointCount}</span>
-                      <p className="text-[10px] text-gray-400 mt-0.5">UA: {item.record.userAgent?.substring(0, 80) || '—'}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-sm text-gray-900">{item.ip}</span>
+                        {item.record.geo && (
+                          <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-medium">
+                            {item.record.geo.city}, {item.record.geo.region} — {item.record.geo.country}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400">Score: {item.record.suspicionScore} | Requests: {item.record.count} | Endpoints: {item.record.endpointCount}</span>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {item.record.geo?.isp ? `ISP: ${item.record.geo.isp} | ` : ''}UA: {item.record.userAgent?.substring(0, 80) || '—'}
+                      </p>
                     </div>
-                    <button onClick={() => handleUnblock(item.ip)} className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg hover:bg-emerald-200">Desbloquear</button>
+                    <button onClick={() => handleUnblock(item.ip)} className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg hover:bg-emerald-200 shrink-0">Desbloquear</button>
                   </div>
                 ))}
               </div>
@@ -132,11 +142,20 @@ export default function SegurancaPage() {
                 {data!.watching.map(item => (
                   <div key={item.ip} className="px-5 py-3 flex items-center justify-between">
                     <div>
-                      <span className="font-mono font-bold text-sm text-gray-900">{item.ip}</span>
-                      <span className="text-xs text-gray-400 ml-3">Score: {item.record.suspicionScore} | Requests: {item.record.count}</span>
-                      <p className="text-[10px] text-gray-400 mt-0.5">UA: {item.record.userAgent?.substring(0, 80) || '—'}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-sm text-gray-900">{item.ip}</span>
+                        {item.record.geo && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium">
+                            {item.record.geo.city}, {item.record.geo.region} — {item.record.geo.country}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-400">Score: {item.record.suspicionScore} | Requests: {item.record.count}</span>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {item.record.geo?.isp ? `ISP: ${item.record.geo.isp} | ` : ''}UA: {item.record.userAgent?.substring(0, 80) || '—'}
+                      </p>
                     </div>
-                    <button onClick={() => handleBlock()} className="px-3 py-1 bg-red-100 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-200">Bloquear</button>
+                    <button onClick={() => { setBlockIpInput(item.ip); handleBlock(); }} className="px-3 py-1 bg-red-100 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-200 shrink-0">Bloquear</button>
                   </div>
                 ))}
               </div>
@@ -146,6 +165,36 @@ export default function SegurancaPage() {
           {!data?.blocked?.length && !data?.watching?.length && (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
               <p className="text-gray-400">Nenhuma atividade suspeita detectada</p>
+            </div>
+          )}
+
+          {/* All Connected IPs */}
+          {(data?.allConnected?.length ?? 0) > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-5 py-3 bg-gray-50 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-800 text-sm">Todos os IPs Conectados ({data!.allConnected.length})</h3>
+              </div>
+              <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                {data!.allConnected.map(item => (
+                  <div key={item.ip} className="px-5 py-3 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-2 h-2 rounded-full ${item.record.blocked ? 'bg-red-500' : item.record.suspicionScore >= 30 ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                      <span className="font-mono font-bold text-sm text-gray-900">{item.ip}</span>
+                      {item.record.geo && (
+                        <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-medium">
+                          {item.record.geo.city}{item.record.geo.region ? `, ${item.record.geo.region}` : ''} — {item.record.geo.country}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-gray-400">
+                      {item.record.geo?.isp && <span className="text-[10px] max-w-[150px] truncate">{item.record.geo.isp}</span>}
+                      <span>Score: {item.record.suspicionScore}</span>
+                      <span>{item.record.count} reqs</span>
+                      <span>{item.record.endpointCount} endpoints</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
