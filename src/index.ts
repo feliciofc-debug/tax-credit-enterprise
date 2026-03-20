@@ -45,6 +45,9 @@ import webhookRoutes from './routes/webhook.routes';
 import integrationRoutes from './routes/integration.routes';
 import revenueRoutes from './routes/revenue.routes';
 import serproRoutes from './routes/serpro.routes';
+import securityRoutes from './routes/security.routes';
+import { antiScrapingMiddleware } from './middleware/antiScraping';
+import { watermarkResponseMiddleware } from './middleware/watermark';
 
 dotenv.config();
 
@@ -62,6 +65,16 @@ app.set('trust proxy', 1);
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "https://*.vercel.app", "https://*.taxcreditenterprise.com", "https://*.onrender.com"],
+    },
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
 // CORS - origens autorizadas
@@ -144,6 +157,12 @@ app.use('/api/batch/upload', uploadLimiter);
 app.use('/api/hpc', hpcLimiter);
 app.use('/api/', apiLimiter);
 
+// Anti-scraping (detecta e bloqueia bots, crawlers e comportamento automatizado)
+app.use(antiScrapingMiddleware);
+
+// Watermark em rotas de formalizacao (documentos gerados)
+app.use('/api/formalization', watermarkResponseMiddleware);
+
 // ==============================
 // Health checks
 // ==============================
@@ -194,6 +213,7 @@ app.use('/api/webhook', webhookRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/revenue', revenueRoutes);
 app.use('/api/serpro', serproRoutes);
+app.use('/api/security', securityRoutes);
 
 // Error handling
 app.use(errorHandler);
