@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { taxCreditDocService } from '../services/tax-credit-documentation.service';
 import { authenticateToken } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { prisma } from '../utils/prisma';
 import archiver from 'archiver';
 import { Readable } from 'stream';
 
@@ -115,46 +116,89 @@ router.post('/validate-checklist', authenticateToken, async (req: Request, res: 
 
 /**
  * POST /api/tax-credit/prepare-perdcomp
- * Prepara arquivo para importação no PER/DCOMP
+ * Prepara dados estruturados para preenchimento do PER/DCOMP Web
  */
 router.post('/prepare-perdcomp', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { analysisId, opportunityIndex } = req.body;
+    const { analysisId } = req.body;
 
-    // Gerar arquivo no formato aceito pelo PER/DCOMP
-    // Isso varia dependendo do tipo de crédito
+    let opportunities: any[] = [];
+    let companyName = '';
+    let cnpj = '';
+    let periodo = '';
 
-    const perdcompData = {
-      codigoReceita: '5856', // Exemplo: COFINS
-      periodoApuracao: '01/2024',
-      valorCredito: 10000.50,
-      naturezaCredito: 'Crédito de COFINS sobre insumos',
-      fundamentacaoLegal: 'Lei 10.833/2003, art. 3º'
+    if (analysisId) {
+      const record = await prisma.viabilityAnalysis.findUnique({ where: { id: analysisId } });
+      if (record) {
+        try { opportunities = JSON.parse(record.opportunities || '[]'); } catch {}
+        companyName = record.companyName || '';
+        cnpj = record.cnpj || '';
+        try {
+          const parsed = JSON.parse(record.aiSummary || '{}');
+          periodo = parsed?.periodoAnalisado || '';
+        } catch { /* ignore */ }
+      }
+    }
+
+    const federalOps = opportunities.filter((op: any) => {
+      const t = (op.tributo || '').toUpperCase();
+      return !t.includes('ICMS') && !t.includes('ISS') && !t.includes('DIFAL');
+    });
+
+    const CODIGOS: Record<string, string> = {
+      'PIS': '8109', 'COFINS': '2172', 'PIS/COFINS': '5952',
+      'IRPJ': '2362', 'CSLL': '2484', 'INSS': '2100', 'IPI': '1020',
     };
+
+    const guideSteps = federalOps.map((op: any, idx: number) => {
+      const tributo = op.tributo || 'PIS/COFINS';
+      const codigoReceita = Object.entries(CODIGOS).find(([k]) =>
+        tributo.toUpperCase().includes(k)
+      )?.[1] || '8109';
+      return {
+        step: idx + 1, tributo, valorCredito: op.valorEstimado || 0,
+        tipoCredito: op.tipo || '', fundamentacao: op.fundamentacaoLegal || '',
+        probabilidade: op.probabilidadeRecuperacao || 0, codigoReceita,
+        periodoApuracao: periodo,
+        campos: {
+          tipoDocumento: 'Declaracao de Compensacao',
+          tipoCredito: `Pagamento Indevido — ${tributo}`,
+          qualificacao: 'Outra Qualificacao',
+          periodoApuracaoCredito: periodo,
+          valorCredito: op.valorEstimado || 0,
+          codigoReceitaDebito: codigoReceita,
+        },
+      };
+    });
 
     return res.json({
       success: true,
       data: {
-        perdcompData,
-        instructions: [
-          '1. Acesse o e-CAC (https://cav.receita.fazenda.gov.br)',
-          '2. Entre em "Declarações e Demonstrativos"',
-          '3. Selecione "PER/DCOMP"',
-          '4. Clique em "Preencher Declaração"',
-          '5. Importe os dados fornecidos',
-          '6. Anexe os documentos gerados',
-          '7. Transmita via ReceitaNet'
+        companyName, cnpj, periodo,
+        totalCreditos: federalOps.reduce((s: number, op: any) => s + (op.valorEstimado || 0), 0),
+        totalOportunidades: federalOps.length,
+        guideSteps,
+        retificacoes: [
+          { obrigacao: 'EFD Contribuições', sistema: 'SPED (PVA)', quando: 'PIS ou COFINS', acao: 'Registros M200/M600' },
+          { obrigacao: 'DCTF', sistema: 'e-CAC > DCTF Web', quando: 'Sempre', acao: 'Incluir compensação' },
+          { obrigacao: 'ECF', sistema: 'SPED (ECF)', quando: 'IRPJ ou CSLL', acao: 'Bloco N' },
+          { obrigacao: 'GFIP/eSocial', sistema: 'Conectividade ICP', quando: 'INSS patronal', acao: 'Retificar contribuição' },
         ],
-        estimatedProcessingTime: '30-90 dias'
-      }
+        sequenciaTransmissao: [
+          '1º — PER (Pedido de Ressarcimento)',
+          '2º — DCOMP (Declaração de Compensação)',
+          '3º — DCTF retificada',
+          '4º — EFD Contribuições retificada',
+          '5º — ECF retificada (se IRPJ/CSLL)',
+        ],
+        prazoRetificacao: 'Até 30 dias após DCOMP',
+        estimatedProcessingTime: '30-90 dias',
+        urlEcac: 'https://cav.receita.fazenda.gov.br',
+      },
     });
-
   } catch (error: any) {
     logger.error('Error preparing PER/DCOMP:', error);
-    return res.status(500).json({
-      success: false,
-      error: 'Erro ao preparar PER/DCOMP'
-    });
+    return res.status(500).json({ success: false, error: 'Erro ao preparar PER/DCOMP' });
   }
 });
 

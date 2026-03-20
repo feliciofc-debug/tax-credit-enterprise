@@ -294,6 +294,38 @@ function getJurisprudenciaCARF(creditos: Array<{ tributo: string; descricaoTese:
 // PARECER TECNICO PER/DCOMP
 // ============================================================
 
+function getCodigosReceita(creditos: Array<{ tributo: string }>): string {
+  const codigos: Record<string, { codigo: string; descricao: string }> = {
+    'PIS':         { codigo: '8109', descricao: 'PIS/PASEP — Faturamento' },
+    'COFINS':      { codigo: '2172', descricao: 'COFINS — Faturamento' },
+    'PIS/COFINS':  { codigo: '8109/2172', descricao: 'PIS (8109) + COFINS (2172)' },
+    'IRPJ':        { codigo: '2362', descricao: 'IRPJ — Estimativa Mensal' },
+    'CSLL':        { codigo: '2484', descricao: 'CSLL — Estimativa Mensal' },
+    'IRPJ/CSLL':   { codigo: '2362/2484', descricao: 'IRPJ (2362) + CSLL (2484)' },
+    'INSS':        { codigo: '2100', descricao: 'Contrib. Previdenciaria Patronal' },
+    'IPI':         { codigo: '1020', descricao: 'IPI — Produtos Industrializados' },
+    'RAT':         { codigo: '2100', descricao: 'RAT/SAT — Risco Ambiental Trabalho' },
+  };
+
+  const tributos = [...new Set(creditos.map(c => c.tributo.toUpperCase()))];
+  const rows = tributos.map(t => {
+    const match = Object.entries(codigos).find(([k]) => t.includes(k.toUpperCase()));
+    if (match) return `   ${match[1].codigo.padEnd(12)} ${match[1].descricao}`;
+    return null;
+  }).filter(Boolean);
+
+  const extras = [
+    '   5856         COFINS — Importacao',
+    '   5602         PIS — Importacao',
+    '   0561         IRRF — Rendimentos do Trabalho',
+    '   1708         IRRF — Servicos entre PJ',
+    '   5952         PIS — Nao-cumulativo',
+    '   5960         COFINS — Nao-cumulativo',
+  ];
+
+  return [...rows, '', '   OUTROS CODIGOS FREQUENTES:', ...extras].join('\n');
+}
+
 export interface PerdcompDocumentParams {
   empresaNome: string;
   cnpj: string;
@@ -358,39 +390,181 @@ d) Compensar valores restituidos com FGTS vincendo via GRRF (Guia de Recolhiment
 - Folha de pagamento analitica
 - Procuração com poderes para representar perante a CEF`;
 
+  const codigoReceitaTable = getCodigosReceita(params.creditos);
+
   const secao5PERDCOMP = `=============================================================================
-5. ORIENTACOES PARA PREENCHIMENTO DO PER/DCOMP WEB
+5. GUIA COMPLETO — PREENCHIMENTO DO PER/DCOMP WEB (TELA A TELA)
 =============================================================================
 
-5.1. ACESSO:
-- Portal e-CAC (https://cav.receita.fazenda.gov.br)
-- Certificado digital e-CNPJ tipo A1 ou A3 (conta gov.br nivel Ouro)
-- Menu: Restituicao e Compensacao > PER/DCOMP Web > Criar Novo Pedido
+ATENCAO: Este guia descreve o passo a passo EXATO no sistema PER/DCOMP Web
+da Receita Federal. Siga cada tela na ordem indicada.
 
-5.2. PREENCHIMENTO:
+-----------------------------------------------------------------------------
+TELA 1 — ACESSO AO SISTEMA
+-----------------------------------------------------------------------------
+1. Abra o navegador e acesse: https://cav.receita.fazenda.gov.br
+2. Autentique com certificado digital e-CNPJ (A1 ou A3) do contribuinte
+   OU acesse via gov.br nivel OURO/PRATA com procuracao eletronica
+3. Na tela inicial do e-CAC, no menu lateral esquerdo, clique em:
+   "Declaracoes e Demonstrativos" > "PER/DCOMP Web"
+4. Clique no botao "Criar Novo Pedido" (botao azul, canto superior direito)
 
-   | Campo PER/DCOMP            | Valor                              |
-   |----------------------------|--------------------------------------|
-   | Tipo de Documento          | ${params.tipoDocumento}              |
-   | Tipo de Credito            | ${params.tipoCreditoPerdcomp}        |
-   | Qualificacao               | Outra Qualificacao                   |
-   | Periodo Apuracao Credito   | ${params.periodoCredito}             |
-   | Valor Credito Original     | R$ ${formatNumber(params.valorTotal)}|
-   | Codigo Receita Debito      | ${params.codigoReceitaDebito}        |
-   | Periodo Debito             | ${params.periodoDebito}              |
+   PRE-REQUISITO: Verifique se a procuracao eletronica esta ativa em:
+   Menu > Procuracoes > Consultar Procuracoes > tipo "PER/DCOMP"
 
-5.3. PROCEDIMENTO:
-a) Criar pedido com os dados acima
-b) Anexar este Parecer Tecnico como documento suporte
-c) Anexar demonstrativo de calculo (planilha Excel com detalhamento)
-d) Transmitir e salvar recibo (protocolo e numero da PER/DCOMP)
-e) Registrar na DCTF a compensacao efetuada
+-----------------------------------------------------------------------------
+TELA 2 — TIPO DE DOCUMENTO
+-----------------------------------------------------------------------------
+Escolha o tipo de documento:
 
-5.4. RETIFICACAO DE OBRIGACOES ACESSORIAS (OBRIGATORIO):
-- EFD Contribuicoes: retificar periodos para refletir creditos apurados
-- DCTF: incluir compensacao declarada
-- ECF: ajustar base de calculo quando aplicavel
-- GFIP/eSocial: retificar quando envolver contribuicoes previdenciarias`;
+   [X] ${params.tipoDocumento}
+
+   REGRA: Se vai COMPENSAR um debito proprio, use "Declaracao de Compensacao".
+          Se quer RESTITUICAO em especie (dinheiro na conta), use
+          "Pedido Eletronico de Restituicao".
+          IMPORTANTE: Para PIS/COFINS nao-cumulativo, o PER (Pedido de
+          Ressarcimento) DEVE ser transmitido ANTES da DCOMP vinculada.
+
+   Clique em "Avancar"
+
+-----------------------------------------------------------------------------
+TELA 3 — DADOS DO CREDITO
+-----------------------------------------------------------------------------
+Preencha os campos conforme abaixo:
+
+   Tipo de Credito ........: ${params.tipoCreditoPerdcomp}
+   Qualificacao ...........: Outra Qualificacao
+   Periodo Apuracao .......: ${params.periodoCredito}
+   Valor do Credito (R$) ..: ${formatNumber(params.valorTotal)}
+
+   DETALHAMENTO POR TRIBUTO:
+${params.creditos.map((c, i) => `   ${i + 1}) ${c.tributo}: R$ ${formatNumber(c.valorAtualizado)} — ${c.tipoCredito}`).join('\n')}
+
+   Clique em "Avancar"
+
+-----------------------------------------------------------------------------
+TELA 4 — INFORMACOES COMPLEMENTARES (CREDITO)
+-----------------------------------------------------------------------------
+   Origem do Credito: Pagamento Indevido / a Maior
+   Base Legal: Conforme Parecer Tecnico em anexo
+   Observacoes: "${params.creditos[0]?.descricaoTese || 'Credito apurado conforme analise tecnica'}"
+   Numero Processo Administrativo: (deixar em branco se nao houver)
+   Numero Processo Judicial: (deixar em branco se nao houver acao)
+
+   Clique em "Avancar"
+
+-----------------------------------------------------------------------------
+TELA 5 — DEBITO A COMPENSAR (somente para Declaracao de Compensacao)
+-----------------------------------------------------------------------------
+   Codigo Receita .........: ${params.codigoReceitaDebito}
+   Periodo Debito .........: ${params.periodoDebito}
+   Valor a Compensar (R$) .: ${formatNumber(params.valorTotal)}
+
+   TABELA DE CODIGOS DE RECEITA MAIS UTILIZADOS:
+${codigoReceitaTable}
+
+   DICA: Pode compensar com QUALQUER debito federal proprio, inclusive:
+   - IRPJ/CSLL de estimativa mensal
+   - PIS/COFINS do mes corrente
+   - INSS patronal (desde que nao seja contribuicao previdenciaria
+     retida de terceiros)
+
+   Clique em "Avancar"
+
+${params.creditos.length > 1 ? `   NOTA: Se houver MAIS de um debito a compensar, clique em
+   "Incluir Novo Debito" e repita a operacao para cada um.\n` : ''}
+-----------------------------------------------------------------------------
+TELA 6 — ANEXAR DOCUMENTOS
+-----------------------------------------------------------------------------
+   Clique em "Anexar Documento" e inclua:
+
+   1. PARECER TECNICO (este documento) — PDF
+   2. MEMORIA DE CALCULO — planilha Excel com detalhamento periodo a periodo
+   3. EXTRATO DE CREDITOS TRIBUTARIOS — extraido da plataforma TaxCredit
+   4. SPEDs (EFD Fiscal, EFD Contribuicoes, ECF) — opcionais mas recomendados
+
+   Formato aceito: PDF (max 15MB por arquivo, 60MB total)
+   Nomeacao sugerida: PERDCOMP_${params.cnpj.replace(/\D/g, '')}_PARECER.pdf
+
+   Clique em "Avancar"
+
+-----------------------------------------------------------------------------
+TELA 7 — REVISAO E TRANSMISSAO
+-----------------------------------------------------------------------------
+   1. REVISE todos os dados. Confira especialmente:
+      - CNPJ do contribuinte (campo superior)
+      - Valor do credito (deve bater com o parecer)
+      - Periodo de apuracao (correto conforme SPED)
+      - Codigo de receita do debito
+
+   2. Clique em "Verificar Pendencias"
+      - Se houver pendencias, corrija antes de transmitir
+      - Pendencia comum: "DCTF nao entregue" — transmita a DCTF primeiro
+
+   3. Clique em "Transmitir"
+      - O sistema gera um RECIBO DE TRANSMISSAO
+      - SALVE O RECIBO (PDF) — e o seu comprovante legal
+      - Anote o NUMERO DA PER/DCOMP (ex: 99999.99999.99999-99)
+
+   ATENCAO: Apos a transmissao NAO e possivel alterar. Se errou,
+   transmita uma PER/DCOMP RETIFICADORA.
+
+=============================================================================
+5B. SEQUENCIA CORRETA DE TRANSMISSAO
+=============================================================================
+
+   ORDEM OBRIGATORIA (erro aqui causa auto de infracao):
+
+   1o) PER (Pedido de Ressarcimento) — se for PIS/COFINS nao-cumulativo
+   2o) DCOMP (Declaracao de Compensacao) — vinculada ao PER
+   3o) DCTF retificada — incluindo a compensacao declarada
+   4o) EFD Contribuicoes retificada — refletindo os creditos
+   5o) ECF retificada — quando envolver IRPJ/CSLL
+
+   PRAZO: Transmita as retificacoes em ATE 30 DIAS apos a DCOMP.
+
+=============================================================================
+5C. RETIFICACAO DE OBRIGACOES ACESSORIAS — MAPA COMPLETO
+=============================================================================
+
+   OBRIGACAO         | SISTEMA           | O QUE RETIFICAR
+   ------------------|-------------------|--------------------------------------------
+   EFD Contribuicoes | SPED (PVA)        | Registros M200/M600: incluir creditos
+   DCTF              | e-CAC > DCTF Web  | Incluir a compensacao na ficha de debitos
+   ECF               | SPED (ECF)        | Bloco N: ajustar IRPJ/CSLL quando aplicavel
+   GFIP/eSocial      | Conectividade ICP | Retificar quando envolver INSS patronal
+   EFD ICMS/IPI      | SPED (PVA)        | Apenas se houver ajuste de ICMS proprio
+   DIRF              | e-CAC             | Apenas se envolver retencao na fonte
+
+   PROCEDIMENTO DA RETIFICACAO:
+   a) Gerar arquivo retificador no programa validador (PVA) da Receita
+   b) Assinar com certificado digital
+   c) Transmitir via ReceitaNet
+   d) Guardar recibo de transmissao junto ao dossiê
+
+=============================================================================
+5D. ACOMPANHAMENTO POS-TRANSMISSAO
+=============================================================================
+
+   1. Acesse e-CAC > Declaracoes e Demonstrativos > PER/DCOMP Web
+   2. Na lista, localize pelo numero da PER/DCOMP
+   3. Status possiveis:
+
+      - "EM ANALISE" .......: Aguardando processamento (normal, 30-90 dias)
+      - "DEFERIDA" .........: Credito aceito, compensacao efetivada
+      - "ATIVA" ............: Aguardando manifestacao da RFB
+      - "NAO HOMOLOGADA" ...: Credito parcial ou totalmente rejeitado
+      - "INTIMACAO" ........: RFB solicita documentos adicionais
+
+   4. Se "NAO HOMOLOGADA":
+      - Prazo de 30 dias para Manifestacao de Inconformidade (Art. 74, par.9)
+      - Recurso ao CARF em 30 dias apos decisao da DRJ
+      - Incluir este parecer como documento de defesa
+
+   5. Se "INTIMACAO":
+      - Responda DENTRO do prazo indicado (geralmente 20 dias uteis)
+      - Anexe: Parecer Tecnico + Memoria de Calculo + SPEDs
+      - Via e-CAC > Processos Digitais > Resposta a Intimacao`;
 
   const secao5 = isFGTS ? secao5FGTS : secao5PERDCOMP;
 
