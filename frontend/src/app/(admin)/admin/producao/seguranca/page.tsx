@@ -4,14 +4,16 @@ import useSWR, { mutate } from 'swr';
 import { authedFetcher, SWR_OPTIONS_FAST } from '@/lib/fetcher';
 
 interface SecurityData {
-  summary: { totalBlocked: number; totalWatching: number; totalTracked: number };
+  summary: { totalBlocked: number; totalWatching: number; totalTracked: number; totalRanges: number };
   blocked: Array<{ ip: string; record: any }>;
   watching: Array<{ ip: string; record: any }>;
   allConnected: Array<{ ip: string; record: any }>;
+  blockedRanges: Array<{ prefix: string; reason: string }>;
 }
 
 export default function SegurancaPage() {
   const [blockIpInput, setBlockIpInput] = useState('');
+  const [blockRangeInput, setBlockRangeInput] = useState('');
   const [expandedIp, setExpandedIp] = useState<string | null>(null);
 
   const { data, isLoading } = useSWR<SecurityData>(
@@ -46,7 +48,18 @@ export default function SegurancaPage() {
     mutate('/api/security/dashboard');
   }, [apiBase, token]);
 
-  const summary = data?.summary || { totalBlocked: 0, totalWatching: 0, totalTracked: 0 };
+  const handleBlockRange = useCallback(async () => {
+    if (!blockRangeInput) return;
+    await fetch(`${apiBase}/api/security/block-range`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ prefix: blockRangeInput, reason: `Faixa bloqueada: ${blockRangeInput}*` }),
+    });
+    setBlockRangeInput('');
+    mutate('/api/security/dashboard');
+  }, [blockRangeInput, apiBase, token]);
+
+  const summary = data?.summary || { totalBlocked: 0, totalWatching: 0, totalTracked: 0, totalRanges: 0 };
 
   function IpRow({ item, variant }: { item: { ip: string; record: any }; variant: 'blocked' | 'watching' | 'connected' }) {
     const r = item.record;
@@ -138,7 +151,7 @@ export default function SegurancaPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
           <p className="text-3xl font-bold text-red-600">{summary.totalBlocked}</p>
           <p className="text-xs text-red-500 font-medium">IPs Bloqueados</p>
@@ -147,6 +160,10 @@ export default function SegurancaPage() {
           <p className="text-3xl font-bold text-amber-600">{summary.totalWatching}</p>
           <p className="text-xs text-amber-500 font-medium">Em Observacao</p>
         </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-5 text-center">
+          <p className="text-3xl font-bold text-purple-600">{summary.totalRanges || 0}</p>
+          <p className="text-xs text-purple-500 font-medium">Faixas Bloqueadas</p>
+        </div>
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 text-center">
           <p className="text-3xl font-bold text-blue-600">{summary.totalTracked}</p>
           <p className="text-xs text-blue-500 font-medium">Total Rastreados</p>
@@ -154,13 +171,37 @@ export default function SegurancaPage() {
       </div>
 
       {/* Manual Block */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
-        <p className="text-sm font-semibold text-gray-900 mb-3">Bloquear IP Manualmente (permanente)</p>
-        <div className="flex gap-3">
-          <input className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={blockIpInput} onChange={e => setBlockIpInput(e.target.value)} placeholder="Ex: 35.247.111.159" />
-          <button onClick={() => handleBlock()} disabled={!blockIpInput} className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 disabled:bg-gray-300 text-sm">Bloquear</button>
+      <div className="grid md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-sm font-semibold text-gray-900 mb-3">Bloquear IP (permanente)</p>
+          <div className="flex gap-3">
+            <input className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={blockIpInput} onChange={e => setBlockIpInput(e.target.value)} placeholder="Ex: 35.247.111.159" />
+            <button onClick={() => handleBlock()} disabled={!blockIpInput} className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 disabled:bg-gray-300 text-sm">Bloquear</button>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-purple-200 p-5">
+          <p className="text-sm font-semibold text-gray-900 mb-3">Bloquear Faixa de IPs (subnet)</p>
+          <div className="flex gap-3">
+            <input className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" value={blockRangeInput} onChange={e => setBlockRangeInput(e.target.value)} placeholder="Ex: 178.156. (bloqueia 178.156.*)" />
+            <button onClick={handleBlockRange} disabled={!blockRangeInput} className="px-5 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 disabled:bg-gray-300 text-sm">Bloquear Faixa</button>
+          </div>
         </div>
       </div>
+
+      {/* Blocked Ranges */}
+      {(data?.blockedRanges?.length ?? 0) > 0 && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
+          <p className="text-sm font-bold text-purple-800 mb-2">Faixas de IP Bloqueadas ({data!.blockedRanges.length})</p>
+          <div className="flex flex-wrap gap-2">
+            {data!.blockedRanges.map((r, i) => (
+              <span key={i} className="px-3 py-1 bg-white border border-purple-200 rounded-lg text-xs font-mono">
+                <span className="text-purple-700 font-bold">{r.prefix}*</span>
+                <span className="text-gray-400 ml-2">{r.reason}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Protection Layers */}
       <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-fuchsia-50 border border-indigo-200 rounded-2xl p-5 mb-6">
