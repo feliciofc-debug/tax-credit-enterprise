@@ -1199,9 +1199,16 @@ ${Array.from(uniqueDespesas).map(codCta => {
 
   private getDedupKey(basename: string, ext: string): string {
     if (ext === '.txt') {
+      const lower = basename.toLowerCase();
+      let prefix = 'sped';
+      if (lower.includes('contrib')) prefix = 'efd-contrib';
+      else if (lower.includes('ecf')) prefix = 'ecf';
+      else if (lower.includes('ecd')) prefix = 'ecd';
+      else if (lower.includes('icms') || lower.includes('ipi')) prefix = 'efd-icms';
+
       const match = basename.match(/(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)(\d{4})/i) ||
         basename.match(/(\d{4})(\d{2})(\d{2})-(\d{4})(\d{2})(\d{2})/);
-      if (match) return `sped-${match[0]}`;
+      if (match) return `${prefix}-${match[0]}`;
     }
     return basename.toLowerCase();
   }

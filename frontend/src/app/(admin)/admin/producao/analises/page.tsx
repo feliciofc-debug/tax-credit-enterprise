@@ -303,6 +303,17 @@ export default function AdminAnalisesPage() {
   const recs = detail?.recomendacoes || [];
   const alerts = detail?.alertas || [];
 
+  const opsConfirmadas = ops.filter(o => (o.probabilidadeRecuperacao ?? 0) >= 80);
+  const opsProvaveis   = ops.filter(o => (o.probabilidadeRecuperacao ?? 0) >= 60 && (o.probabilidadeRecuperacao ?? 0) < 80);
+  const opsCondicionais = ops.filter(o => (o.probabilidadeRecuperacao ?? 0) < 60);
+  const totalConfirmado  = opsConfirmadas.reduce((s, o) => s + (o.valorEstimado || 0), 0);
+  const totalProvavel    = opsProvaveis.reduce((s, o) => s + (o.valorEstimado || 0), 0);
+  const totalCondicional = opsCondicionais.reduce((s, o) => s + (o.valorEstimado || 0), 0);
+
+  const opsSorted = [...opsConfirmadas, ...opsProvaveis, ...opsCondicionais];
+  const getStatusLabel = (prob: number) => prob >= 80 ? 'CONFIRMADO' : prob >= 60 ? 'PROVÁVEL' : 'CONDICIONAL';
+  const getStatusColor = (prob: number) => prob >= 80 ? 'bg-green-100 text-green-800 border-green-300' : prob >= 60 ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-red-100 text-red-800 border-red-300';
+
   /* ============================================================
      RENDER
      ============================================================ */
@@ -420,8 +431,27 @@ export default function AdminAnalisesPage() {
                   ) : (
                     <>
                       <p className="text-3xl font-extrabold">{fmt(detail.estimatedCredit)}</p>
-                      <p className="text-indigo-200 text-xs">Total Estimado (análise IA)</p>
+                      <p className="text-indigo-200 text-xs">Total Estimado de Recuperação</p>
                     </>
+                  )}
+                  {ops.length > 0 && (
+                    <div className="flex gap-3 mt-2 justify-end text-xs">
+                      {totalConfirmado > 0 && (
+                        <span className="bg-green-500/20 text-green-200 px-2 py-0.5 rounded">
+                          Confirmado: {fmt(totalConfirmado)}
+                        </span>
+                      )}
+                      {totalProvavel > 0 && (
+                        <span className="bg-amber-500/20 text-amber-200 px-2 py-0.5 rounded">
+                          Provável: {fmt(totalProvavel)}
+                        </span>
+                      )}
+                      {totalCondicional > 0 && (
+                        <span className="bg-red-500/20 text-red-200 px-2 py-0.5 rounded">
+                          Condicional: {fmt(totalCondicional)}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -459,6 +489,11 @@ export default function AdminAnalisesPage() {
               <div className="px-6 py-4">
                 <p className="text-sm font-bold text-gray-900 mb-3">
                   EXTRATO DE OPORTUNIDADES ({ops.length})
+                  <span className="ml-4 font-normal text-xs text-gray-500">
+                    {opsConfirmadas.length > 0 && <span className="inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded mr-2">{opsConfirmadas.length} confirmado(s)</span>}
+                    {opsProvaveis.length > 0 && <span className="inline-block bg-amber-100 text-amber-700 px-2 py-0.5 rounded mr-2">{opsProvaveis.length} provável(is)</span>}
+                    {opsCondicionais.length > 0 && <span className="inline-block bg-red-100 text-red-700 px-2 py-0.5 rounded">{opsCondicionais.length} condicional(is)</span>}
+                  </span>
                 </p>
 
                 <div className="overflow-x-auto">
@@ -466,6 +501,7 @@ export default function AdminAnalisesPage() {
                     <thead>
                       <tr className="bg-gray-100 text-gray-600 text-xs uppercase">
                         <th className="px-4 py-3 text-left font-semibold">#</th>
+                        <th className="px-4 py-3 text-left font-semibold">Status</th>
                         <th className="px-4 py-3 text-left font-semibold">Oportunidade</th>
                         <th className="px-4 py-3 text-left font-semibold">Tributo</th>
                         <th className="px-4 py-3 text-right font-semibold">Valor Estimado</th>
@@ -474,9 +510,14 @@ export default function AdminAnalisesPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {ops.map((op, i) => (
+                      {opsSorted.map((op, i) => (
                         <tr key={i} className="hover:bg-indigo-50 transition-colors">
                           <td className="px-4 py-3 text-gray-400 font-mono">{String(i + 1).padStart(2, '0')}</td>
+                          <td className="px-4 py-3">
+                            <span className={`text-xs font-bold px-2 py-1 rounded border ${getStatusColor(op.probabilidadeRecuperacao ?? 0)}`}>
+                              {getStatusLabel(op.probabilidadeRecuperacao ?? 0)}
+                            </span>
+                          </td>
                           <td className="px-4 py-3">
                             <p className="font-medium text-gray-900">{op.tipo || ''}</p>
                             <p className="text-gray-600 text-xs mt-1 leading-relaxed whitespace-pre-line">{op.descricao || ''}</p>
@@ -501,9 +542,30 @@ export default function AdminAnalisesPage() {
                       ))}
                     </tbody>
                     <tfoot>
+                      {totalConfirmado > 0 && (
+                        <tr className="bg-green-50">
+                          <td className="px-4 py-2" colSpan={4}><span className="text-green-800 font-semibold text-xs">CONFIRMADO (prob. {'>'}= 80%)</span></td>
+                          <td className="px-4 py-2 text-right font-bold text-green-800 whitespace-nowrap">{fmt(totalConfirmado)}</td>
+                          <td colSpan={2}></td>
+                        </tr>
+                      )}
+                      {totalProvavel > 0 && (
+                        <tr className="bg-amber-50">
+                          <td className="px-4 py-2" colSpan={4}><span className="text-amber-800 font-semibold text-xs">PROVÁVEL (prob. 60-79%)</span></td>
+                          <td className="px-4 py-2 text-right font-bold text-amber-800 whitespace-nowrap">{fmt(totalProvavel)}</td>
+                          <td colSpan={2}></td>
+                        </tr>
+                      )}
+                      {totalCondicional > 0 && (
+                        <tr className="bg-red-50">
+                          <td className="px-4 py-2" colSpan={4}><span className="text-red-800 font-semibold text-xs">CONDICIONAL (prob. {'<'} 60%)</span></td>
+                          <td className="px-4 py-2 text-right font-bold text-red-800 whitespace-nowrap">{fmt(totalCondicional)}</td>
+                          <td colSpan={2}></td>
+                        </tr>
+                      )}
                       <tr className="bg-indigo-50 font-bold">
-                        <td className="px-4 py-3" colSpan={3}>
-                          <span className="text-indigo-900">TOTAL ESTIMADO DE RECUPERACAO</span>
+                        <td className="px-4 py-3" colSpan={4}>
+                          <span className="text-indigo-900">TOTAL ESTIMADO DE RECUPERAÇÃO</span>
                         </td>
                         <td className="px-4 py-3 text-right text-green-800 text-lg whitespace-nowrap">
                           {fmt(detail.estimatedCredit)}
@@ -521,11 +583,14 @@ export default function AdminAnalisesPage() {
               <div className="px-6 py-4 border-t border-gray-200">
                 <p className="text-sm font-bold text-gray-900 mb-3">DETALHAMENTO POR OPORTUNIDADE</p>
                 <div className="space-y-3">
-                  {ops.map((op, i) => (
+                  {opsSorted.map((op, i) => (
                     <details key={i} className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
                       <summary className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-gray-400 font-mono text-xs">{String(i + 1).padStart(2, '0')}</span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded border ${getStatusColor(op.probabilidadeRecuperacao ?? 0)}`}>
+                            {getStatusLabel(op.probabilidadeRecuperacao ?? 0)}
+                          </span>
                           <span className="font-medium text-gray-900 text-sm">{op.tipo || ''}</span>
                           <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded">{op.tributo || ''}</span>
                         </div>
@@ -658,6 +723,25 @@ export default function AdminAnalisesPage() {
                   <div className="total-label">Total Estimado de Recuperação</div>
                 </div>
               </div>
+              {ops.length > 0 && (
+                <div style={{ display: 'flex', gap: '12px', marginTop: '6px', justifyContent: 'flex-end' }}>
+                  {totalConfirmado > 0 && (
+                    <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+                      Confirmado: {fmt(totalConfirmado)}
+                    </span>
+                  )}
+                  {totalProvavel > 0 && (
+                    <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+                      Provável: {fmt(totalProvavel)}
+                    </span>
+                  )}
+                  {totalCondicional > 0 && (
+                    <span style={{ background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+                      Condicional: {fmt(totalCondicional)}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="header-meta">
                 {detail.periodoAnalisado && <span>Periodo: {detail.periodoAnalisado}</span>}
                 {detail.regimeTributario && <span>| Regime: {detail.regimeTributario}</span>}
@@ -681,6 +765,7 @@ export default function AdminAnalisesPage() {
                   <thead>
                     <tr>
                       <th>#</th>
+                      <th>Status</th>
                       <th>Oportunidade</th>
                       <th>Tributo</th>
                       <th className="text-right">Valor Estimado</th>
@@ -689,31 +774,62 @@ export default function AdminAnalisesPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {ops.map((op, i) => (
-                      <tr key={i}>
-                        <td>{String(i + 1).padStart(2, '0')}</td>
-                        <td>
-                          <strong>{op.tipo || ''}</strong>
-                          <div style={{ fontSize: '11px', color: '#4b5563', marginTop: '4px', lineHeight: '1.7' }}>{op.descricao || ''}</div>
-                        </td>
-                        <td><span className="badge badge-indigo">{op.tributo || ''}</span></td>
-                        <td className="text-right text-green">{fmt(op.valorEstimado)}</td>
-                        <td className="text-center">
-                          <span className={`badge ${probBadge(op.probabilidadeRecuperacao)}`}>
-                            {op.probabilidadeRecuperacao ?? 0}%
-                          </span>
-                        </td>
-                        <td className="text-center">
-                          <span className={`badge ${complexBadge(op.complexidade)}`}>
-                            {op.complexidade || '-'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {opsSorted.map((op, i) => {
+                      const prob = op.probabilidadeRecuperacao ?? 0;
+                      const statusBg = prob >= 80 ? '#dcfce7' : prob >= 60 ? '#fef3c7' : '#fee2e2';
+                      const statusTxt = prob >= 80 ? '#166534' : prob >= 60 ? '#92400e' : '#991b1b';
+                      return (
+                        <tr key={i}>
+                          <td>{String(i + 1).padStart(2, '0')}</td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span style={{ background: statusBg, color: statusTxt, padding: '2px 6px', borderRadius: '3px', fontSize: '9px', fontWeight: 'bold' }}>
+                              {getStatusLabel(prob)}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{op.tipo || ''}</strong>
+                            <div style={{ fontSize: '11px', color: '#4b5563', marginTop: '4px', lineHeight: '1.7' }}>{op.descricao || ''}</div>
+                          </td>
+                          <td><span className="badge badge-indigo">{op.tributo || ''}</span></td>
+                          <td className="text-right text-green">{fmt(op.valorEstimado)}</td>
+                          <td className="text-center">
+                            <span className={`badge ${probBadge(op.probabilidadeRecuperacao)}`}>
+                              {prob}%
+                            </span>
+                          </td>
+                          <td className="text-center">
+                            <span className={`badge ${complexBadge(op.complexidade)}`}>
+                              {op.complexidade || '-'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                   <tfoot>
+                    {totalConfirmado > 0 && (
+                      <tr style={{ background: '#dcfce7' }}>
+                        <td colSpan={4}><strong style={{ color: '#166534', fontSize: '10px' }}>CONFIRMADO (prob. {'>'}= 80%)</strong></td>
+                        <td className="text-right" style={{ color: '#166534', fontWeight: 'bold' }}>{fmt(totalConfirmado)}</td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    )}
+                    {totalProvavel > 0 && (
+                      <tr style={{ background: '#fef3c7' }}>
+                        <td colSpan={4}><strong style={{ color: '#92400e', fontSize: '10px' }}>PROVÁVEL (prob. 60-79%)</strong></td>
+                        <td className="text-right" style={{ color: '#92400e', fontWeight: 'bold' }}>{fmt(totalProvavel)}</td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    )}
+                    {totalCondicional > 0 && (
+                      <tr style={{ background: '#fee2e2' }}>
+                        <td colSpan={4}><strong style={{ color: '#991b1b', fontSize: '10px' }}>CONDICIONAL (prob. {'<'} 60%)</strong></td>
+                        <td className="text-right" style={{ color: '#991b1b', fontWeight: 'bold' }}>{fmt(totalCondicional)}</td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    )}
                     <tr className="total-row">
-                      <td colSpan={3}><strong>TOTAL ESTIMADO DE RECUPERACAO</strong></td>
+                      <td colSpan={4}><strong>TOTAL ESTIMADO DE RECUPERAÇÃO</strong></td>
                       <td className="text-right text-green" style={{ fontSize: '13px' }}>{fmt(detail.estimatedCredit)}</td>
                       <td colSpan={2}></td>
                     </tr>
@@ -725,9 +841,19 @@ export default function AdminAnalisesPage() {
             {ops.length > 0 && (
               <div className="section">
                 <div className="section-title">Detalhamento por Oportunidade</div>
-                {ops.map((op, i) => (
+                {opsSorted.map((op, i) => {
+                  const prob = op.probabilidadeRecuperacao ?? 0;
+                  const statusBg = prob >= 80 ? '#dcfce7' : prob >= 60 ? '#fef3c7' : '#fee2e2';
+                  const statusTxt = prob >= 80 ? '#166534' : prob >= 60 ? '#92400e' : '#991b1b';
+                  return (
                   <div key={i} className="detail-block">
-                    <h4>{String(i + 1).padStart(2, '0')}. {op.tipo || ''} — <span className="text-indigo">{op.tributo || ''}</span> — {fmt(op.valorEstimado)}</h4>
+                    <h4>
+                      {String(i + 1).padStart(2, '0')}.{' '}
+                      <span style={{ background: statusBg, color: statusTxt, padding: '1px 6px', borderRadius: '3px', fontSize: '9px', fontWeight: 'bold', marginRight: '6px' }}>
+                        {getStatusLabel(prob)}
+                      </span>
+                      {op.tipo || ''} — <span className="text-indigo">{op.tributo || ''}</span> — {fmt(op.valorEstimado)}
+                    </h4>
                     {op.descricao && <p>{op.descricao}</p>}
                     <div className="detail-grid" style={{ marginTop: '6px' }}>
                       {op.fundamentacaoLegal && <p><span className="label">Fundamentação:</span> {op.fundamentacaoLegal}</p>}
@@ -742,7 +868,8 @@ export default function AdminAnalisesPage() {
                       <p style={{ marginTop: '4px' }}><span className="label">Passos:</span> {(op.passosPraticos || []).join(' -> ')}</p>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

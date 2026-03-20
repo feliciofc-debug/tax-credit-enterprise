@@ -216,7 +216,15 @@ export function buildDemonstrativo(
   }
 
   // 1b. EFD CONTRIBUIÇÕES — PIS/COFINS reais (quando disponível, substitui estimativas)
-  const efdContribs = (zipResult.efdContribs || []) as EfdContribData[];
+  const rawEfdContribs = (zipResult.efdContribs || []) as EfdContribData[];
+  const seenEfdContribs = new Set<string>();
+  const efdContribs: EfdContribData[] = [];
+  for (const efd of rawEfdContribs) {
+    const key = `efd-contrib|${efd.periodo?.inicio || ''}|${efd.periodo?.fim || ''}`;
+    if (seenEfdContribs.has(key)) { logger.warn(`[DEMONSTRATIVO] EFD Contribuições duplicado ignorado: ${key}`); continue; }
+    seenEfdContribs.add(key);
+    efdContribs.push(efd);
+  }
   if (efdContribs.length > 0) {
     for (const efd of efdContribs) {
       const periodo = efd.periodo?.fim || efd.periodo?.inicio || 'N/D';
@@ -337,7 +345,15 @@ export function buildDemonstrativo(
   }
 
   // 1c. ECF — IRPJ/CSLL reais
-  const ecfs = (zipResult.ecfs || []) as EcfData[];
+  const rawEcfs = (zipResult.ecfs || []) as EcfData[];
+  const seenEcfs = new Set<string>();
+  const ecfs: EcfData[] = [];
+  for (const ecf of rawEcfs) {
+    const key = `ecf|${ecf.periodo?.inicio || ''}|${ecf.periodo?.fim || ''}`;
+    if (seenEcfs.has(key)) { logger.warn(`[DEMONSTRATIVO] ECF duplicado ignorado: ${key}`); continue; }
+    seenEcfs.add(key);
+    ecfs.push(ecf);
+  }
   if (ecfs.length > 0) {
     for (const ecf of ecfs) {
       const periodo = ecf.periodo?.fim || ecf.periodo?.inicio || 'N/D';
@@ -406,7 +422,15 @@ export function buildDemonstrativo(
   }
 
   // 1d. ECD — indicadores contábeis (informativo, não gera crédito direto)
-  const ecds = (zipResult.ecds || []) as EcdData[];
+  const rawEcds = (zipResult.ecds || []) as EcdData[];
+  const seenEcds = new Set<string>();
+  const ecds: EcdData[] = [];
+  for (const ecd of rawEcds) {
+    const key = `ecd|${ecd.periodo?.inicio || ''}|${ecd.periodo?.fim || ''}`;
+    if (seenEcds.has(key)) { logger.warn(`[DEMONSTRATIVO] ECD duplicado ignorado: ${key}`); continue; }
+    seenEcds.add(key);
+    ecds.push(ecd);
+  }
   if (ecds.length > 0) {
     for (const ecd of ecds) {
       const periodo = ecd.periodo?.fim || ecd.periodo?.inicio || 'N/D';
@@ -687,13 +711,18 @@ ${demo.empresa ? `<p><strong>Empresa:</strong> ${empresaNome} &nbsp;|&nbsp; <str
     grupos.get(key)!.push(item);
   }
 
+  const getIcmsValue = (item: DemonstrativoItem) => /^ICMS/i.test(item.tributo) ? item.total : 0;
+  const getIrpjCsllValue = (item: DemonstrativoItem) => /^(IRPJ|CSLL)/i.test(item.tributo) ? item.total : 0;
+
   // --- Summary table rows ---
   let seqResumo = 0;
   const resumoRows = Array.from(grupos.entries()).map(([key, items]) => {
     seqResumo++;
     const [tributo, ponto, baseLegal] = key.split('|||');
+    const totalIcms = items.reduce((s, i) => s + getIcmsValue(i), 0);
     const totalPis = items.reduce((s, i) => s + i.vlrPis, 0);
     const totalCofins = items.reduce((s, i) => s + i.vlrCofins, 0);
+    const totalIrpjCsll = items.reduce((s, i) => s + getIrpjCsllValue(i), 0);
     const totalGrupo = items.reduce((s, i) => s + i.total, 0);
     const situacao = items[0].referenciaSped ? items[0].referenciaSped.split(' ')[0] : 'SPED';
     return `<tr>
@@ -701,14 +730,18 @@ ${demo.empresa ? `<p><strong>Empresa:</strong> ${empresaNome} &nbsp;|&nbsp; <str
       <td>${tributo}</td>
       <td>${ponto}</td>
       <td>${situacao}</td>
+      <td class="valor">${totalIcms > 0 ? `R$ ${fmt(totalIcms)}` : '-'}</td>
       <td class="valor">R$ ${fmt(totalPis)}</td>
       <td class="valor">R$ ${fmt(totalCofins)}</td>
+      <td class="valor">${totalIrpjCsll > 0 ? `R$ ${fmt(totalIrpjCsll)}` : '-'}</td>
       <td class="valor total-cell">R$ ${fmt(totalGrupo)}</td>
     </tr>`;
   }).join('');
 
+  const totalIcmsGeral = itensReais.reduce((s, i) => s + getIcmsValue(i), 0);
   const totalPisGeral = itensReais.reduce((s, i) => s + i.vlrPis, 0);
   const totalCofinsGeral = itensReais.reduce((s, i) => s + i.vlrCofins, 0);
+  const totalIrpjCsllGeral = itensReais.reduce((s, i) => s + getIrpjCsllValue(i), 0);
 
   // --- Detailed tables per group ---
   let seqDetalhe = 0;
@@ -717,18 +750,25 @@ ${demo.empresa ? `<p><strong>Empresa:</strong> ${empresaNome} &nbsp;|&nbsp; <str
     const [tributo, ponto, baseLegal] = key.split('|||');
     const sortedItems = [...items].sort((a, b) => a.periodo.localeCompare(b.periodo));
 
+    const hasIcmsInGroup = items.some(i => getIcmsValue(i) > 0);
+    const hasIrpjCsllInGroup = items.some(i => getIrpjCsllValue(i) > 0);
+
     const detailRows = sortedItems.map(i => `<tr>
       <td>${i.periodo}</td>
       <td>${i.ponto}</td>
       <td class="valor">R$ ${fmt(i.baseCalculo)}</td>
+      ${hasIcmsInGroup ? `<td class="valor">${getIcmsValue(i) > 0 ? `R$ ${fmt(getIcmsValue(i))}` : '-'}</td>` : ''}
       <td class="valor">R$ ${fmt(i.vlrPis)}</td>
       <td class="valor">R$ ${fmt(i.vlrCofins)}</td>
+      ${hasIrpjCsllInGroup ? `<td class="valor">${getIrpjCsllValue(i) > 0 ? `R$ ${fmt(getIrpjCsllValue(i))}` : '-'}</td>` : ''}
       <td class="valor total-cell">R$ ${fmt(i.total)}</td>
     </tr>`).join('');
 
     const subBase = items.reduce((s, i) => s + i.baseCalculo, 0);
+    const subIcms = items.reduce((s, i) => s + getIcmsValue(i), 0);
     const subPis = items.reduce((s, i) => s + i.vlrPis, 0);
     const subCofins = items.reduce((s, i) => s + i.vlrCofins, 0);
+    const subIrpjCsll = items.reduce((s, i) => s + getIrpjCsllValue(i), 0);
     const subTotal = items.reduce((s, i) => s + i.total, 0);
 
     return `
@@ -736,15 +776,17 @@ ${demo.empresa ? `<p><strong>Empresa:</strong> ${empresaNome} &nbsp;|&nbsp; <str
       <h3>${seqDetalhe}) ${ponto}</h3>
       <table>
         <thead><tr class="detail-header">
-          <th>Período</th><th>Descrição da Operação</th><th>Base Cálculo</th><th>Vlr PIS</th><th>Vlr Cofins</th><th>Total de Créditos</th>
+          <th>Período</th><th>Descrição da Operação</th><th>Base Cálculo</th>${hasIcmsInGroup ? '<th>ICMS</th>' : ''}<th>Vlr PIS</th><th>Vlr Cofins</th>${hasIrpjCsllInGroup ? '<th>IRPJ/CSLL</th>' : ''}<th>Total de Créditos</th>
         </tr></thead>
         <tbody>
           ${detailRows}
           <tr class="subtotal-row">
             <td colspan="2"></td>
             <td class="valor">R$ ${fmt(subBase)}</td>
+            ${hasIcmsInGroup ? `<td class="valor">R$ ${fmt(subIcms)}</td>` : ''}
             <td class="valor">R$ ${fmt(subPis)}</td>
             <td class="valor">R$ ${fmt(subCofins)}</td>
+            ${hasIrpjCsllInGroup ? `<td class="valor">R$ ${fmt(subIrpjCsll)}</td>` : ''}
             <td class="valor total-cell">R$ ${fmt(subTotal)}</td>
           </tr>
         </tbody>
@@ -837,14 +879,16 @@ ${demo.empresa ? `<p><strong>Empresa:</strong> ${empresaNome} &nbsp;|&nbsp; <str
   <h2>Resumo dos Créditos Identificados — Valores apurados das escriturações digitais</h2>
   <table>
     <thead><tr class="summary-header">
-      <th>#</th><th>Tributo</th><th>Ponto / Operação</th><th>Registro</th><th>PIS</th><th>COFINS</th><th>Total</th>
+      <th>#</th><th>Tributo</th><th>Ponto / Operação</th><th>Registro</th><th>ICMS</th><th>PIS</th><th>COFINS</th><th>IRPJ/CSLL</th><th>Total</th>
     </tr></thead>
     <tbody>
       ${resumoRows}
       <tr class="total-row">
         <td colspan="4">VALOR TOTAL DOS CRÉDITOS IDENTIFICADOS</td>
+        <td class="valor">${totalIcmsGeral > 0 ? `R$ ${fmt(totalIcmsGeral)}` : '-'}</td>
         <td class="valor">R$ ${fmt(totalPisGeral)}</td>
         <td class="valor">R$ ${fmt(totalCofinsGeral)}</td>
+        <td class="valor">${totalIrpjCsllGeral > 0 ? `R$ ${fmt(totalIrpjCsllGeral)}` : '-'}</td>
         <td class="valor">R$ ${fmt(demo.totalReal)}</td>
       </tr>
     </tbody>

@@ -297,30 +297,28 @@ Aplique TODAS as regras abaixo adicionalmente:
 
 ## TESES OBRIGATÓRIAS — ANALISE TODAS
 
+### REGRA DE AGRUPAMENTO — PIS + COFINS NA MESMA TESE
+IMPORTANTE: Quando PIS e COFINS decorrem da MESMA tese jurídica (ex: Tema 69, Tema 779, Tema 1.048), COMBINE-AS em UMA ÚNICA oportunidade:
+- tributo: "PIS/COFINS" (nunca criar duas linhas separadas "PIS" e "COFINS" para a mesma tese)
+- valorEstimado: soma PIS + COFINS
+- Mostre a memória de cálculo separada no campo descricao (PIS: R$ X + COFINS: R$ Y = Total: R$ Z)
+Exceção: se houver situação específica que afeta APENAS PIS ou APENAS COFINS, aí pode separar.
+
 ### BLOCO 1: PIS/COFINS (Regime Não-Cumulativo — Lucro Real)
 
-**TESE 1.1 — Exclusão do ICMS da base do PIS (Tese do Século)**
+**TESE 1.1 — Exclusão do ICMS da base do PIS/COFINS — Tese do Século (Tema 69 STF)**
 - Fundamento: RE 574.706 — Tema 69 STF — Repercussão Geral
 - Modulação: efeitos a partir de 15/03/2017 (exceto quem ajuizou antes)
-- Cálculo: ICMS destacado nas vendas × alíquota PIS 1,65%
+- Cálculo: ICMS destacado nas vendas × alíquota PIS 1,65% + ICMS destacado nas vendas × alíquota COFINS 7,6%
+- tributo: "PIS/COFINS" — GERAR COMO ITEM ÚNICO com valor combinado
 - Probabilidade: 95% — tese pacificada
 
-**TESE 1.2 — Exclusão do ICMS da base da COFINS (Tese do Século)**
-- Mesmo fundamento: RE 574.706 — Tema 69 STF
-- Cálculo: ICMS destacado nas vendas × alíquota COFINS 7,6%
-- Probabilidade: 95% — tese pacificada
-
-**TESE 1.3 — Créditos de PIS sobre insumos (conceito ampliado)**
+**TESE 1.3 — Créditos de PIS/COFINS sobre insumos (conceito ampliado)**
 - Fundamento: REsp 1.221.170/PR — Tema 779 STJ
-- Lei 10.637/2002 art. 3° | IN RFB 1.911/2019 art. 172
+- Lei 10.637/2002 art. 3° | Lei 10.833/2003 art. 3° | IN RFB 1.911/2019 art. 172
 - Itens em indústrias: energia elétrica, manutenção, EPIs, fretes sobre compras, embalagens, combustíveis, materiais intermediários
-- Cálculo: identificar custos elegíveis × 1,65%
-- Probabilidade: 75%
-
-**TESE 1.4 — Créditos de COFINS sobre insumos (conceito ampliado)**
-- Mesmo fundamento: REsp 1.221.170/PR — Tema 779 STJ
-- Lei 10.833/2003 art. 3°
-- Cálculo: custos elegíveis × 7,6%
+- Cálculo: custos elegíveis × PIS 1,65% + custos elegíveis × COFINS 7,6%
+- tributo: "PIS/COFINS" — GERAR COMO ITEM ÚNICO
 - Probabilidade: 75%
 
 **TESE 1.5 — PIS/COFINS Monofásico — Medicamentos e Farmacêuticos**
