@@ -15,6 +15,8 @@ export default function SegurancaPage() {
   const [blockIpInput, setBlockIpInput] = useState('');
   const [blockRangeInput, setBlockRangeInput] = useState('');
   const [expandedIp, setExpandedIp] = useState<string | null>(null);
+  const [attackReport, setAttackReport] = useState<any>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
 
   const { data, isLoading } = useSWR<SecurityData>(
     '/api/security/dashboard',
@@ -58,6 +60,18 @@ export default function SegurancaPage() {
     setBlockRangeInput('');
     mutate('/api/security/dashboard');
   }, [blockRangeInput, apiBase, token]);
+
+  const loadAttackReport = useCallback(async () => {
+    setLoadingReport(true);
+    try {
+      const res = await fetch(`${apiBase}/api/security/attack-report`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.success) setAttackReport(json.data);
+    } catch { /* ignore */ }
+    setLoadingReport(false);
+  }, [apiBase, token]);
 
   const summary = data?.summary || { totalBlocked: 0, totalWatching: 0, totalTracked: 0, totalRanges: 0 };
 
@@ -148,6 +162,77 @@ export default function SegurancaPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Shield — Seguranca e Monitoramento</h1>
         <p className="text-gray-500 text-sm mt-1">Protecao maxima: anti-bot, honeypot, geo-tracking, fingerprint, rate limiting — atualiza a cada 5s</p>
+      </div>
+
+      {/* Attack Report */}
+      <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-2xl p-5 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-bold text-red-800">Relatorio de Ataques (Banco de Dados)</h2>
+            <p className="text-[10px] text-red-500">Dados persistentes — nao se perdem com restart do servidor</p>
+          </div>
+          <button onClick={loadAttackReport} disabled={loadingReport} className="px-4 py-2 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 disabled:bg-gray-300">
+            {loadingReport ? 'Carregando...' : attackReport ? 'Atualizar Relatorio' : 'Gerar Relatorio'}
+          </button>
+        </div>
+        {attackReport && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="bg-white rounded-lg p-3 border border-red-100 text-center">
+                <p className="text-2xl font-bold text-red-600">{attackReport.totalAttacks}</p>
+                <p className="text-[10px] text-gray-500">Total Ataques</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-red-100 text-center">
+                <p className="text-2xl font-bold text-orange-600">{attackReport.uniqueIps}</p>
+                <p className="text-[10px] text-gray-500">IPs Unicos</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-red-100 text-center">
+                <p className="text-2xl font-bold text-purple-600">{attackReport.durationHours || 0}h</p>
+                <p className="text-[10px] text-gray-500">Duracao</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-red-100 text-center">
+                <p className="text-[11px] font-bold text-gray-700">{attackReport.firstAttack ? new Date(attackReport.firstAttack).toLocaleString('pt-BR') : '—'}</p>
+                <p className="text-[10px] text-gray-500">Primeiro Ataque</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-red-100 text-center">
+                <p className="text-[11px] font-bold text-gray-700">{attackReport.lastAttack ? new Date(attackReport.lastAttack).toLocaleString('pt-BR') : '—'}</p>
+                <p className="text-[10px] text-gray-500">Ultimo Ataque</p>
+              </div>
+            </div>
+            {attackReport.byProvider && Object.keys(attackReport.byProvider).length > 0 && (
+              <div className="bg-white rounded-lg p-3 border border-red-100">
+                <p className="text-xs font-bold text-gray-700 mb-2">Ataques por Provedor:</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(attackReport.byProvider).sort((a: any, b: any) => b[1] - a[1]).map(([provider, count]: any) => (
+                    <span key={provider} className="px-2 py-1 bg-red-50 border border-red-200 rounded text-[10px] font-mono">
+                      {provider}: <b>{count}</b>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {attackReport.events && attackReport.events.length > 0 && (
+              <div className="bg-white rounded-lg border border-red-100 overflow-hidden">
+                <div className="px-3 py-2 bg-red-50 border-b border-red-100">
+                  <p className="text-xs font-bold text-red-800">Log de Eventos ({attackReport.events.length})</p>
+                </div>
+                <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
+                  {attackReport.events.map((e: any, i: number) => (
+                    <div key={i} className="px-3 py-2 text-[10px] flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-gray-800">{e.ip}</span>
+                        {e.geo && <span className="text-gray-400">{e.geo}</span>}
+                        {e.org && <span className="text-blue-500">{e.org}</span>}
+                        <span className="text-red-400 italic">{e.reason?.substring(0, 60)}</span>
+                      </div>
+                      <span className="text-gray-400 shrink-0 ml-2">{new Date(e.timestamp).toLocaleString('pt-BR')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats */}

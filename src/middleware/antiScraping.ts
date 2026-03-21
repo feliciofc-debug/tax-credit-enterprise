@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import { logger } from '../utils/logger';
+import { prisma } from '../utils/prisma';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -175,6 +176,82 @@ function blockRecord(record: RequestRecord, reason: string, ip: string): void {
   const permStr = record.permanentlyBlocked ? ' **PERMANENTE**' : '';
 
   logger.warn(`[SHIELD] BLOQUEADO${permStr}: ${ip}${geoStr} | Motivo: ${reason} | UA: ${record.userAgent?.substring(0, 80)}`);
+
+  // Persist to database for permanent evidence
+  persistEvent(ip, record.permanentlyBlocked ? 'permanent_block' : 'blocked', reason, record).catch(() => {});
+}
+
+async function persistEvent(ip: string, action: string, reason: string, record: RequestRecord): Promise<void> {
+  try {
+    await prisma.securityEvent.create({
+      data: {
+        ip,
+        action,
+        reason,
+        userAgent: record.userAgent?.substring(0, 500) || null,
+        path: record.endpoints.size > 0 ? Array.from(record.endpoints)[0] : null,
+        score: record.suspicionScore,
+        country: record.geo?.country || null,
+        region: record.geo?.region || null,
+        city: record.geo?.city || null,
+        isp: record.geo?.isp || null,
+        org: record.geo?.org || null,
+        hosting: record.geo?.hosting || false,
+        proxy: record.geo?.proxy || false,
+      },
+    });
+  } catch { /* db write is best-effort */ }
+}
+
+export async function getAttackReport(): Promise<any> {
+  try {
+    const events = await prisma.securityEvent.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    const totalAttacks = events.length;
+    const uniqueIps = new Set(events.map(e => e.ip)).size;
+    const firstAttack = events.length > 0 ? events[events.length - 1].createdAt : null;
+    const lastAttack = events.length > 0 ? events[0].createdAt : null;
+
+    const byProvider: Record<string, number> = {};
+    const byCountry: Record<string, number> = {};
+    const byAction: Record<string, number> = {};
+    events.forEach(e => {
+      const provider = e.org || e.isp || 'Unknown';
+      byProvider[provider] = (byProvider[provider] || 0) + 1;
+      if (e.country) byCountry[e.country] = (byCountry[e.country] || 0) + 1;
+      byAction[e.action] = (byAction[e.action] || 0) + 1;
+    });
+
+    return {
+      totalAttacks,
+      uniqueIps,
+      firstAttack,
+      lastAttack,
+      durationHours: firstAttack && lastAttack
+        ? Math.round((new Date(lastAttack).getTime() - new Date(firstAttack).getTime()) / (1000 * 60 * 60) * 10) / 10
+        : 0,
+      byProvider,
+      byCountry,
+      byAction,
+      events: events.map(e => ({
+        ip: e.ip,
+        action: e.action,
+        reason: e.reason,
+        userAgent: e.userAgent,
+        geo: e.city ? `${e.city}, ${e.region}, ${e.country}` : null,
+        isp: e.isp,
+        org: e.org,
+        hosting: e.hosting,
+        proxy: e.proxy,
+        timestamp: e.createdAt,
+      })),
+    };
+  } catch {
+    return { totalAttacks: 0, uniqueIps: 0, events: [] };
+  }
 }
 
 function isBlockedRange(ip: string): string | null {

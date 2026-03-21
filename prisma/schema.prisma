@@ -829,3 +829,24 @@ model SerproLog {
   @@index([service])
   @@index([createdAt])
 }
+
+model SecurityEvent {
+  id          String   @id @default(cuid())
+  ip          String
+  action      String   // blocked, permanent_block, honeypot, bot_detected, range_blocked, hosting_blocked
+  reason      String
+  userAgent   String?
+  path        String?
+  score       Int      @default(100)
+  country     String?
+  region      String?
+  city        String?
+  isp         String?
+  org         String?
+  hosting     Boolean  @default(false)
+  proxy       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  @@index([ip])
+  @@index([createdAt])
+  @@index([action])
+}
