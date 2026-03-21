@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { getBlockedIps, getAllTrackedIps, unblockIp, blockIp, addBlockedRange, getBlockedRanges } from '../middleware/antiScraping';
+import { getBlockedIps, getAllTrackedIps, unblockIp, blockIp, addBlockedRange, getBlockedRanges, addWhitelistIp, getWhitelistIps } from '../middleware/antiScraping';
 
 const router = Router();
 
@@ -68,6 +68,25 @@ router.post('/block-range', authenticateToken, async (req: Request, res: Respons
 router.get('/blocked-ranges', authenticateToken, async (_req: Request, res: Response) => {
   try {
     return res.json({ success: true, data: getBlockedRanges() });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/whitelist', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { ip } = req.body;
+    if (!ip) return res.status(400).json({ success: false, error: 'IP obrigatorio' });
+    addWhitelistIp(ip);
+    return res.json({ success: true, message: `IP ${ip} adicionado a whitelist` });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/whitelist', authenticateToken, async (_req: Request, res: Response) => {
+  try {
+    return res.json({ success: true, data: getWhitelistIps() });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }

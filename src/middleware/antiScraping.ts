@@ -106,7 +106,7 @@ const SENSITIVE_PATTERNS = [
   /\/api\/viability/i, /\/api\/hpc/i, /\/api\/formalization/i,
   /\/api\/serpro/i, /\/api\/revenue/i, /\/api\/integrations/i,
   /\/api\/tax-credit/i, /\/api\/analysis/i, /\/api\/simples/i,
-  /\/api\/security/i, /\/api\/auth/i,
+  /\/api\/security/i,
 ];
 
 // Cloud/hosting orgs detected via geo lookup
@@ -237,8 +237,37 @@ function calculateSuspicion(record: RequestRecord, req: Request): number {
 // MAIN MIDDLEWARE
 // ────────────────────────────────────────────────────────────────────────────
 
+// Routes that must NEVER be blocked (auth, public pages, health)
+const WHITELIST_PATHS = [
+  '/api/health',
+  '/api/webhook',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/me',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
+  '/api/auth/partner-login',
+  '/api/auth/partner-register',
+  '/api/partner/login',
+  '/api/partner/register',
+];
+
+// Admin IPs that should never be blocked
+const WHITELIST_IPS = new Set([
+  '186.205.9.74', // Admin — Claro/NET Rio de Janeiro
+]);
+
+export function addWhitelistIp(ip: string): void {
+  WHITELIST_IPS.add(ip);
+}
+
+export function getWhitelistIps(): string[] {
+  return Array.from(WHITELIST_IPS);
+}
+
 export function antiScrapingMiddleware(req: Request, res: Response, next: NextFunction): void {
-  if (req.path === '/api/health' || req.path === '/api/webhook') {
+  // Whitelist paths — never block auth and public routes
+  if (WHITELIST_PATHS.some(p => req.path.startsWith(p))) {
     next();
     return;
   }
@@ -246,6 +275,12 @@ export function antiScrapingMiddleware(req: Request, res: Response, next: NextFu
   const ip = getClientIp(req);
   const ua = req.headers['user-agent'] || '';
   const now = Date.now();
+
+  // Whitelist admin IPs — never block
+  if (WHITELIST_IPS.has(ip)) {
+    next();
+    return;
+  }
 
   let record = ipTracker.get(ip);
   if (!record) {
