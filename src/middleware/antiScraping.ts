@@ -48,6 +48,134 @@ const BLOCK_THRESHOLD = 50;
 const SENSITIVE_RATE_LIMIT = 30;
 const sensitiveRateTracker = new Map<string, { count: number; windowStart: number }>();
 
+// ────────────────────────────────────────────────────────────────────────────
+// Attack Escalation Detector — detecta coordenacao distribuida (DDoS-lite/botnet)
+// ────────────────────────────────────────────────────────────────────────────
+const ESCALATION_WINDOW_MS = 10 * 60 * 1000; // janela de 10 min
+const ESCALATION_IP_THRESHOLD = 5;            // 5+ IPs novos = alerta
+const ESCALATION_BLOCK_THRESHOLD = 10;        // 10+ IPs novos = ativar lockdown
+const ESCALATION_PROVIDER_THRESHOLD = 3;      // 3+ IPs do mesmo provedor cloud = ataque coordenado
+const ESCALATION_PATH_THRESHOLD = 4;          // 4+ IPs diferentes batendo no mesmo endpoint
+let escalationLockdown = false;
+let escalationLockdownUntil = 0;
+const recentBlocks: Array<{ ip: string; ts: number; org?: string; path?: string; reason: string }> = [];
+
+interface EscalationStatus {
+  active: boolean;
+  level: 'normal' | 'watch' | 'alert' | 'lockdown';
+  windowMinutes: number;
+  uniqueIpsInWindow: number;
+  blocksInWindow: number;
+  topProvidersInWindow: Array<{ provider: string; count: number }>;
+  topPathsInWindow: Array<{ path: string; count: number }>;
+  coordinatedProviders: string[];
+  coordinatedPaths: string[];
+  lockdownActive: boolean;
+  lockdownUntil: string | null;
+  recommendation: string;
+}
+
+function pruneRecentBlocks(): void {
+  const cutoff = Date.now() - ESCALATION_WINDOW_MS;
+  while (recentBlocks.length > 0 && recentBlocks[0].ts < cutoff) {
+    recentBlocks.shift();
+  }
+}
+
+export function getEscalationStatus(): EscalationStatus {
+  pruneRecentBlocks();
+  const now = Date.now();
+
+  const ipsInWindow = new Set(recentBlocks.map(b => b.ip));
+  const byProvider: Record<string, Set<string>> = {};
+  const byPath: Record<string, Set<string>> = {};
+
+  recentBlocks.forEach(b => {
+    const provider = b.org || 'Unknown';
+    if (!byProvider[provider]) byProvider[provider] = new Set();
+    byProvider[provider].add(b.ip);
+    if (b.path) {
+      if (!byPath[b.path]) byPath[b.path] = new Set();
+      byPath[b.path].add(b.ip);
+    }
+  });
+
+  const topProvidersInWindow = Object.entries(byProvider)
+    .map(([provider, ips]) => ({ provider, count: ips.size }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const topPathsInWindow = Object.entries(byPath)
+    .map(([path, ips]) => ({ path, count: ips.size }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const coordinatedProviders = topProvidersInWindow
+    .filter(p => p.count >= ESCALATION_PROVIDER_THRESHOLD)
+    .map(p => p.provider);
+
+  const coordinatedPaths = topPathsInWindow
+    .filter(p => p.count >= ESCALATION_PATH_THRESHOLD)
+    .map(p => p.path);
+
+  let level: 'normal' | 'watch' | 'alert' | 'lockdown' = 'normal';
+  let recommendation = 'Sistema operando normalmente';
+
+  if (escalationLockdown && now < escalationLockdownUntil) {
+    level = 'lockdown';
+    recommendation = 'LOCKDOWN ATIVO — todos os IPs hosting/cloud novos sao bloqueados na hora';
+  } else if (ipsInWindow.size >= ESCALATION_BLOCK_THRESHOLD) {
+    level = 'lockdown';
+    recommendation = `${ipsInWindow.size} IPs bloqueados em ${ESCALATION_WINDOW_MS / 60000}min — recomenda-se ativar lockdown manual`;
+  } else if (ipsInWindow.size >= ESCALATION_IP_THRESHOLD || coordinatedProviders.length > 0 || coordinatedPaths.length > 0) {
+    level = 'alert';
+    if (coordinatedProviders.length > 0) {
+      recommendation = `Ataque coordenado detectado de ${coordinatedProviders.join(', ')} — considere bloquear faixas`;
+    } else if (coordinatedPaths.length > 0) {
+      recommendation = `Multiplos IPs varrendo ${coordinatedPaths[0]} — possivel scan distribuido`;
+    } else {
+      recommendation = `${ipsInWindow.size} IPs bloqueados na ultima janela — observar padrao`;
+    }
+  } else if (ipsInWindow.size > 0) {
+    level = 'watch';
+    recommendation = `${ipsInWindow.size} bloqueio(s) na janela — atividade dentro do normal`;
+  }
+
+  return {
+    active: level !== 'normal',
+    level,
+    windowMinutes: ESCALATION_WINDOW_MS / 60000,
+    uniqueIpsInWindow: ipsInWindow.size,
+    blocksInWindow: recentBlocks.length,
+    topProvidersInWindow,
+    topPathsInWindow,
+    coordinatedProviders,
+    coordinatedPaths,
+    lockdownActive: escalationLockdown && now < escalationLockdownUntil,
+    lockdownUntil: escalationLockdown && escalationLockdownUntil > now
+      ? new Date(escalationLockdownUntil).toISOString()
+      : null,
+    recommendation,
+  };
+}
+
+export function activateLockdown(durationMinutes: number = 60): { until: string } {
+  escalationLockdown = true;
+  escalationLockdownUntil = Date.now() + durationMinutes * 60 * 1000;
+  logger.warn(`[SHIELD] LOCKDOWN ATIVADO por ${durationMinutes}min — bloqueio de IPs novos hosting/cloud`);
+  return { until: new Date(escalationLockdownUntil).toISOString() };
+}
+
+export function deactivateLockdown(): void {
+  escalationLockdown = false;
+  escalationLockdownUntil = 0;
+  logger.info('[SHIELD] Lockdown desativado manualmente');
+}
+
+export function isLockdownActive(): boolean {
+  return escalationLockdown && Date.now() < escalationLockdownUntil;
+}
+
 // Allowed countries (clients are Brazilian — allow BR and common VPN exits for legit users)
 const ALLOWED_COUNTRIES = new Set(['BR', 'PT', 'US']);
 
@@ -179,6 +307,23 @@ function blockRecord(record: RequestRecord, reason: string, ip: string): void {
 
   // Persist to database for permanent evidence
   persistEvent(ip, record.permanentlyBlocked ? 'permanent_block' : 'blocked', reason, record).catch(() => {});
+
+  // Track for escalation detection
+  recentBlocks.push({
+    ip,
+    ts: Date.now(),
+    org: record.geo?.org || record.geo?.isp,
+    path: record.endpoints.size > 0 ? Array.from(record.endpoints)[0] : undefined,
+    reason,
+  });
+  pruneRecentBlocks();
+
+  // Auto-activate lockdown if escalation threshold breached
+  const ipsInWindow = new Set(recentBlocks.map(b => b.ip));
+  if (!escalationLockdown && ipsInWindow.size >= ESCALATION_BLOCK_THRESHOLD) {
+    activateLockdown(60);
+    logger.error(`[SHIELD] AUTO-LOCKDOWN: ${ipsInWindow.size} IPs bloqueados em ${ESCALATION_WINDOW_MS / 60000}min — ataque coordenado`);
+  }
 }
 
 async function persistEvent(ip: string, action: string, reason: string, record: RequestRecord): Promise<void> {
@@ -203,11 +348,81 @@ async function persistEvent(ip: string, action: string, reason: string, record: 
   } catch { /* db write is best-effort */ }
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Forensic classification — identify attack type from path/userAgent/reason
+// ────────────────────────────────────────────────────────────────────────────
+
+const ATTACK_SIGNATURES: Array<{ type: string; test: (e: { path?: string|null; userAgent?: string|null; reason?: string|null; action?: string }) => boolean }> = [
+  {
+    type: 'sql_injection',
+    test: e => /('|%27|--|\bunion\b|\bselect\b|\bor\s+1\s*=\s*1|\bdrop\s+table|\binsert\s+into|\bsleep\s*\(|\bexec\s*\(|\bxp_cmdshell|\bwaitfor\s+delay)/i.test((e.path || '') + ' ' + (e.userAgent || '')),
+  },
+  {
+    type: 'xss',
+    test: e => /(<script|javascript:|onerror=|onload=|<iframe|<svg|alert\(|document\.cookie|eval\()/i.test((e.path || '') + ' ' + (e.userAgent || '')),
+  },
+  {
+    type: 'path_traversal',
+    test: e => /(\.\.\/|\.\.\\|%2e%2e|%252e|\/etc\/passwd|\/proc\/self|c:\\windows|boot\.ini)/i.test(e.path || ''),
+  },
+  {
+    type: 'rce_attempt',
+    test: e => /(\$\{jndi:|;[a-z]+=|`[a-z]|\$\(|\bcmd\.exe|\bpowershell|\/bin\/(ba)?sh|wget\s+http|curl\s+http)/i.test((e.path || '') + ' ' + (e.userAgent || '')),
+  },
+  {
+    type: 'config_probe',
+    test: e => /(\.env|\.git|\.svn|wp-config|web\.config|config\.json|backup\.|\.bak|\.old|\.orig|database\.yml|secrets|\.pem|\.key|id_rsa)/i.test(e.path || ''),
+  },
+  {
+    type: 'admin_probe',
+    test: e => /(wp-admin|wp-login|phpmyadmin|administrator|admin\.php|\/manager|\/console|\/actuator|\/debug|server-status|\/horizon)/i.test(e.path || ''),
+  },
+  {
+    type: 'api_recon',
+    test: e => /(swagger|openapi|graphql|api-docs|\.well-known|\/v[0-9]+\/(users|admin|export|database|keys|internal))/i.test(e.path || ''),
+  },
+  {
+    type: 'brute_force',
+    test: e => /(login|signin|auth|password|register)/i.test(e.path || '') && /(rate.*limit|too\s+many|brute|score:\s*[5-9][0-9])/i.test(e.reason || ''),
+  },
+  {
+    type: 'scanner_tool',
+    test: e => /(sqlmap|nikto|nmap|masscan|dirbuster|gobuster|wfuzz|ffuf|burp|nuclei|acunetix|zap)/i.test(e.userAgent || ''),
+  },
+  {
+    type: 'bot_scraper',
+    test: e => /(python|curl|wget|go-http|scrapy|axios|node-fetch|httpx|aiohttp|okhttp|java\/|libwww)/i.test(e.userAgent || ''),
+  },
+  {
+    type: 'honeypot_hit',
+    test: e => (e.action || '') === 'permanent_block' && /honeypot/i.test(e.reason || ''),
+  },
+  {
+    type: 'cloud_hosting',
+    test: e => /(hosting|cloud|aws|amazon|google|azure|hetzner|digitalocean|ovh|linode|vultr|contabo)/i.test(e.reason || ''),
+  },
+];
+
+function classifyAttack(e: { path?: string|null; userAgent?: string|null; reason?: string|null; action?: string }): string[] {
+  const types: string[] = [];
+  for (const sig of ATTACK_SIGNATURES) {
+    try { if (sig.test(e)) types.push(sig.type); } catch {}
+  }
+  return types.length > 0 ? types : ['other'];
+}
+
+function topN<T extends string>(map: Record<T, number>, n: number): Array<{ key: T; count: number }> {
+  return Object.entries(map)
+    .map(([key, count]) => ({ key: key as T, count: count as number }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, n);
+}
+
 export async function getAttackReport(): Promise<any> {
   try {
     const events = await prisma.securityEvent.findMany({
       orderBy: { createdAt: 'desc' },
-      take: 200,
+      take: 1000,
     });
 
     const totalAttacks = events.length;
@@ -218,12 +433,59 @@ export async function getAttackReport(): Promise<any> {
     const byProvider: Record<string, number> = {};
     const byCountry: Record<string, number> = {};
     const byAction: Record<string, number> = {};
-    events.forEach(e => {
+    const byAttackType: Record<string, number> = {};
+    const byPath: Record<string, number> = {};
+    const byUserAgent: Record<string, number> = {};
+    const byIp: Record<string, number> = {};
+    const byReason: Record<string, number> = {};
+    const timelineByHour: Record<string, number> = {}; // YYYY-MM-DD HH
+
+    const enrichedEvents = events.map(e => {
+      const types = classifyAttack(e);
+      types.forEach(t => { byAttackType[t] = (byAttackType[t] || 0) + 1; });
+
       const provider = e.org || e.isp || 'Unknown';
       byProvider[provider] = (byProvider[provider] || 0) + 1;
       if (e.country) byCountry[e.country] = (byCountry[e.country] || 0) + 1;
       byAction[e.action] = (byAction[e.action] || 0) + 1;
+      byIp[e.ip] = (byIp[e.ip] || 0) + 1;
+      if (e.path) byPath[e.path] = (byPath[e.path] || 0) + 1;
+      if (e.userAgent) {
+        const uaShort = e.userAgent.substring(0, 80);
+        byUserAgent[uaShort] = (byUserAgent[uaShort] || 0) + 1;
+      }
+      if (e.reason) {
+        const reasonShort = e.reason.substring(0, 60);
+        byReason[reasonShort] = (byReason[reasonShort] || 0) + 1;
+      }
+
+      const hourKey = e.createdAt.toISOString().substring(0, 13).replace('T', ' ');
+      timelineByHour[hourKey] = (timelineByHour[hourKey] || 0) + 1;
+
+      return {
+        ip: e.ip,
+        action: e.action,
+        reason: e.reason,
+        path: e.path,
+        userAgent: e.userAgent,
+        attackTypes: types,
+        geo: e.city ? `${e.city}, ${e.region}, ${e.country}` : null,
+        country: e.country,
+        countryCode: e.country,
+        isp: e.isp,
+        org: e.org,
+        hosting: e.hosting,
+        proxy: e.proxy,
+        score: e.score,
+        timestamp: e.createdAt,
+      };
     });
+
+    const timeline = Object.entries(timelineByHour)
+      .map(([hour, count]) => ({ hour, count }))
+      .sort((a, b) => a.hour.localeCompare(b.hour));
+
+    const peakHour = timeline.reduce((peak, cur) => cur.count > (peak?.count ?? 0) ? cur : peak, null as { hour: string; count: number } | null);
 
     return {
       totalAttacks,
@@ -233,24 +495,21 @@ export async function getAttackReport(): Promise<any> {
       durationHours: firstAttack && lastAttack
         ? Math.round((new Date(lastAttack).getTime() - new Date(firstAttack).getTime()) / (1000 * 60 * 60) * 10) / 10
         : 0,
+      peakHour,
       byProvider,
       byCountry,
       byAction,
-      events: events.map(e => ({
-        ip: e.ip,
-        action: e.action,
-        reason: e.reason,
-        userAgent: e.userAgent,
-        geo: e.city ? `${e.city}, ${e.region}, ${e.country}` : null,
-        isp: e.isp,
-        org: e.org,
-        hosting: e.hosting,
-        proxy: e.proxy,
-        timestamp: e.createdAt,
-      })),
+      byAttackType,
+      topIps: topN(byIp, 20),
+      topPaths: topN(byPath, 20),
+      topUserAgents: topN(byUserAgent, 15),
+      topReasons: topN(byReason, 15),
+      timeline,
+      escalation: getEscalationStatus(),
+      events: enrichedEvents,
     };
-  } catch {
-    return { totalAttacks: 0, uniqueIps: 0, events: [] };
+  } catch (err: any) {
+    return { totalAttacks: 0, uniqueIps: 0, events: [], error: err?.message || 'unknown error' };
   }
 }
 
@@ -460,6 +719,12 @@ export function antiScrapingMiddleware(req: Request, res: Response, next: NextFu
       if (isHosting) {
         blockRecord(record, `IP de hosting/cloud: ${geo.org || geo.isp} [${geo.city}, ${geo.country}]`, ip);
         logger.warn(`[SHIELD] HOSTING BLOQUEADO: ${ip} — ${geo.org} / ${geo.isp} [${geo.city}, ${geo.region}, ${geo.country}]`);
+        return;
+      }
+
+      // LOCKDOWN: bloquear qualquer IP nao-BR durante ataque coordenado
+      if (isLockdownActive() && geo.countryCode !== 'BR') {
+        blockRecord(record, `LOCKDOWN: IP nao-BR durante ataque coordenado (${geo.country})`, ip);
         return;
       }
 

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { getBlockedIps, getAllTrackedIps, unblockIp, blockIp, addBlockedRange, getBlockedRanges, addWhitelistIp, getWhitelistIps, getAttackReport } from '../middleware/antiScraping';
+import { getBlockedIps, getAllTrackedIps, unblockIp, blockIp, addBlockedRange, getBlockedRanges, addWhitelistIp, getWhitelistIps, getAttackReport, getEscalationStatus, activateLockdown, deactivateLockdown, isLockdownActive } from '../middleware/antiScraping';
 
 const router = Router();
 
@@ -96,6 +96,42 @@ router.post('/whitelist', authenticateToken, async (req: Request, res: Response)
 router.get('/whitelist', authenticateToken, async (_req: Request, res: Response) => {
   try {
     return res.json({ success: true, data: getWhitelistIps() });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Escalation / Lockdown
+router.get('/escalation', authenticateToken, async (_req: Request, res: Response) => {
+  try {
+    return res.json({ success: true, data: getEscalationStatus() });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/lockdown/activate', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const minutes = Number(req.body?.minutes) > 0 ? Number(req.body.minutes) : 60;
+    const result = activateLockdown(minutes);
+    return res.json({ success: true, message: `Lockdown ativado por ${minutes} minutos`, data: result });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/lockdown/deactivate', authenticateToken, async (_req: Request, res: Response) => {
+  try {
+    deactivateLockdown();
+    return res.json({ success: true, message: 'Lockdown desativado' });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.get('/lockdown/status', authenticateToken, async (_req: Request, res: Response) => {
+  try {
+    return res.json({ success: true, data: { active: isLockdownActive() } });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }

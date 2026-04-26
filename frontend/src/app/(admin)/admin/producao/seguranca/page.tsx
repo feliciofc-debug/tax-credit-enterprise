@@ -11,17 +11,39 @@ interface SecurityData {
   blockedRanges: Array<{ prefix: string; reason: string }>;
 }
 
+interface EscalationData {
+  active: boolean;
+  level: 'normal' | 'watch' | 'alert' | 'lockdown';
+  windowMinutes: number;
+  uniqueIpsInWindow: number;
+  blocksInWindow: number;
+  topProvidersInWindow: Array<{ provider: string; count: number }>;
+  topPathsInWindow: Array<{ path: string; count: number }>;
+  coordinatedProviders: string[];
+  coordinatedPaths: string[];
+  lockdownActive: boolean;
+  lockdownUntil: string | null;
+  recommendation: string;
+}
+
 export default function SegurancaPage() {
   const [blockIpInput, setBlockIpInput] = useState('');
   const [blockRangeInput, setBlockRangeInput] = useState('');
   const [expandedIp, setExpandedIp] = useState<string | null>(null);
   const [attackReport, setAttackReport] = useState<any>(null);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const { data, isLoading } = useSWR<SecurityData>(
     '/api/security/dashboard',
     authedFetcher,
     { ...SWR_OPTIONS_FAST, refreshInterval: 5000 },
+  );
+
+  const { data: escalation } = useSWR<EscalationData>(
+    '/api/security/escalation',
+    authedFetcher,
+    { ...SWR_OPTIONS_FAST, refreshInterval: 10000 },
   );
 
   const apiBase = typeof window !== 'undefined'
@@ -50,6 +72,16 @@ export default function SegurancaPage() {
     mutate('/api/security/dashboard');
   }, [apiBase, token]);
 
+  const handleLockdown = useCallback(async (activate: boolean) => {
+    const url = activate ? '/api/security/lockdown/activate' : '/api/security/lockdown/deactivate';
+    await fetch(`${apiBase}${url}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(activate ? { minutes: 60 } : {}),
+    });
+    mutate('/api/security/escalation');
+  }, [apiBase, token]);
+
   const handleBlockRange = useCallback(async () => {
     if (!blockRangeInput) return;
     await fetch(`${apiBase}/api/security/block-range`, {
@@ -63,14 +95,28 @@ export default function SegurancaPage() {
 
   const loadAttackReport = useCallback(async () => {
     setLoadingReport(true);
+    setReportError(null);
     try {
-      const res = await fetch(`${apiBase}/api/security/attack-report`, {
+      if (!token) throw new Error('Sem token de autenticacao — faca login novamente');
+      const url = `${apiBase}/api/security/attack-report`;
+      console.log('[AttackReport] GET', url);
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
-      if (json.success) setAttackReport(json.data);
-    } catch { /* ignore */ }
-    setLoadingReport(false);
+      console.log('[AttackReport] status', res.status);
+      const text = await res.text();
+      let json: any;
+      try { json = JSON.parse(text); } catch { throw new Error(`Resposta nao-JSON (HTTP ${res.status}): ${text.substring(0, 200)}`); }
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${json?.error || text.substring(0, 200)}`);
+      if (json.success === false) throw new Error(json.error || 'API retornou success=false');
+      setAttackReport(json.data ?? json);
+      console.log('[AttackReport] OK', json.data);
+    } catch (err: any) {
+      console.error('[AttackReport] ERRO', err);
+      setReportError(err?.message || 'Erro desconhecido ao buscar relatorio');
+    } finally {
+      setLoadingReport(false);
+    }
   }, [apiBase, token]);
 
   const summary = data?.summary || { totalBlocked: 0, totalWatching: 0, totalTracked: 0, totalRanges: 0 };
@@ -164,6 +210,83 @@ export default function SegurancaPage() {
         <p className="text-gray-500 text-sm mt-1">Protecao maxima: anti-bot, honeypot, geo-tracking, fingerprint, rate limiting — atualiza a cada 5s</p>
       </div>
 
+      {/* Escalation / Lockdown Alert */}
+      {escalation && escalation.level !== 'normal' && (
+        <div className={`mb-6 rounded-2xl p-5 border-2 ${
+          escalation.level === 'lockdown' ? 'bg-red-100 border-red-600 animate-pulse' :
+          escalation.level === 'alert' ? 'bg-orange-50 border-orange-500' :
+          'bg-amber-50 border-amber-300'
+        }`}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`w-3 h-3 rounded-full ${
+                  escalation.level === 'lockdown' ? 'bg-red-600' :
+                  escalation.level === 'alert' ? 'bg-orange-500' :
+                  'bg-amber-400'
+                } animate-pulse`} />
+                <h2 className={`text-base font-bold uppercase tracking-wide ${
+                  escalation.level === 'lockdown' ? 'text-red-800' :
+                  escalation.level === 'alert' ? 'text-orange-800' :
+                  'text-amber-800'
+                }`}>
+                  {escalation.level === 'lockdown' ? 'LOCKDOWN ATIVO — Ataque Coordenado' :
+                   escalation.level === 'alert' ? 'ALERTA DE ESCALONAMENTO' :
+                   'Atividade Sob Observacao'}
+                </h2>
+              </div>
+              <p className="text-sm text-gray-700 mb-2">{escalation.recommendation}</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs mt-3">
+                <div className="bg-white/70 rounded p-2">
+                  <p className="text-gray-500 text-[10px]">IPs bloqueados (ultimos {escalation.windowMinutes}min)</p>
+                  <p className="font-bold text-lg">{escalation.uniqueIpsInWindow}</p>
+                </div>
+                <div className="bg-white/70 rounded p-2">
+                  <p className="text-gray-500 text-[10px]">Total de bloqueios</p>
+                  <p className="font-bold text-lg">{escalation.blocksInWindow}</p>
+                </div>
+                <div className="bg-white/70 rounded p-2">
+                  <p className="text-gray-500 text-[10px]">Provedores coordenados</p>
+                  <p className="font-bold text-sm truncate">{escalation.coordinatedProviders.length > 0 ? escalation.coordinatedProviders.slice(0, 2).join(', ') : '—'}</p>
+                </div>
+                <div className="bg-white/70 rounded p-2">
+                  <p className="text-gray-500 text-[10px]">Endpoints alvejados</p>
+                  <p className="font-bold text-sm truncate">{escalation.coordinatedPaths.length > 0 ? escalation.coordinatedPaths[0] : '—'}</p>
+                </div>
+              </div>
+              {escalation.topProvidersInWindow.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-[10px] text-gray-500 mb-1">Top provedores na janela:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {escalation.topProvidersInWindow.slice(0, 8).map(p => (
+                      <span key={p.provider} className="px-2 py-0.5 bg-white rounded text-[10px] font-mono border border-gray-200">
+                        {p.provider}: <b className="text-red-600">{p.count}</b>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 shrink-0">
+              {escalation.lockdownActive ? (
+                <>
+                  <button onClick={() => handleLockdown(false)} className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700">
+                    Desativar Lockdown
+                  </button>
+                  {escalation.lockdownUntil && (
+                    <p className="text-[10px] text-gray-500 text-center">Ate {new Date(escalation.lockdownUntil).toLocaleTimeString('pt-BR')}</p>
+                  )}
+                </>
+              ) : (
+                <button onClick={() => handleLockdown(true)} className="px-4 py-2 bg-red-700 text-white text-xs font-bold rounded-lg hover:bg-red-800">
+                  Ativar Lockdown 60min
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Attack Report */}
       <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-2xl p-5 mb-6">
         <div className="flex items-center justify-between mb-3">
@@ -175,6 +298,11 @@ export default function SegurancaPage() {
             {loadingReport ? 'Carregando...' : attackReport ? 'Atualizar Relatorio' : 'Gerar Relatorio'}
           </button>
         </div>
+        {reportError && (
+          <div className="mb-3 px-3 py-2 bg-red-100 border border-red-300 rounded-lg text-[11px] text-red-800 font-mono break-all">
+            <b>Erro ao carregar relatorio:</b> {reportError}
+          </div>
+        )}
         {attackReport && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -199,33 +327,172 @@ export default function SegurancaPage() {
                 <p className="text-[10px] text-gray-500">Ultimo Ataque</p>
               </div>
             </div>
-            {attackReport.byProvider && Object.keys(attackReport.byProvider).length > 0 && (
-              <div className="bg-white rounded-lg p-3 border border-red-100">
-                <p className="text-xs font-bold text-gray-700 mb-2">Ataques por Provedor:</p>
+            {/* Classificacao Forense de Ataques */}
+            {attackReport.byAttackType && Object.keys(attackReport.byAttackType).length > 0 && (
+              <div className="bg-white rounded-lg p-3 border border-red-200">
+                <p className="text-xs font-bold text-gray-700 mb-2">Classificacao Forense por Tipo de Ataque:</p>
                 <div className="flex flex-wrap gap-2">
-                  {Object.entries(attackReport.byProvider).sort((a: any, b: any) => b[1] - a[1]).map(([provider, count]: any) => (
-                    <span key={provider} className="px-2 py-1 bg-red-50 border border-red-200 rounded text-[10px] font-mono">
-                      {provider}: <b>{count}</b>
-                    </span>
+                  {Object.entries(attackReport.byAttackType).sort((a: any, b: any) => b[1] - a[1]).map(([type, count]: any) => {
+                    const labels: Record<string, { label: string; color: string }> = {
+                      sql_injection: { label: 'SQL Injection', color: 'bg-red-600 text-white' },
+                      xss: { label: 'XSS', color: 'bg-pink-600 text-white' },
+                      path_traversal: { label: 'Path Traversal', color: 'bg-orange-600 text-white' },
+                      rce_attempt: { label: 'RCE / Log4Shell', color: 'bg-purple-700 text-white' },
+                      config_probe: { label: 'Config Probe (.env/.git)', color: 'bg-yellow-600 text-white' },
+                      admin_probe: { label: 'Admin Probe (wp-admin etc)', color: 'bg-amber-600 text-white' },
+                      api_recon: { label: 'API Recon (swagger/graphql)', color: 'bg-cyan-700 text-white' },
+                      brute_force: { label: 'Brute Force (login)', color: 'bg-red-700 text-white' },
+                      scanner_tool: { label: 'Scanner (sqlmap/nikto)', color: 'bg-fuchsia-700 text-white' },
+                      bot_scraper: { label: 'Bot/Scraper', color: 'bg-blue-600 text-white' },
+                      honeypot_hit: { label: 'Honeypot Hit', color: 'bg-purple-600 text-white' },
+                      cloud_hosting: { label: 'Cloud/Hosting IP', color: 'bg-gray-700 text-white' },
+                      other: { label: 'Outros', color: 'bg-gray-400 text-white' },
+                    };
+                    const info = labels[type] || { label: type, color: 'bg-gray-500 text-white' };
+                    return (
+                      <span key={type} className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${info.color}`}>
+                        {info.label}: {count}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="grid md:grid-cols-2 gap-3">
+              {attackReport.byProvider && Object.keys(attackReport.byProvider).length > 0 && (
+                <div className="bg-white rounded-lg p-3 border border-red-100">
+                  <p className="text-xs font-bold text-gray-700 mb-2">Ataques por Provedor:</p>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                    {Object.entries(attackReport.byProvider).sort((a: any, b: any) => b[1] - a[1]).slice(0, 20).map(([provider, count]: any) => (
+                      <span key={provider} className="px-2 py-1 bg-red-50 border border-red-200 rounded text-[10px] font-mono">
+                        {provider}: <b>{count}</b>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {attackReport.byCountry && Object.keys(attackReport.byCountry).length > 0 && (
+                <div className="bg-white rounded-lg p-3 border border-red-100">
+                  <p className="text-xs font-bold text-gray-700 mb-2">Ataques por Pais:</p>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                    {Object.entries(attackReport.byCountry).sort((a: any, b: any) => b[1] - a[1]).map(([country, count]: any) => (
+                      <span key={country} className="px-2 py-1 bg-orange-50 border border-orange-200 rounded text-[10px] font-mono">
+                        {country}: <b>{count}</b>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Top IPs Atacantes */}
+            {attackReport.topIps && attackReport.topIps.length > 0 && (
+              <div className="bg-white rounded-lg p-3 border border-red-100">
+                <p className="text-xs font-bold text-gray-700 mb-2">Top IPs Atacantes (clique pra bloquear):</p>
+                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                  {attackReport.topIps.slice(0, 20).map((item: any) => (
+                    <button
+                      key={item.key}
+                      onClick={() => handleBlock(item.key)}
+                      className="px-2 py-1 bg-red-50 border border-red-300 rounded text-[10px] font-mono hover:bg-red-200 transition-colors"
+                    >
+                      {item.key} <b className="text-red-700">({item.count})</b>
+                    </button>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Top Endpoints Atacados */}
+            {attackReport.topPaths && attackReport.topPaths.length > 0 && (
+              <div className="bg-white rounded-lg p-3 border border-red-100">
+                <p className="text-xs font-bold text-gray-700 mb-2">Top Endpoints Atacados:</p>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {attackReport.topPaths.slice(0, 15).map((item: any) => (
+                    <div key={item.key} className="flex items-center justify-between text-[10px] font-mono px-2 py-0.5 bg-red-50 rounded">
+                      <span className="truncate">{item.key}</span>
+                      <b className="text-red-700 ml-2">{item.count}</b>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Top User-Agents */}
+            {attackReport.topUserAgents && attackReport.topUserAgents.length > 0 && (
+              <div className="bg-white rounded-lg p-3 border border-red-100">
+                <p className="text-xs font-bold text-gray-700 mb-2">Top User-Agents Atacantes:</p>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {attackReport.topUserAgents.slice(0, 10).map((item: any) => (
+                    <div key={item.key} className="flex items-center justify-between text-[10px] font-mono px-2 py-0.5 bg-red-50 rounded">
+                      <span className="truncate">{item.key || '(vazio)'}</span>
+                      <b className="text-red-700 ml-2 shrink-0">{item.count}</b>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Timeline horaria */}
+            {attackReport.timeline && attackReport.timeline.length > 0 && (
+              <div className="bg-white rounded-lg p-3 border border-red-100">
+                <p className="text-xs font-bold text-gray-700 mb-2">
+                  Timeline Horaria de Ataques
+                  {attackReport.peakHour && <span className="ml-2 text-red-600">— Pico: {attackReport.peakHour.hour} ({attackReport.peakHour.count} ataques)</span>}
+                </p>
+                <div className="flex items-end gap-0.5 h-20 overflow-x-auto">
+                  {attackReport.timeline.map((bucket: any) => {
+                    const maxCount = Math.max(...attackReport.timeline.map((b: any) => b.count));
+                    const heightPct = maxCount > 0 ? (bucket.count / maxCount) * 100 : 0;
+                    return (
+                      <div key={bucket.hour} className="flex flex-col items-center group relative shrink-0" style={{ width: '8px' }}>
+                        <div
+                          className="w-full bg-red-500 hover:bg-red-700 transition-colors rounded-t"
+                          style={{ height: `${Math.max(heightPct, 4)}%` }}
+                          title={`${bucket.hour}: ${bucket.count} ataques`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[9px] text-gray-400 mt-1">Cada barra = 1 hora — passe o mouse para detalhes</p>
+              </div>
+            )}
+
             {attackReport.events && attackReport.events.length > 0 && (
               <div className="bg-white rounded-lg border border-red-100 overflow-hidden">
-                <div className="px-3 py-2 bg-red-50 border-b border-red-100">
+                <div className="px-3 py-2 bg-red-50 border-b border-red-100 flex items-center justify-between">
                   <p className="text-xs font-bold text-red-800">Log de Eventos ({attackReport.events.length})</p>
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([JSON.stringify(attackReport, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `attack-report-${new Date().toISOString().substring(0, 19).replace(/:/g, '-')}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="px-2 py-1 bg-red-600 text-white text-[10px] font-bold rounded hover:bg-red-700"
+                  >
+                    Download JSON Forense
+                  </button>
                 </div>
-                <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
+                <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
                   {attackReport.events.map((e: any, i: number) => (
-                    <div key={i} className="px-3 py-2 text-[10px] flex items-center justify-between">
+                    <div key={i} className="px-3 py-2 text-[10px]">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono font-bold text-gray-800">{e.ip}</span>
+                        {e.attackTypes && e.attackTypes.map((t: string) => (
+                          <span key={t} className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[9px] font-bold">{t}</span>
+                        ))}
                         {e.geo && <span className="text-gray-400">{e.geo}</span>}
-                        {e.org && <span className="text-blue-500">{e.org}</span>}
-                        <span className="text-red-400 italic">{e.reason?.substring(0, 60)}</span>
+                        {e.org && <span className="text-blue-500 text-[9px]">{e.org}</span>}
+                        <span className="text-gray-400 ml-auto shrink-0">{new Date(e.timestamp).toLocaleString('pt-BR')}</span>
                       </div>
-                      <span className="text-gray-400 shrink-0 ml-2">{new Date(e.timestamp).toLocaleString('pt-BR')}</span>
+                      <div className="text-red-500 italic mt-0.5 truncate">{e.reason}</div>
+                      {e.path && <div className="text-gray-500 font-mono mt-0.5 truncate">path: {e.path}</div>}
                     </div>
                   ))}
                 </div>
