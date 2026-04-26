@@ -47,6 +47,7 @@ import revenueRoutes from './routes/revenue.routes';
 import serproRoutes from './routes/serpro.routes';
 import securityRoutes from './routes/security.routes';
 import { antiScrapingMiddleware } from './middleware/antiScraping';
+import { deceptionMiddleware } from './middleware/deception';
 import { watermarkResponseMiddleware } from './middleware/watermark';
 
 dotenv.config();
@@ -156,6 +157,10 @@ app.use('/api/partner/register', authLimiter);
 app.use('/api/batch/upload', uploadLimiter);
 app.use('/api/hpc', hpcLimiter);
 app.use('/api/', apiLimiter);
+
+// Deception (honeypot ativo: serve dados falsos + canary tokens em rotas-isca)
+// Roda ANTES do antiScraping — depois de servir bait, marca IP como bloqueado
+app.use(deceptionMiddleware);
 
 // Anti-scraping (detecta e bloqueia bots, crawlers e comportamento automatizado)
 app.use(antiScrapingMiddleware);

@@ -46,6 +46,12 @@ export default function SegurancaPage() {
     { ...SWR_OPTIONS_FAST, refreshInterval: 10000 },
   );
 
+  const { data: deception } = useSWR<any>(
+    '/api/security/deception/report',
+    authedFetcher,
+    { ...SWR_OPTIONS_FAST, refreshInterval: 15000 },
+  );
+
   const apiBase = typeof window !== 'undefined'
     ? (localStorage.getItem('apiUrl') || process.env.NEXT_PUBLIC_API_URL || '')
     : '';
@@ -284,6 +290,133 @@ export default function SegurancaPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Deception / Honeypot Ativo */}
+      {deception && deception.totalEvents > 0 && (
+        <div className="mb-6 bg-gradient-to-r from-purple-50 to-fuchsia-50 border border-purple-300 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-sm font-bold text-purple-900 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
+                Honeypot Ativo — Atacantes que Morderam o Bait
+              </h2>
+              <p className="text-[10px] text-purple-500 mt-0.5">Conteudo falso servido em rotas-isca + canary tokens rastreaveis</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="bg-white rounded-lg p-3 border border-purple-100 text-center">
+              <p className="text-2xl font-bold text-purple-700">{deception.totalEvents}</p>
+              <p className="text-[10px] text-gray-500">Bait Hits Total</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-purple-100 text-center">
+              <p className="text-2xl font-bold text-fuchsia-700">{deception.topVictims?.length || 0}</p>
+              <p className="text-[10px] text-gray-500">Atacantes Unicos</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-purple-100 text-center">
+              <p className="text-2xl font-bold text-pink-700">{((deception.totalBytesServed || 0) / 1024).toFixed(1)} kB</p>
+              <p className="text-[10px] text-gray-500">Lixo Servido</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-purple-100 text-center">
+              <p className="text-2xl font-bold text-violet-700">{deception.totalTarpitMinutes || 0}min</p>
+              <p className="text-[10px] text-gray-500">Tempo Tarpit</p>
+            </div>
+          </div>
+
+          {/* CANARY ALERTS — quando alguem tenta usar credencial falsa */}
+          {deception.triggeredCanaries && deception.triggeredCanaries.length > 0 && (
+            <div className="mb-4 bg-red-50 border-2 border-red-400 rounded-xl p-4">
+              <p className="text-xs font-bold text-red-900 mb-2 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                CANARY DISPARADO ({deception.triggeredCanaries.length}) — credenciais falsas que vazaram foram USADAS!
+              </p>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {deception.triggeredCanaries.map((c: any, i: number) => (
+                  <div key={i} className="bg-white rounded p-2 text-[10px]">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="font-mono text-red-700 font-bold">{c.token}</span>
+                      <span className="text-gray-400">{new Date(c.triggeredAt).toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div className="mt-1 text-gray-600">
+                      Servido para <b className="font-mono">{c.servedToIp}</b> ({c.baitType}) → <b className="text-red-600">usado por {c.triggerSource}</b>
+                    </div>
+                    {c.triggerNote && <div className="text-gray-400 italic">{c.triggerNote}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tipos de bait mais usados */}
+          {deception.byBaitType && Object.keys(deception.byBaitType).length > 0 && (
+            <div className="bg-white rounded-lg p-3 border border-purple-100 mb-3">
+              <p className="text-xs font-bold text-gray-700 mb-2">Baits Mais Mordidos:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.entries(deception.byBaitType).sort((a: any, b: any) => b[1] - a[1]).map(([type, count]: any) => (
+                  <span key={type} className="px-2 py-1 bg-purple-50 border border-purple-200 rounded text-[10px] font-mono">
+                    {type}: <b className="text-purple-700">{count}</b>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Top vítimas (atacantes que mais morderam) */}
+          {deception.topVictims && deception.topVictims.length > 0 && (
+            <div className="bg-white rounded-lg p-3 border border-purple-100 mb-3">
+              <p className="text-xs font-bold text-gray-700 mb-2">Top Atacantes Iludidos (clique para bloquear):</p>
+              <div className="flex flex-wrap gap-1.5">
+                {deception.topVictims.slice(0, 15).map((v: any) => (
+                  <button
+                    key={v.ip}
+                    onClick={() => handleBlock(v.ip)}
+                    className="px-2 py-1 bg-purple-50 border border-purple-300 rounded text-[10px] font-mono hover:bg-purple-200 transition-colors"
+                  >
+                    {v.ip} <b className="text-purple-700">({v.count}x)</b>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Eventos recentes */}
+          {deception.recentEvents && deception.recentEvents.length > 0 && (
+            <div className="bg-white rounded-lg border border-purple-100 overflow-hidden">
+              <div className="px-3 py-2 bg-purple-50 border-b border-purple-100 flex items-center justify-between">
+                <p className="text-xs font-bold text-purple-900">Bait Hits Recentes ({deception.recentEvents.length})</p>
+                <button
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify(deception, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `deception-report-${new Date().toISOString().substring(0, 19).replace(/:/g, '-')}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="px-2 py-0.5 bg-purple-600 text-white text-[9px] font-bold rounded hover:bg-purple-700"
+                >
+                  Download JSON
+                </button>
+              </div>
+              <div className="max-h-56 overflow-y-auto divide-y divide-gray-50">
+                {deception.recentEvents.slice(0, 30).map((e: any, i: number) => (
+                  <div key={i} className="px-3 py-1.5 text-[10px]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-gray-800">{e.ip}</span>
+                      <span className="px-1.5 py-0 bg-purple-100 text-purple-700 rounded text-[9px] font-bold">{e.baitType}</span>
+                      <span className="text-gray-500 font-mono truncate flex-1">{e.path}</span>
+                      <span className="text-purple-600">{e.responseSize}b</span>
+                      <span className="text-violet-600">{e.durationMs}ms</span>
+                      <span className="text-gray-400 shrink-0">{new Date(e.timestamp).toLocaleTimeString('pt-BR')}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

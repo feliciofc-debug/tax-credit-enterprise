@@ -850,3 +850,40 @@ model SecurityEvent {
   @@index([createdAt])
   @@index([action])
 }
+
+// Deception / Honeypot: log do que cada atacante "extraiu" (dados falsos servidos)
+model DeceptionEvent {
+  id            String   @id @default(cuid())
+  ip            String
+  path          String                          // qual honeypot ele acessou
+  userAgent     String?
+  baitType      String                          // env_file, fake_api, admin_panel, config_json, canary_token
+  canaryToken   String?                         // token unico embedded no bait (rastreavel se vazar)
+  responseSize  Int      @default(0)
+  durationMs    Int?                            // tempo de resposta do tarpit (se aplicavel)
+  country       String?
+  region        String?
+  city          String?
+  isp           String?
+  org           String?
+  createdAt     DateTime @default(now())
+  @@index([ip])
+  @@index([canaryToken])
+  @@index([baitType])
+  @@index([createdAt])
+}
+
+// Canary tokens emitidos — quando aparecerem em logs de auth ou pastebin, sabemos
+model CanaryToken {
+  id            String   @id @default(cuid())
+  token         String   @unique               // ex: ck_live_xxx ou aws_AKIAFAKE...
+  servedToIp    String                          // pra qual IP foi entregue
+  baitType      String                          // env_file, api_response, etc.
+  servedAt      DateTime @default(now())
+  triggeredAt   DateTime?                       // quando alguem TENTOU usar
+  triggerSource String?                         // ip que tentou usar
+  triggerNote   String?                         // descricao do trigger
+  @@index([token])
+  @@index([servedToIp])
+  @@index([triggeredAt])
+}

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { getBlockedIps, getAllTrackedIps, unblockIp, blockIp, addBlockedRange, getBlockedRanges, addWhitelistIp, getWhitelistIps, getAttackReport, getEscalationStatus, activateLockdown, deactivateLockdown, isLockdownActive } from '../middleware/antiScraping';
+import { getDeceptionReport, checkCanaryTrigger } from '../middleware/deception';
 
 const router = Router();
 
@@ -132,6 +133,27 @@ router.post('/lockdown/deactivate', authenticateToken, async (_req: Request, res
 router.get('/lockdown/status', authenticateToken, async (_req: Request, res: Response) => {
   try {
     return res.json({ success: true, data: { active: isLockdownActive() } });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Deception — honeypot ativo
+router.get('/deception/report', authenticateToken, async (_req: Request, res: Response) => {
+  try {
+    const report = await getDeceptionReport();
+    return res.json({ success: true, data: report });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/deception/check-canary', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { token, sourceIp, note } = req.body;
+    if (!token) return res.status(400).json({ success: false, error: 'token obrigatorio' });
+    const triggered = await checkCanaryTrigger(token, sourceIp || 'unknown', note || 'manual check');
+    return res.json({ success: true, data: { triggered } });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }
