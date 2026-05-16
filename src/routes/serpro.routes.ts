@@ -3,6 +3,7 @@ import { authenticateToken } from '../middleware/auth';
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
 import { serproService, SerproCredentials, SerproServiceName } from '../services/serpro.service';
+import { runCrossAnalysisDirfFontes } from '../services/cross-analysis.service';
 
 const router = Router();
 
@@ -292,6 +293,121 @@ router.post('/connections/:id/processos', authenticateToken, async (req: Request
 // ============================================================
 // Logs
 // ============================================================
+
+// ============================================================
+// Onda 3 — Coletas federais via procuracao
+// ============================================================
+
+async function loadConn(req: Request, res: Response) {
+  const conn = await prisma.serproConnection.findUnique({ where: { id: req.params.id } });
+  if (!conn) { res.status(404).json({ success: false, error: 'Conexao nao encontrada' }); return null; }
+  return conn;
+}
+
+router.post('/connections/:id/perdcomp/lista', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj, periodoInicio, periodoFim } = req.body;
+    const r = await serproService.listarPerdcomp(getCredentials(conn), conn.cnpj, contribuinteCnpj, periodoInicio, periodoFim);
+    await logCall(conn.id, 'perdcomp_lista', 'LISTARPERDCOMP22', r);
+    res.json({ success: r.success, data: r.data });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+router.post('/connections/:id/perdcomp/consulta', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj, numero } = req.body;
+    const r = await serproService.consultarPerdcomp(getCredentials(conn), conn.cnpj, contribuinteCnpj, numero);
+    await logCall(conn.id, 'perdcomp_consulta', 'CONSPERDCOMP21', r);
+    res.json({ success: r.success, data: r.data });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+router.post('/connections/:id/perdcomp/despacho', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj, numero } = req.body;
+    const r = await serproService.consultarDespachoPerdcomp(getCredentials(conn), conn.cnpj, contribuinteCnpj, numero);
+    await logCall(conn.id, 'perdcomp_despacho', 'CONSDESPACHO23', r);
+    res.json({ success: r.success, data: r.data });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+router.post('/connections/:id/dctf', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj, pa } = req.body;
+    const r = await serproService.consultarDCTF(getCredentials(conn), conn.cnpj, contribuinteCnpj, pa);
+    await logCall(conn.id, 'dctf_consultar', 'CONSDECLARACAO15', r);
+    res.json({ success: r.success, data: r.data });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+router.post('/connections/:id/dirf', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj, anoBase } = req.body;
+    const r = await serproService.consultarDIRF(getCredentials(conn), conn.cnpj, contribuinteCnpj, parseInt(anoBase, 10));
+    await logCall(conn.id, 'dirf_consultar', 'CONSDECLARACAO17', r);
+    res.json({ success: r.success, data: r.data });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+router.post('/connections/:id/fontes-pagadoras', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj, anoBase } = req.body;
+    const r = await serproService.consultarFontesPagadoras(getCredentials(conn), conn.cnpj, contribuinteCnpj, parseInt(anoBase, 10));
+    await logCall(conn.id, 'fontes_pagadoras', 'CONSFONTES18', r);
+    res.json({ success: r.success, data: r.data });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+router.post('/connections/:id/parcelamento-pgfn', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj } = req.body;
+    const r = await serproService.consultarParcelamentoPGFN(getCredentials(conn), conn.cnpj, contribuinteCnpj);
+    await logCall(conn.id, 'parcelamento_pgfn', 'CONSPARCSIMP41', r);
+    res.json({ success: r.success, data: r.data });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+router.post('/connections/:id/parcelamento-rfb', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj } = req.body;
+    const r = await serproService.consultarParcelamentoRFB(getCredentials(conn), conn.cnpj, contribuinteCnpj);
+    await logCall(conn.id, 'parcelamento_rfb', 'CONSPARCDEB42', r);
+    res.json({ success: r.success, data: r.data });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+router.post('/connections/:id/caixa-postal/detalhe', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj, isn } = req.body;
+    const r = await serproService.detalharCaixaPostal(getCredentials(conn), conn.cnpj, contribuinteCnpj, isn);
+    await logCall(conn.id, 'caixa_postal_detalhe2', 'MSGDETALHAMENTO62', r);
+    res.json({ success: r.success, data: r.data });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ============================================================
+// Cross-Analysis: DIRF x Fontes Pagadoras
+// Detector automatico de divergencias e teses tributarias
+// ============================================================
+router.post('/connections/:id/analise-cruzada/dirf-fontes', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const conn = await loadConn(req, res); if (!conn) return;
+    const { contribuinteCnpj, anoBase } = req.body;
+    if (!contribuinteCnpj || !anoBase) return res.status(400).json({ success: false, error: 'contribuinteCnpj e anoBase obrigatorios' });
+    const result = await runCrossAnalysisDirfFontes(getCredentials(conn), conn.cnpj, contribuinteCnpj, parseInt(anoBase, 10));
+    await logCall(conn.id, 'analise_cruzada_dirf_fontes', 'CROSS_ANALYSIS', { success: true, raw: { result: result.resumo }, durationMs: 0 });
+    res.json({ success: true, data: result });
+  } catch (e: any) { res.status(500).json({ success: false, error: e.message }); }
+});
 
 router.get('/connections/:id/logs', authenticateToken, async (req: Request, res: Response) => {
   try {

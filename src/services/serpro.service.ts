@@ -58,6 +58,17 @@ const CATALOG = {
   pgdasd_declaracoes: { idSistema: 'PGDASD', idServico: 'CONSDECLARACAO13', versao: '1.0', tipo: 'Consultar' },
   eventos_pj: { idSistema: 'EVENTOSATUALIZACAO', idServico: 'SOLICEVENTOSPJ132', versao: '1.0', tipo: 'Monitorar' },
   autenticar_procurador: { idSistema: 'AUTENTICAPROCURADOR', idServico: 'ENVIOXMLASSINADO81', versao: '1.0', tipo: 'Apoiar' },
+  // === Onda 3 — Coletas federais via procuracao ===
+  perdcomp_consulta: { idSistema: 'PERDCOMP', idServico: 'CONSPERDCOMP21', versao: '1.0', tipo: 'Consultar' },
+  perdcomp_lista: { idSistema: 'PERDCOMP', idServico: 'LISTARPERDCOMP22', versao: '1.0', tipo: 'Consultar' },
+  perdcomp_despacho: { idSistema: 'PERDCOMP', idServico: 'CONSDESPACHO23', versao: '1.0', tipo: 'Consultar' },
+  dctf_consultar: { idSistema: 'DCTF', idServico: 'CONSDECLARACAO15', versao: '1.0', tipo: 'Consultar' },
+  dctf_recibo: { idSistema: 'DCTF', idServico: 'CONSRECIBO16', versao: '1.0', tipo: 'Consultar' },
+  dirf_consultar: { idSistema: 'DIRF', idServico: 'CONSDECLARACAO17', versao: '1.0', tipo: 'Consultar' },
+  fontes_pagadoras: { idSistema: 'FONTESPAG', idServico: 'CONSFONTES18', versao: '1.0', tipo: 'Consultar' },
+  caixa_postal_detalhe2: { idSistema: 'CAIXAPOSTAL', idServico: 'MSGDETALHAMENTO62', versao: '1.0', tipo: 'Consultar' },
+  parcelamento_pgfn: { idSistema: 'PARCPGFN', idServico: 'CONSPARCSIMP41', versao: '1.0', tipo: 'Consultar' },
+  parcelamento_rfb: { idSistema: 'PARCRFB', idServico: 'CONSPARCDEB42', versao: '1.0', tipo: 'Consultar' },
 } as const;
 
 export type SerproServiceName = keyof typeof CATALOG;
@@ -204,6 +215,82 @@ class SerproService {
     });
   }
 
+  /**
+   * Cadastra procuracao eletronica programaticamente via SERPRO
+   * AUTENTICAPROCURADOR/ENVIOXMLASSINADO81.
+   *
+   * IMPORTANTE: esse fluxo exige um XML de procuracao previamente
+   * assinado digitalmente pelo OUTORGANTE (cert ICP-Brasil do cliente
+   * final). Sem isso, retorna { sent:false, reason:'cert_outorgante_indisponivel' }
+   * e o caller deve cair para o fluxo manual (link magico).
+   *
+   * Contratos SERPRO padrao nao incluem esse servico — o caller checa
+   * disponibilidade chamando primeiro.
+   */
+  async cadastrarProcuracaoAuto(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    outorganteCnpj: string,
+    outorgadoCnpj: string,
+    xmlAssinadoBase64?: string,
+    poderes?: string[],
+  ): Promise<{ success: boolean; protocol?: string; reason?: string; raw?: any }> {
+    if (!xmlAssinadoBase64) {
+      return { success: false, reason: 'xml_assinado_outorgante_indisponivel' };
+    }
+    try {
+      const result = await this.callService(
+        creds,
+        'autenticar_procurador',
+        contratanteCnpj,
+        outorganteCnpj,
+        {
+          outorgante: outorganteCnpj.replace(/\D/g, ''),
+          tipoOutorgante: '2',
+          outorgado: outorgadoCnpj.replace(/\D/g, ''),
+          tipoOutorgado: '2',
+          xmlAssinado: xmlAssinadoBase64,
+          poderes: poderes || [],
+        },
+      );
+      if (!result.success) {
+        return { success: false, reason: 'serpro_recusou', raw: result.raw };
+      }
+      const protocol = (result.data && (result.data.protocolo || result.data.protocol)) || undefined;
+      return { success: true, protocol, raw: result.raw };
+    } catch (err: any) {
+      return { success: false, reason: err.message, raw: null };
+    }
+  }
+
+  /**
+   * Verifica se o contrato/conexao SERPRO atual permite usar
+   * AUTENTICAPROCURADOR. Chama uma operacao "leve" e interpreta o
+   * codigo de erro retornado.
+   */
+  async checkAutoGrantCapability(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+  ): Promise<{ supported: boolean; reason?: string }> {
+    try {
+      // tenta callService com payload vazio so para ver se o servico esta habilitado
+      const result = await this.callService(
+        creds,
+        'autenticar_procurador',
+        contratanteCnpj,
+        contratanteCnpj,
+        { outorgante: contratanteCnpj.replace(/\D/g, ''), tipoOutorgante: '2' },
+      );
+      const raw = JSON.stringify(result.raw || {}).toLowerCase();
+      if (raw.includes('nao autorizado') || raw.includes('not authorized') || raw.includes('servico nao contratado')) {
+        return { supported: false, reason: 'servico_nao_contratado' };
+      }
+      return { supported: true };
+    } catch (err: any) {
+      return { supported: false, reason: err.message };
+    }
+  }
+
   async consultarPagamentos(
     creds: SerproCredentials,
     contratanteCnpj: string,
@@ -284,6 +371,142 @@ class SerproService {
     return this.callService(creds, 'pgdasd_extrato', contratanteCnpj, contribuinteCnpj, { numeroDas });
   }
 
+  // ============================================================
+  // PER/DCOMP — Pedidos de Restituicao e Compensacao
+  // ============================================================
+  async listarPerdcomp(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+    periodoInicio?: string,
+    periodoFim?: string,
+  ) {
+    return this.callService(creds, 'perdcomp_lista', contratanteCnpj, contribuinteCnpj, {
+      cnpj: contribuinteCnpj.replace(/\D/g, ''),
+      ...(periodoInicio ? { periodoInicio } : {}),
+      ...(periodoFim ? { periodoFim } : {}),
+    });
+  }
+
+  async consultarPerdcomp(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+    numero: string,
+  ) {
+    return this.callService(creds, 'perdcomp_consulta', contratanteCnpj, contribuinteCnpj, {
+      numero,
+      cnpj: contribuinteCnpj.replace(/\D/g, ''),
+    });
+  }
+
+  async consultarDespachoPerdcomp(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+    numero: string,
+  ) {
+    return this.callService(creds, 'perdcomp_despacho', contratanteCnpj, contribuinteCnpj, {
+      numero,
+      cnpj: contribuinteCnpj.replace(/\D/g, ''),
+    });
+  }
+
+  // ============================================================
+  // DCTF (classica, nao Web)
+  // ============================================================
+  async consultarDCTF(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+    pa: string,
+  ) {
+    return this.callService(creds, 'dctf_consultar', contratanteCnpj, contribuinteCnpj, {
+      cnpj: contribuinteCnpj.replace(/\D/g, ''),
+      pa,
+    });
+  }
+
+  async consultarReciboDCTF(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+    pa: string,
+  ) {
+    return this.callService(creds, 'dctf_recibo', contratanteCnpj, contribuinteCnpj, {
+      cnpj: contribuinteCnpj.replace(/\D/g, ''),
+      pa,
+    });
+  }
+
+  // ============================================================
+  // DIRF
+  // ============================================================
+  async consultarDIRF(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+    anoBase: number,
+  ) {
+    return this.callService(creds, 'dirf_consultar', contratanteCnpj, contribuinteCnpj, {
+      cnpj: contribuinteCnpj.replace(/\D/g, ''),
+      anoBase,
+    });
+  }
+
+  // ============================================================
+  // Fontes Pagadoras
+  // ============================================================
+  async consultarFontesPagadoras(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+    anoBase: number,
+  ) {
+    return this.callService(creds, 'fontes_pagadoras', contratanteCnpj, contribuinteCnpj, {
+      cnpj: contribuinteCnpj.replace(/\D/g, ''),
+      anoBase,
+    });
+  }
+
+  // ============================================================
+  // Caixa Postal — detalhe de mensagem especifica
+  // ============================================================
+  async detalharCaixaPostal(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+    isn: string,
+  ) {
+    return this.callService(creds, 'caixa_postal_detalhe2', contratanteCnpj, contribuinteCnpj, {
+      ni: contribuinteCnpj.replace(/\D/g, ''),
+      isn,
+    });
+  }
+
+  // ============================================================
+  // Parcelamentos
+  // ============================================================
+  async consultarParcelamentoPGFN(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+  ) {
+    return this.callService(creds, 'parcelamento_pgfn', contratanteCnpj, contribuinteCnpj, {
+      cnpj: contribuinteCnpj.replace(/\D/g, ''),
+    });
+  }
+
+  async consultarParcelamentoRFB(
+    creds: SerproCredentials,
+    contratanteCnpj: string,
+    contribuinteCnpj: string,
+  ) {
+    return this.callService(creds, 'parcelamento_rfb', contratanteCnpj, contribuinteCnpj, {
+      cnpj: contribuinteCnpj.replace(/\D/g, ''),
+    });
+  }
+
   getAvailableServices(): Array<{ name: string; key: SerproServiceName; description: string; tipo: string; status: string }> {
     return [
       { name: 'Verificar Procuracao', key: 'procuracoes', description: 'Verifica procuracao eletronica entre outorgante e procurador', tipo: 'Consultar', status: 'ativo' },
@@ -301,6 +524,17 @@ class SerproService {
       { name: 'Extrato DAS (Simples)', key: 'pgdasd_extrato', description: 'Consulta extrato do DAS do Simples Nacional', tipo: 'Consultar', status: 'ativo' },
       { name: 'Declaracoes PGDASD', key: 'pgdasd_declaracoes', description: 'Consulta declaracoes transmitidas do PGDAS-D', tipo: 'Consultar', status: 'ativo' },
       { name: 'Eventos Atualizacao PJ', key: 'eventos_pj', description: 'Solicita eventos de atualizacao de PJ em lote', tipo: 'Monitorar', status: 'ativo' },
+      // Onda 3 — coletas via procuracao
+      { name: 'PER/DCOMP — Listar',     key: 'perdcomp_lista',    description: 'Lista PER/DCOMP transmitidos pelo contribuinte', tipo: 'Consultar', status: 'ativo' },
+      { name: 'PER/DCOMP — Detalhe',    key: 'perdcomp_consulta', description: 'Consulta um PER/DCOMP especifico (conteudo completo)', tipo: 'Consultar', status: 'ativo' },
+      { name: 'PER/DCOMP — Despacho',   key: 'perdcomp_despacho', description: 'Consulta despacho decisorio do PER/DCOMP', tipo: 'Consultar', status: 'ativo' },
+      { name: 'DCTF (classica)',        key: 'dctf_consultar',    description: 'Consulta declaracao DCTF (nao DCTFWeb) por periodo', tipo: 'Consultar', status: 'ativo' },
+      { name: 'DCTF — Recibo',          key: 'dctf_recibo',       description: 'Recibo da DCTF classica', tipo: 'Consultar', status: 'ativo' },
+      { name: 'DIRF',                   key: 'dirf_consultar',    description: 'Consulta declaracao DIRF do ano-base', tipo: 'Consultar', status: 'ativo' },
+      { name: 'Fontes Pagadoras',       key: 'fontes_pagadoras',  description: 'Lista fontes pagadoras informadas a Receita', tipo: 'Consultar', status: 'ativo' },
+      { name: 'Caixa Postal — Detalhe', key: 'caixa_postal_detalhe2', description: 'Detalha mensagem especifica da caixa postal', tipo: 'Consultar', status: 'ativo' },
+      { name: 'Parcelamento PGFN',      key: 'parcelamento_pgfn', description: 'Consulta parcelamentos PGFN ativos do contribuinte', tipo: 'Consultar', status: 'ativo' },
+      { name: 'Parcelamento RFB',       key: 'parcelamento_rfb',  description: 'Consulta parcelamentos RFB ativos do contribuinte', tipo: 'Consultar', status: 'ativo' },
     ];
   }
 

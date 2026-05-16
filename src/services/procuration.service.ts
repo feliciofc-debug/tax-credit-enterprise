@@ -9,8 +9,177 @@ const ATOM = {
   cargo: 'Socio-Administrador',
 } as const;
 
+// ============================================================
+// PRESETS DE PROCURACAO ELETRONICA (e-CAC PJ → Procurador PJ)
+// ============================================================
+//
+// Cada preset descreve um Procurador (escritorio contabil/tributario)
+// que recebe outorga via e-CAC pelo cliente final.
+//
+// O preset CONSULTRI segue o documento oficial
+// "Passo a Passo - Procuracao Eletronica para MOT - CONSULTRI - JUN2025"
+// e contem a lista canonica dos 45 poderes a serem marcados no CAV.
+// ============================================================
+
+export type ProcuracaoPresetKey = 'consultri' | 'atom';
+
+export interface ProcuracaoPreset {
+  key: ProcuracaoPresetKey;
+  razaoSocial: string;
+  nomeFantasia: string;
+  cnpj: string;
+  prazoMeses: number;
+  versaoDoc: string;
+  poderes: string[];
+}
+
+/**
+ * Preset CONSULTRI — CONSULTORIA E ANALISES TRIBUTARIAS - CONSULTRIBR
+ * Fonte: "Passo a Passo - Procuracao Eletronica para MOT - CONSULTRI - JUN2025.pdf"
+ */
+export const CONSULTRI_PRESET: ProcuracaoPreset = {
+  key: 'consultri',
+  razaoSocial: 'CONSULTORIA E ANALISES TRIBUTARIAS - CONSULTRIBR',
+  nomeFantasia: 'CONSULTRI',
+  cnpj: '27.591.029/0001-41',
+  prazoMeses: 12,
+  versaoDoc: 'JUN2025',
+  poderes: [
+    'E-social - Download',
+    'E-social - Download Domestico',
+    'E-social - Grupo Acesso WEB',
+    'E-social - Grupo Desligamento',
+    'E-social - Grupo Especial',
+    'E-social - Grupo Preliminar',
+    'E-social - Grupo Rotinas',
+    'E-social - Grupo SST',
+    'Acessar o sistema DCTFWeb',
+    'Acessar o Programa Especial de Regularizacao Tributaria - PERT',
+    'Acessar o Programa Especial de Regularizacao Tributaria - PERT - Debito Previdenciario',
+    'Acessar PER/DCOMP WEB',
+    'Aplicacoes PGFN - Parcelamento Simplificado',
+    'Caixa Postal - Mensagens',
+    'CHATRFB - Todos os servicos disponiveis no canal de atendimento',
+    'Copia de Declaracao',
+    'Declaracoes - DCTF (Acesso ao conteudo da declaracao, extrato e 2a via do recibo)',
+    'Declaracoes - DIPJ/PJ Simplificada (Acesso ao conteudo da declaracao, extrato e 2a via do recibo)',
+    'Declaracoes - DIRF (Acesso ao conteudo da declaracao, extrato e 2a via do recibo)',
+    'Download da Escrituracao Contabil Digital (SPED-ECD) utilizando o Receitanet Bx',
+    'Download da Escrituracao Fiscal Digital (SPED-EFD) utilizando o Receitanet Bx',
+    'Download de EFD-PIS/Cofins atraves do ReceitaNetBX',
+    'Download dos arquivos SPED Dados Agregados e Termos da ECD utilizando o ReceitanetBx',
+    'Fontes Pagadoras',
+    'Intimacao DCTF',
+    'Pagamento e Parcelamento Lei n 12.996/2014',
+    'Pagamentos - Comprovante de Arrecadacao',
+    'Parcelamento - Solicitar e Acompanhar',
+    'Parcelamento de Debitos',
+    'Parcelamento Especial - Opcoes da Lei 11.941/2009',
+    'Parcelamento Simplificado Previdenciario',
+    'Parcelamento Simplificado Previdenciario DAU',
+    'Processos Digitais',
+    'Programa de Regularizacao Tributaria - Debitos Previdenciarios',
+    'Programa de Regularizacao Tributaria - Demais Debitos',
+    'PER/DCOMP - Consulta Analise Preliminar/Autorregularizacao',
+    'PER/DCOMP - Consulta Despacho Decisorio',
+    'PER/DCOMP - Consulta Intimacao',
+    'PER/DCOMP - Consulta Processamento',
+    'PGF - Consulta Debitos inscritos a partir de 01/11/2012',
+    'PGFN - Consulta Debitos inscritos a partir de 01/11/2012',
+    'Reabertura Pagamento e Parcelamento Lei n 11.941/09',
+    'Situacao Fiscal do Contribuinte',
+    'SPED ECD - Central de Balancos',
+    'SPED-ECF (Escrituracao Contabil Fiscal)',
+    'SPED-ECF-Download - Download via ReceitanetBX da Escrituracao Contabil Fiscal',
+  ],
+};
+
+/**
+ * Preset ATOM/TaxCredit Enterprise (procurador interno).
+ * Espelha o CONSULTRI nos poderes mas com CNPJ proprio.
+ */
+export const ATOM_PRESET: ProcuracaoPreset = {
+  key: 'atom',
+  razaoSocial: ATOM.razaoSocial,
+  nomeFantasia: 'TaxCredit Enterprise',
+  cnpj: ATOM.cnpj,
+  prazoMeses: 24,
+  versaoDoc: 'v1',
+  poderes: CONSULTRI_PRESET.poderes, // mesmo escopo operacional
+};
+
+const PRESETS: Record<ProcuracaoPresetKey, ProcuracaoPreset> = {
+  consultri: CONSULTRI_PRESET,
+  atom: ATOM_PRESET,
+};
+
+export function getProcuracaoPreset(key: string): ProcuracaoPreset | null {
+  return PRESETS[key as ProcuracaoPresetKey] || null;
+}
+
+export function listProcuracaoPresets(): ProcuracaoPreset[] {
+  return Object.values(PRESETS);
+}
+
+/**
+ * Calcula o "diff" entre os poderes outorgados (retorno SERPRO OBTERPROCURACAO41)
+ * e os poderes requeridos pelo preset.
+ *
+ * SERPRO retorna estrutura `{ procuracoes: [{ servico, ... }] }` ou similar; aqui
+ * normalizamos pelo nome textual contendo substrings caracteristicas.
+ */
+export function diffPoderes(
+  presetKey: string,
+  serproResposta: any,
+): { granted: string[]; missing: string[]; extras: string[] } {
+  const preset = getProcuracaoPreset(presetKey);
+  if (!preset) return { granted: [], missing: [], extras: [] };
+
+  // SERPRO pode devolver "servicos" / "poderes" / "atos" — varremos em profundidade
+  const grantedRaw: string[] = [];
+  const visit = (node: any) => {
+    if (!node) return;
+    if (Array.isArray(node)) { node.forEach(visit); return; }
+    if (typeof node === 'object') {
+      for (const v of Object.values(node)) visit(v);
+      if (typeof (node as any).servico === 'string') grantedRaw.push((node as any).servico);
+      if (typeof (node as any).descricao === 'string') grantedRaw.push((node as any).descricao);
+      if (typeof (node as any).nome === 'string') grantedRaw.push((node as any).nome);
+    }
+  };
+  visit(serproResposta);
+  const grantedSet = new Set(grantedRaw.map(normalize));
+
+  const granted: string[] = [];
+  const missing: string[] = [];
+  for (const poder of preset.poderes) {
+    const norm = normalize(poder);
+    const found = Array.from(grantedSet).some(g => g.includes(norm) || norm.includes(g));
+    if (found) granted.push(poder);
+    else missing.push(poder);
+  }
+
+  const extras: string[] = [];
+  for (const g of grantedRaw) {
+    const norm = normalize(g);
+    const inPreset = preset.poderes.some(p => normalize(p).includes(norm) || norm.includes(normalize(p)));
+    if (!inPreset) extras.push(g);
+  }
+
+  return { granted, missing, extras };
+}
+
+function normalize(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export interface ProcurationParams {
-  type: 'particular' | 'ecac_guide' | 'sefaz';
+  type: 'particular' | 'ecac_guide' | 'sefaz' | 'ecac_preset';
   lawyerScenario: 'atom_lawyer' | 'partner_lawyer' | 'client_lawyer';
   clienteNome: string;
   clienteCnpj: string;
@@ -28,6 +197,7 @@ export interface ProcurationParams {
   poderes?: string[];
   cidade?: string;
   data?: string;
+  presetKey?: ProcuracaoPresetKey; // novo: gera guia baseado em preset
 }
 
 const DEFAULT_PODERES = [
@@ -51,12 +221,102 @@ export function generateProcurationDocument(params: ProcurationParams): string {
       return generateParticular(params);
     case 'ecac_guide':
       return generateEcacGuide(params);
+    case 'ecac_preset':
+      return generateEcacPresetGuide(params);
     case 'sefaz':
       return generateSefaz(params);
     default:
       logger.warn(`Tipo de procuracao desconhecido: ${type}`);
       return generateParticular(params);
   }
+}
+
+/**
+ * Guia passo a passo para o cliente outorgar procuracao eletronica PJ -> PJ
+ * no e-CAC, com base em um PRESET (ex.: CONSULTRI). Reflete o documento
+ * oficial JUN2025 do parceiro, com checklist exato dos poderes a marcar.
+ */
+function generateEcacPresetGuide(p: ProcurationParams): string {
+  const preset = getProcuracaoPreset(p.presetKey || 'consultri');
+  if (!preset) {
+    logger.warn(`Preset desconhecido: ${p.presetKey}`);
+    return generateEcacGuide(p);
+  }
+  const poderesChecklist = preset.poderes.map(pod => `   [ ] ${pod}`).join('\n');
+
+  return `=============================================================================
+GUIA - PROCURACAO ELETRONICA e-CAC -> ${preset.nomeFantasia}
+=============================================================================
+Documento de referencia: ${preset.nomeFantasia} ${preset.versaoDoc}
+Procurador: ${preset.razaoSocial}
+CNPJ Procurador: ${preset.cnpj}
+Vigencia sugerida: ${preset.prazoMeses} meses
+=============================================================================
+
+Prezado(a) representante legal de ${p.clienteNome},
+
+Para que ${preset.nomeFantasia} possa acessar em seu nome os sistemas da
+Receita Federal e operar a recuperacao tributaria, intimacoes e
+declaracoes, e necessario conceder uma procuracao eletronica no CAV/e-CAC.
+
+=============================================================================
+PRE-REQUISITOS
+=============================================================================
+  - Certificado Digital (e-CNPJ A1 ou A3) da empresa ${p.clienteCnpj} instalado
+  - Java atualizado (o assinador SERPRO baixa um arquivo .jnlp)
+  - Navegador moderno (Chrome ou Edge recomendado)
+
+=============================================================================
+PASSO A PASSO (resumo dos 8 passos oficiais)
+=============================================================================
+
+1) Acesse https://cav.receita.fazenda.gov.br/autenticacao/login
+   - Clique em "Entrar com gov.br" e depois em "Seu certificado digital"
+   - Selecione o certificado da empresa e digite o PIN
+
+2) Dentro do e-CAC, acesse:
+   "Senhas e Procuracoes" -> "Cadastro, Consulta e Procuracao e-CAC"
+   -> "Cadastrando Procuracao"
+
+3) No formulario:
+   - Outorgante: ja preenchido com sua empresa (${p.clienteCnpj})
+   - Dados do Procurador -> selecione "Pessoa Juridica"
+   - CNPJ do Procurador: ${preset.cnpj}
+   - O nome sera preenchido automaticamente:
+       ${preset.razaoSocial}
+
+4) Em "Dados da Procuracao":
+   - Data-fim da vigencia: ${preset.prazoMeses} meses a partir de hoje
+
+5) Marque OBRIGATORIAMENTE os seguintes poderes (checklist):
+
+${poderesChecklist}
+
+6) Clique em "Cadastrar Procuracao".
+   - O sistema fara o download do assinador SERPRO (.jnlp)
+   - Execute o arquivo via Java e clique em "Assinar"
+   - Digite novamente o PIN do certificado
+
+7) Pronto! A procuracao esta cadastrada e ativa imediatamente.
+
+8) Avise ${preset.nomeFantasia} (ou utilize o botao "Verificar agora" na
+   plataforma TaxCredit) para que a ativacao seja confirmada via SERPRO
+   Integra Contador. Em seguida, ja podemos consumir Caixa Postal,
+   DCTFWeb, Situacao Fiscal, PER/DCOMP e os SPED automaticamente.
+
+=============================================================================
+IMPORTANTE
+=============================================================================
+  - Em caso de duvida na execucao do assinador (.jnlp), atualize o Java
+    (https://www.java.com/pt-BR/download/) e tente novamente.
+  - A procuracao pode ser revogada a qualquer momento por voce no proprio
+    e-CAC, na aba "Procuracoes ativas".
+  - A plataforma TaxCredit verificara a vigencia automaticamente e
+    notificara 60, 30 e 7 dias antes do vencimento para renovacao.
+
+${preset.nomeFantasia} - via TaxCredit Enterprise
+=============================================================================
+`;
 }
 
 function generateParticular(p: ProcurationParams): string {

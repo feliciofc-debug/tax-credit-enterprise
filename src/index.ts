@@ -36,6 +36,9 @@ import formalizationRoutes from './routes/formalization.routes';
 import hpcRoutes from './routes/hpc.routes';
 import thesisRoutes from './routes/thesis.routes';
 import procurationRoutes from './routes/procuration.routes';
+import publicOutorgaRoutes from './routes/public-outorga.routes';
+import consultriRoutes from './routes/consultri.routes';
+import serproWebhookRoutes from './routes/serpro-webhook.routes';
 import byceoRoutes from './routes/byceo.routes';
 import jurisprudenciaRoutes from './routes/jurisprudencia.routes';
 import conformidadeFacilRoutes from './routes/conformidade-facil.routes';
@@ -209,6 +212,9 @@ app.use('/api/formalization', formalizationRoutes);
 app.use('/api/hpc', hpcRoutes);
 app.use('/api/thesis', thesisRoutes);
 app.use('/api/procuration', procurationRoutes);
+app.use('/api/public/outorga', publicOutorgaRoutes);
+app.use('/api/consultri', consultriRoutes);
+app.use('/api/webhooks', serproWebhookRoutes);
 app.use('/api/v1/byceo', byceoRoutes);
 app.use('/api/jurisprudencia', jurisprudenciaRoutes);
 app.use('/api/conformidade-facil', conformidadeFacilRoutes);
@@ -249,6 +255,14 @@ server.keepAliveTimeout = 620000;
 server.headersTimeout = 660000;
 
 // Cron: varredura de jurisprudência (diária às 6h, quando habilitada)
+// Onda 2 CONSULTRI — scheduler de automacao (polling SERPRO, alertas, coletas)
+try {
+  const { startConsultriScheduler } = require('./services/consultri-scheduler.service');
+  startConsultriScheduler();
+} catch (e: any) {
+  logger.warn(`[Bootstrap] ConsultriScheduler nao iniciado: ${e.message}`);
+}
+
 if (process.env.JURISPRUDENCIA_VARREDURA_CRON_ENABLED === 'true') {
   try {
     const cron = require('node-cron');
