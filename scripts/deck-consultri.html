@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>TaxCredit Enterprise · Apresentação Consultri</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #0a0a0f;
+    color: #fff;
+    -webkit-font-smoothing: antialiased;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @page { size: A4 landscape; margin: 0; }
+
+  .slide {
+    width: 297mm;
+    height: 210mm;
+    padding: 14mm 18mm;
+    page-break-after: always;
+    page-break-inside: avoid;
+    background: #0a0a0f;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .slide:last-child { page-break-after: auto; }
+
+  /* Page number footer */
+  .slide::after {
+    content: attr(data-num) " / 22  ·  TaxCredit Enterprise  ·  Confidencial Consultri";
+    position: absolute;
+    bottom: 6mm;
+    right: 18mm;
+    font-size: 8pt;
+    color: #555;
+    letter-spacing: 0.5px;
+  }
+  .slide::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: linear-gradient(to right, #10b981, #f97316);
+  }
+
+  /* Typography */
+  h1 { font-size: 48pt; font-weight: 900; letter-spacing: -0.02em; line-height: 1.05; }
+  h2 { font-size: 28pt; font-weight: 900; letter-spacing: -0.01em; line-height: 1.1; margin-bottom: 4pt; }
+  h3 { font-size: 14pt; font-weight: 700; }
+  h4 { font-size: 11pt; font-weight: 700; }
+  p { font-size: 10pt; line-height: 1.55; color: #d1d5db; }
+  .small { font-size: 8.5pt; }
+  .xs { font-size: 7.5pt; }
+  .mono { font-family: 'Consolas', monospace; }
+
+  .emerald { color: #34d399; }
+  .orange  { color: #fb923c; }
+  .blue    { color: #60a5fa; }
+  .purple  { color: #c084fc; }
+  .red     { color: #f87171; }
+  .amber   { color: #fbbf24; }
+  .rose    { color: #fb7185; }
+  .indigo  { color: #818cf8; }
+  .teal    { color: #2dd4bf; }
+  .violet  { color: #a78bfa; }
+  .gray    { color: #9ca3af; }
+  .muted   { color: #6b7280; }
+  .bold    { font-weight: 700; }
+  .black   { font-weight: 900; }
+
+  .header {
+    display: flex; align-items: center; gap: 8pt;
+    margin-bottom: 12pt;
+  }
+  .header .num {
+    font-family: 'Consolas', monospace;
+    font-size: 9pt;
+    color: #34d399;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 4px;
+    padding: 2pt 6pt;
+  }
+  .header .line {
+    flex: 1; height: 1px;
+    background: linear-gradient(to right, rgba(16,185,129,0.5), transparent);
+  }
+  .subtitle { font-size: 12pt; color: #9ca3af; margin-top: 2pt; }
+
+  .grid { display: grid; gap: 10pt; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr 1fr; }
+  .g4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+
+  .card {
+    background: #11131a;
+    border: 1px solid #1f2330;
+    border-radius: 10pt;
+    padding: 10pt 12pt;
+  }
+  .card-em {
+    background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05));
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 10pt;
+    padding: 10pt 12pt;
+  }
+  .card-or {
+    background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(249,115,22,0.05));
+    border: 1px solid rgba(249,115,22,0.3);
+    border-radius: 10pt;
+    padding: 10pt 12pt;
+  }
+  .card-red {
+    background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.04));
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 10pt;
+    padding: 10pt 12pt;
+  }
+  .card-pp {
+    background: linear-gradient(135deg, rgba(168,85,247,0.1), rgba(168,85,247,0.04));
+    border: 1px solid rgba(168,85,247,0.3);
+    border-radius: 10pt;
+    padding: 10pt 12pt;
+  }
+  .card-bl {
+    background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.04));
+    border: 1px solid rgba(59,130,246,0.3);
+    border-radius: 10pt;
+    padding: 10pt 12pt;
+  }
+
+  .stat { padding: 8pt 10pt; border-radius: 8pt; }
+  .stat .label { font-size: 7pt; text-transform: uppercase; letter-spacing: 0.8pt; opacity: 0.7; font-weight: 700; }
+  .stat .value { font-size: 22pt; font-weight: 900; margin-top: 3pt; }
+  .stat .sub { font-size: 7.5pt; color: #6b7280; margin-top: 2pt; }
+
+  ul { list-style: none; }
+  ul li { font-size: 9.5pt; line-height: 1.55; color: #d1d5db; padding: 1pt 0; }
+  ul.check li::before { content: "✓ "; color: #34d399; font-weight: bold; margin-right: 4pt; }
+  ul.dot li::before { content: "• "; color: #6b7280; margin-right: 2pt; }
+
+  .pill {
+    display: inline-block;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    color: #34d399;
+    font-size: 7.5pt;
+    font-weight: 700;
+    padding: 2pt 8pt;
+    border-radius: 99pt;
+    letter-spacing: 0.5pt;
+    text-transform: uppercase;
+  }
+  .pill-orange {
+    background: rgba(249,115,22,0.1);
+    border: 1px solid rgba(249,115,22,0.3);
+    color: #fb923c;
+  }
+  .pill-red {
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #f87171;
+  }
+  .pill-amber {
+    background: rgba(245,158,11,0.15);
+    border: 1px solid rgba(245,158,11,0.3);
+    color: #fbbf24;
+  }
+  .pill-blue {
+    background: rgba(59,130,246,0.15);
+    border: 1px solid rgba(59,130,246,0.3);
+    color: #60a5fa;
+  }
+
+  .tributo-row {
+    display: flex; align-items: center; gap: 12pt;
+    padding: 8pt 12pt;
+    background: #11131a;
+    border: 1px solid #1f2330;
+    border-radius: 10pt;
+    margin-bottom: 6pt;
+  }
+  .tributo-sigla {
+    width: 50pt; height: 50pt; flex-shrink: 0;
+    border-radius: 8pt;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13pt; font-weight: 900; color: #fff;
+  }
+  .alert-row {
+    background: #11131a;
+    border: 1px solid #1f2330;
+    border-radius: 8pt;
+    padding: 6pt 10pt;
+    margin-bottom: 4pt;
+    border-left-width: 3px;
+  }
+  .br-red { border-left-color: #ef4444 !important; }
+  .br-am  { border-left-color: #f59e0b !important; }
+  .br-bl  { border-left-color: #3b82f6 !important; }
+
+  .footer-cta {
+    margin-top: auto;
+    padding: 10pt;
+    background: #11131a;
+    border: 1px solid #1f2330;
+    border-radius: 8pt;
+    text-align: center;
+  }
+
+  .cover {
+    height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+  }
+  .cover h1 { font-size: 60pt; }
+  .cover .tag { display: inline-flex; align-items: center; gap: 6pt;
+    background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 99pt; padding: 4pt 12pt; margin-bottom: 16pt;
+  }
+  .cover .tag-dot { width: 6pt; height: 6pt; background: #34d399; border-radius: 99pt; }
+  .cover .tag-text { font-size: 8pt; color: #34d399; text-transform: uppercase; letter-spacing: 1.5pt; font-weight: 700; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 4pt 6pt; text-align: left; font-size: 9pt; border-bottom: 1px solid #1f2330; }
+  th { color: #34d399; text-transform: uppercase; font-size: 7.5pt; letter-spacing: 0.5pt; }
+  .center { text-align: center; }
+  .right { text-align: right; }
+  .strong-row td { font-weight: 700; color: #fff; }
+
+  .plan-box {
+    border: 1px solid #1f2330;
+    border-radius: 8pt;
+    padding: 6pt 10pt;
+    background: rgba(31,35,48,0.4);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4pt;
+  }
+  .plan-box.featured {
+    border: 2px solid #10b981;
+    background: rgba(16,185,129,0.1);
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 00 — CAPA                                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="01">
+  <div class="cover">
+    <div class="tag">
+      <div class="tag-dot"></div>
+      <span class="tag-text">Apresentação Institucional</span>
+    </div>
+    <h1>Tax<span class="emerald">Credit</span> Enterprise</h1>
+    <p style="font-size: 16pt; color: #9ca3af; max-width: 580pt; margin: 14pt 0 30pt 0;">
+      A infraestrutura tecnológica que falta no setor de recuperação tributária
+    </p>
+    <div class="grid g3" style="width: 100%; max-width: 600pt;">
+      <div class="card center">
+        <p class="xs muted" style="text-transform: uppercase; letter-spacing: 1pt; font-weight: 700;">Preparado para</p>
+        <p style="font-size: 18pt; font-weight: 900; margin: 4pt 0;">Consultri</p>
+        <p class="xs muted">Av. Paulista, 807 · São Paulo</p>
+      </div>
+      <div class="card center">
+        <p class="xs muted" style="text-transform: uppercase; letter-spacing: 1pt; font-weight: 700;">Reunião com</p>
+        <p style="font-size: 18pt; font-weight: 900; margin: 4pt 0;">Tadeu</p>
+        <p class="xs muted">CEO Consultri</p>
+      </div>
+      <div class="card center">
+        <p class="xs muted" style="text-transform: uppercase; letter-spacing: 1pt; font-weight: 700;">Apresentado por</p>
+        <p style="font-size: 18pt; font-weight: 900; margin: 4pt 0;">TaxCredit</p>
+        <p class="xs muted">Enterprise Edition</p>
+      </div>
+    </div>
+    <p class="xs muted" style="margin-top: 28pt;">15 de maio de 2026 · 11h00</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 01 — CONSULTRI                                          -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="02">
+  <div class="header">
+    <span class="num">01</span>
+    <div class="line"></div>
+  </div>
+  <h2>A Consultri</h2>
+  <p class="subtitle">Uma operação que respeitamos</p>
+
+  <div class="grid g4" style="margin: 14pt 0;">
+    <div class="stat" style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);">
+      <p class="label emerald">Desde</p>
+      <p class="value emerald">2017</p>
+      <p class="sub">9 anos de mercado</p>
+    </div>
+    <div class="stat" style="background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.3);">
+      <p class="label orange">Consultores</p>
+      <p class="value orange">120+</p>
+      <p class="sub">rede nacional</p>
+    </div>
+    <div class="stat" style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3);">
+      <p class="label blue">Projetos</p>
+      <p class="value blue">800+</p>
+      <p class="sub">ponta a ponta</p>
+    </div>
+    <div class="stat" style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3);">
+      <p class="label purple">Recuperado</p>
+      <p class="value purple">R$ 400M</p>
+      <p class="sub">em créditos tributários</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 4pt;">
+    <p style="font-size: 11pt; line-height: 1.6;">
+      Em <span class="emerald bold">9 anos</span> a Consultri consolidou uma operação nacional com cobertura
+      completa em tributação federal e estadual. Atua nas esferas
+      <span class="orange bold">administrativa e judicial</span> com sede em São Paulo (Av. Paulista, 807)
+      e parceiros em todo o Brasil.
+    </p>
+    <div class="grid g2" style="margin-top: 10pt;">
+      <div>
+        <p class="emerald xs" style="text-transform: uppercase; letter-spacing: 0.5pt; font-weight: 700;">Esfera Administrativa</p>
+        <ul class="dot" style="margin-top: 4pt;">
+          <li>PIS/COFINS (insumos, monofásico, ST, decisões STJ/STF)</li>
+          <li>IRPJ e CSLL</li>
+          <li>IPI e ICMS</li>
+          <li>Créditos previdenciários (folha)</li>
+          <li>Simples Nacional</li>
+          <li>Regimes especiais</li>
+        </ul>
+      </div>
+      <div>
+        <p class="orange xs" style="text-transform: uppercase; letter-spacing: 0.5pt; font-weight: 700;">Esfera Judicial</p>
+        <ul class="dot" style="margin-top: 4pt;">
+          <li>Exclusão ISS da base PIS/COFINS</li>
+          <li>Exclusão PIS/COFINS de suas próprias bases</li>
+          <li>Aproveitamento de créditos ICMS-ST</li>
+          <li>Exclusão PIS/COFINS da base do ICMS</li>
+          <li>Subvenções para investimento</li>
+          <li>Manutenção de benefícios fiscais e regimes especiais</li>
+        </ul>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top: 10pt; border-left: 2px solid #10b981; padding-left: 8pt; font-style: italic;">
+      Clientes referência incluem grandes operações de varejo nacional. Uma das poucas consultorias do Brasil
+      que entrega projeto fim-a-fim, do diagnóstico à homologação.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 02 — DESAFIO                                            -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="03">
+  <div class="header"><span class="num">02</span><div class="line"></div></div>
+  <h2>O desafio de escalar</h2>
+  <p class="subtitle">Como dobrar resultado sem dobrar o time?</p>
+
+  <div class="grid g2" style="margin-top: 16pt; flex: 1;">
+    <div class="card-red">
+      <p class="red xs" style="text-transform: uppercase; letter-spacing: 0.5pt; font-weight: 700; margin-bottom: 8pt;">Modelo atual (tradicional)</p>
+      <ul>
+        <li>○ Cada projeto exige consultor dedicado por semanas</li>
+        <li>○ Coleta manual de SPED, planilhas, conferência</li>
+        <li>○ Tempo médio de diagnóstico: 15-45 dias</li>
+        <li>○ Auditoria de qualidade depende de revisão humana</li>
+        <li>○ Atualização de jurisprudência é manual</li>
+        <li>○ Escala = contratação de mais consultores</li>
+        <li>○ Compliance contínuo é inviável operacionalmente</li>
+      </ul>
+    </div>
+    <div class="card-em">
+      <p class="emerald xs" style="text-transform: uppercase; letter-spacing: 0.5pt; font-weight: 700; margin-bottom: 8pt;">Modelo com TaxCredit</p>
+      <ul>
+        <li>● Plataforma faz a triagem em minutos</li>
+        <li>● Upload de SPED com parser nativo (registro a registro)</li>
+        <li>● Diagnóstico completo em <span class="emerald bold">menos de 3 minutos</span></li>
+        <li>● Memória de cálculo transparente e auditável</li>
+        <li>● Base de teses atualizável <span class="emerald bold">sem deploy</span></li>
+        <li>● Escala = mais uso da plataforma (sem novos consultores)</li>
+        <li>● Compliance contínuo vira receita recorrente</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-cta">
+    <p style="font-size: 11pt;">
+      <span class="emerald bold">Premissa:</span> A TaxCredit não substitui consultor.
+      Ela multiplica a capacidade de cada um por <span class="emerald bold">10x a 50x</span>.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 03 — DOIS PRODUTOS                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="04">
+  <div class="header"><span class="num">03</span><div class="line"></div></div>
+  <h2>Dois produtos integrados</h2>
+  <p class="subtitle">O passado e o presente da empresa-cliente</p>
+
+  <div class="grid g2" style="margin-top: 14pt; flex: 1;">
+    <div class="card-em">
+      <div style="display: flex; align-items: center; gap: 10pt; margin-bottom: 8pt;">
+        <div style="width: 36pt; height: 36pt; background: rgba(16,185,129,0.25); border-radius: 8pt; display: flex; align-items: center; justify-content: center; font-size: 18pt;">📊</div>
+        <div>
+          <p class="emerald xs" style="text-transform: uppercase; letter-spacing: 0.5pt; font-weight: 700;">Produto 1 · Passado</p>
+          <h3>Recuperação 5 Anos</h3>
+        </div>
+      </div>
+      <p style="margin-bottom: 8pt;">Análise retroativa de 60 meses de escrituração fiscal e contábil para identificar todos os créditos tributários pagos a maior nos últimos 5 anos.</p>
+      <ul class="check">
+        <li>4 escriturações: EFD ICMS/IPI, EFD Contribuições, ECF, ECD</li>
+        <li>7 tributos: ICMS, PIS, COFINS, IRPJ, CSLL, IPI, INSS</li>
+        <li>34 teses tributárias auditadas (STF, STJ, CARF)</li>
+        <li>Documentação completa pra protocolo (PER/DCOMP, parecer, petição)</li>
+      </ul>
+      <div style="margin-top: 10pt; padding: 6pt 10pt; background: rgba(16,185,129,0.15); border-radius: 6pt;">
+        <p class="emerald xs bold" style="text-transform: uppercase;">Recuperação típica</p>
+        <p style="font-size: 22pt; font-weight: 900;">3% a 5%</p>
+        <p class="xs muted">do total pago em impostos nos últimos 5 anos</p>
+      </div>
+    </div>
+    <div class="card-or">
+      <div style="display: flex; align-items: center; gap: 10pt; margin-bottom: 8pt;">
+        <div style="width: 36pt; height: 36pt; background: rgba(249,115,22,0.25); border-radius: 8pt; display: flex; align-items: center; justify-content: center; font-size: 18pt;">⚡</div>
+        <div>
+          <p class="orange xs" style="text-transform: uppercase; letter-spacing: 0.5pt; font-weight: 700;">Produto 2 · Presente</p>
+          <h3>Compliance em Tempo Real</h3>
+        </div>
+      </div>
+      <p style="margin-bottom: 8pt;">Monitoramento contínuo das escriturações mensais. A plataforma analisa cada SPED e gera alertas de pagamento indevido <span class="orange bold">antes do recolhimento</span>.</p>
+      <ul class="check">
+        <li>Análise mensal automática de SPEDs novos</li>
+        <li>Alertas por severidade (crítico, warning, info)</li>
+        <li>Parecer técnico e base legal em cada alerta</li>
+        <li>Dashboard com economia comprovada em tempo real</li>
+      </ul>
+      <div style="margin-top: 10pt; padding: 6pt 10pt; background: rgba(249,115,22,0.15); border-radius: 6pt;">
+        <p class="orange xs bold" style="text-transform: uppercase;">Economia mensal típica</p>
+        <p style="font-size: 22pt; font-weight: 900;">R$ 80K — R$ 500K</p>
+        <p class="xs muted">por empresa monitorada (varia por porte e setor)</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-cta">
+    <p><span class="emerald bold">Passado + Presente.</span> O cliente recupera o que pagou indevidamente nos últimos 5 anos <span class="orange bold">e nunca mais paga a mais</span> a partir de hoje.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 04 — PRODUTO 1 OVERVIEW                                 -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="05">
+  <div class="header"><span class="num">04</span><div class="line"></div></div>
+  <h2>Produto 1 — Recuperação 5 Anos</h2>
+  <p class="subtitle">A engenharia por trás do diagnóstico retroativo</p>
+
+  <div class="grid g3" style="margin-top: 12pt;">
+    <div class="card"><h4 class="emerald">4 Escriturações nativas</h4><p class="small" style="margin-top: 3pt;">Parser próprio para EFD ICMS/IPI, EFD Contribuições, ECF e ECD. Leitura registro por registro com precisão de centavos.</p></div>
+    <div class="card"><h4 class="emerald">Análise via IA Claude</h4><p class="small" style="margin-top: 3pt;">Modelo de última geração analisa cada registro, cruza dados contábeis com fiscais e identifica oportunidades em segundos.</p></div>
+    <div class="card"><h4 class="emerald">34 Teses + Jurisprudência</h4><p class="small" style="margin-top: 3pt;">Base de conhecimento STF, STJ e CARF. Cada oportunidade vem com acórdão real, tema vinculante e fundamentação completa.</p></div>
+    <div class="card"><h4 class="emerald">Cruzamento contábil ECD</h4><p class="small" style="margin-top: 3pt;">Análise conta por conta da ECD para identificar insumos sob o conceito amplo do STJ (Tema 779).</p></div>
+    <div class="card"><h4 class="emerald">OCR para PDFs digitalizados</h4><p class="small" style="margin-top: 3pt;">Tesseract.js + OCR Space para escrituração antiga digitalizada. Suporte a PDFs de até 30 páginas.</p></div>
+    <div class="card"><h4 class="emerald">Documentação automatizada</h4><p class="small" style="margin-top: 3pt;">Gera memória de cálculo, planilha de apuração, parecer técnico e petição administrativa em PDFs prontos pra protocolo.</p></div>
+    <div class="card"><h4 class="emerald">Validação contábil automática</h4><p class="small" style="margin-top: 3pt;">Regras de consistência: somas batem, períodos coerentes, CFOPs válidos, CNPJs válidos.</p></div>
+    <div class="card"><h4 class="emerald">Extração automática de períodos</h4><p class="small" style="margin-top: 3pt;">Identifica ano, mês, trimestre, regime tributário e dados da empresa direto do documento.</p></div>
+    <div class="card"><h4 class="emerald">Processamento em batch</h4><p class="small" style="margin-top: 3pt;">Até 200 arquivos simultâneos. Bull + Redis. 5 workers paralelos. Análise de 5 anos em ~30 min.</p></div>
+  </div>
+
+  <div class="footer-cta">
+    <div class="grid g3" style="gap: 12pt;">
+      <div class="center"><p style="font-size: 22pt; font-weight: 900;" class="emerald">60 meses</p><p class="xs muted">de SPED retroativo analisado</p></div>
+      <div class="center"><p style="font-size: 22pt; font-weight: 900;" class="emerald">&lt; 3 min</p><p class="xs muted">por análise completa</p></div>
+      <div class="center"><p style="font-size: 22pt; font-weight: 900;" class="emerald">99,9%</p><p class="xs muted">de precisão (memória rastreável)</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 05 — TRIBUTOS                                           -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="06">
+  <div class="header"><span class="num">05</span><div class="line"></div></div>
+  <h2>Tributos cobertos</h2>
+  <p class="subtitle">7 tributos · 34 teses · jurisprudência atualizada</p>
+
+  <div style="margin-top: 10pt; flex: 1; display: flex; flex-direction: column; gap: 4pt;">
+    <div class="tributo-row">
+      <div class="tributo-sigla" style="background: linear-gradient(135deg, #14b8a6, #0f766e);">ICMS</div>
+      <div class="grid g2" style="flex: 1; gap: 2pt 12pt;">
+        <p class="small">• Saldo credor acumulado (LC 87/96 art. 25)</p>
+        <p class="small">• Ressarcimento ICMS-ST (ADI 2.777 STF)</p>
+        <p class="small">• TUSD/TUST energia</p>
+        <p class="small">• CIAP ativo imobilizado</p>
+        <p class="small">• Crédito extemporâneo</p>
+        <p class="small">• Transferência entre filiais (ADC 49)</p>
+      </div>
+    </div>
+    <div class="tributo-row">
+      <div class="tributo-sigla" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">PIS</div>
+      <div class="grid g2" style="flex: 1; gap: 2pt 12pt;">
+        <p class="small">• Exclusão ICMS da base (Tema 69 STF — RE 574.706)</p>
+        <p class="small">• Créditos sobre insumos (Tema 779 STJ)</p>
+        <p class="small">• Monofásicos pagos a maior</p>
+        <p class="small">• PIS-Importação não aproveitado</p>
+        <p class="small">• Receitas financeiras</p>
+      </div>
+    </div>
+    <div class="tributo-row">
+      <div class="tributo-sigla" style="background: linear-gradient(135deg, #6366f1, #4338ca);">COFINS</div>
+      <div class="grid g2" style="flex: 1; gap: 2pt 12pt;">
+        <p class="small">• Exclusão ICMS da base (Tema 69 STF)</p>
+        <p class="small">• Créditos sobre insumos (Tema 779 STJ)</p>
+        <p class="small">• Monofásicos pagos a maior</p>
+        <p class="small">• COFINS-Importação não aproveitado</p>
+        <p class="small">• ISS fora da base</p>
+      </div>
+    </div>
+    <div class="tributo-row">
+      <div class="tributo-sigla" style="background: linear-gradient(135deg, #f59e0b, #b45309);">IRPJ</div>
+      <div class="grid g2" style="flex: 1; gap: 2pt 12pt;">
+        <p class="small">• Benefícios fiscais ICMS fora da base (LC 160/17)</p>
+        <p class="small">• SELIC sobre repetição de indébito</p>
+        <p class="small">• PAT — dedução integral</p>
+        <p class="small">• Equiparação hospitalar</p>
+      </div>
+    </div>
+    <div class="tributo-row">
+      <div class="tributo-sigla" style="background: linear-gradient(135deg, #f97316, #c2410c);">CSLL</div>
+      <div class="grid g2" style="flex: 1; gap: 2pt 12pt;">
+        <p class="small">• Benefícios fiscais ICMS fora da base (LC 160)</p>
+        <p class="small">• SELIC sobre repetição de indébito (Tema 1.079 STF)</p>
+        <p class="small">• Equiparação hospitalar para saúde</p>
+      </div>
+    </div>
+    <div class="tributo-row">
+      <div class="tributo-sigla" style="background: linear-gradient(135deg, #f43f5e, #be123c);">INSS</div>
+      <div class="grid g2" style="flex: 1; gap: 2pt 12pt;">
+        <p class="small">• Verbas indenizatórias (aviso prévio, terço férias)</p>
+        <p class="small">• RAT/FAP incorreto</p>
+        <p class="small">• Salário-maternidade (Tema 72 STF)</p>
+        <p class="small">• FGTS sobre verbas indenizatórias</p>
+      </div>
+    </div>
+    <div class="tributo-row">
+      <div class="tributo-sigla" style="background: linear-gradient(135deg, #8b5cf6, #5b21b6);">IPI</div>
+      <div class="grid g2" style="flex: 1; gap: 2pt 12pt;">
+        <p class="small">• Crédito sobre produtos finais não tributados (STJ unânime)</p>
+        <p class="small">• Crédito presumido (exportação)</p>
+        <p class="small">• Estorno indevido</p>
+      </div>
+    </div>
+  </div>
+  <p class="xs muted center" style="margin-top: 6pt; font-style: italic;">
+    Cada tese tem fundamentação legal explícita, acórdão real, tema vinculante (quando aplicável) e probabilidade ajustada por jurisprudência mais recente do tribunal competente.
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 06 — FLUXO                                              -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="07">
+  <div class="header"><span class="num">06</span><div class="line"></div></div>
+  <h2>Fluxo operacional</h2>
+  <p class="subtitle">Da escrituração ao protocolo, sem intervenção manual</p>
+
+  <div style="margin-top: 12pt; display: flex; flex-direction: column; gap: 5pt;">
+    <div class="card" style="display: flex; gap: 12pt; align-items: flex-start;">
+      <div style="width: 32pt; height: 32pt; border-radius: 8pt; background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14pt; flex-shrink: 0;" class="emerald">1</div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><h4>Upload do SPED</h4><span class="xs mono muted">~30 seg</span></div>
+        <p class="small">Consultor sobe arquivos direto do ERP do cliente. Aceita ZIP, individual, ou conexão direta via webhook (Omie, SAP, Oracle, TOTVS).</p>
+      </div>
+    </div>
+    <div class="card" style="display: flex; gap: 12pt; align-items: flex-start;">
+      <div style="width: 32pt; height: 32pt; border-radius: 8pt; background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.4); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14pt; flex-shrink: 0;" class="blue">2</div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><h4>Parser nativo SPED</h4><span class="xs mono muted">~5 seg</span></div>
+        <p class="small">Leitura registro por registro. C170 (PIS/COFINS por item), C120 (importação), E110 (apuração ICMS), E520 (apuração PIS/COFINS), I150-I355 (plano de contas ECD).</p>
+      </div>
+    </div>
+    <div class="card" style="display: flex; gap: 12pt; align-items: flex-start;">
+      <div style="width: 32pt; height: 32pt; border-radius: 8pt; background: rgba(168,85,247,0.2); border: 1px solid rgba(168,85,247,0.4); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14pt; flex-shrink: 0;" class="purple">3</div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><h4>Cruzamento + IA Claude</h4><span class="xs mono muted">~60 seg</span></div>
+        <p class="small">IA cruza dados fiscais com contábeis, aplica 34 teses tributárias, ajusta probabilidade por jurisprudência vinculante.</p>
+      </div>
+    </div>
+    <div class="card" style="display: flex; gap: 12pt; align-items: flex-start;">
+      <div style="width: 32pt; height: 32pt; border-radius: 8pt; background: rgba(249,115,22,0.2); border: 1px solid rgba(249,115,22,0.4); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14pt; flex-shrink: 0;" class="orange">4</div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><h4>Memória de cálculo</h4><span class="xs mono muted">instantâneo</span></div>
+        <p class="small">Cada R$ 1,00 de crédito identificado é rastreável até a linha do SPED original. Memória de cálculo blindada para auditoria.</p>
+      </div>
+    </div>
+    <div class="card" style="display: flex; gap: 12pt; align-items: flex-start;">
+      <div style="width: 32pt; height: 32pt; border-radius: 8pt; background: rgba(244,63,94,0.2); border: 1px solid rgba(244,63,94,0.4); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14pt; flex-shrink: 0;" class="rose">5</div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><h4>Documentação completa</h4><span class="xs mono muted">~15 seg</span></div>
+        <p class="small">Geração automática de parecer técnico (PDF), memória (PDF), planilha de apuração (Excel), petição administrativa, declaração de não utilização prévia.</p>
+      </div>
+    </div>
+    <div class="card" style="display: flex; gap: 12pt; align-items: flex-start;">
+      <div style="width: 32pt; height: 32pt; border-radius: 8pt; background: rgba(236,72,153,0.2); border: 1px solid rgba(236,72,153,0.4); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14pt; flex-shrink: 0;" style="color: #ec4899">6</div>
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><h4>Protocolo PER/DCOMP</h4><span class="xs mono muted">manual</span></div>
+        <p class="small">Documentos prontos para protocolo na Receita Federal (PER/DCOMP) e SEFAZ estadual. Cliente apenas assina e envia.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 07 — CRUZAMENTO ECD                                     -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="08">
+  <div class="header"><span class="num">07</span><div class="line"></div></div>
+  <h2>Cruzamento Contábil ECD</h2>
+  <p class="subtitle">Análise conta por conta — conceito amplo de insumo (STJ Tema 779)</p>
+
+  <div class="card" style="margin-top: 12pt; flex: 1;">
+    <p style="margin-bottom: 10pt;">
+      Diferente dos concorrentes que olham só o SPED Fiscal, a TaxCredit lê o
+      <span class="emerald bold">plano de contas completo da ECD</span> e classifica cada conta de
+      despesa/custo aplicando o conceito amplo de insumo definido pelo STJ no
+      <span class="emerald bold">REsp 1.221.170 (Tema 779)</span>.
+    </p>
+    <div class="grid g2">
+      <div class="card-em" style="padding: 8pt 10pt;">
+        <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 4pt;">Elegíveis (créditos identificados)</p>
+        <p class="xs muted" style="margin-bottom: 4pt;">A plataforma classifica como insumo:</p>
+        <div style="columns: 2; column-gap: 12pt; font-size: 8pt; color: #d1d5db;">
+          <p>• Energia elétrica</p>
+          <p>• Água e saneamento</p>
+          <p>• Telecomunicações</p>
+          <p>• Aluguel / locação</p>
+          <p>• Frete e transporte</p>
+          <p>• Manutenção e reparos</p>
+          <p>• Seguros</p>
+          <p>• Embalagens</p>
+          <p>• Matéria-prima</p>
+          <p>• Serviços de consultoria</p>
+          <p>• Publicidade e marketing</p>
+          <p>• Limpeza e zeladoria</p>
+          <p>• Materiais de escritório</p>
+          <p>• Uniformes e EPI</p>
+          <p>• Comissões comerciais</p>
+          <p>• Software e licenças</p>
+          <p>• Vigilância</p>
+          <p>• Capacitação e treinamento</p>
+        </div>
+      </div>
+      <div class="card-red" style="padding: 8pt 10pt;">
+        <p class="red xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 4pt;">Excluídas (não geram crédito)</p>
+        <p class="xs muted" style="margin-bottom: 4pt;">A plataforma exclui automaticamente:</p>
+        <div style="columns: 2; column-gap: 12pt; font-size: 8pt; color: #d1d5db;">
+          <p>• Depreciação</p>
+          <p>• Provisões</p>
+          <p>• Impostos</p>
+          <p>• Multas</p>
+          <p>• Folha de pagamento</p>
+          <p>• Encargos sociais</p>
+          <p>• Doações</p>
+          <p>• Receitas e vendas</p>
+          <p>• Ativos e investimentos</p>
+          <p>• Dividendos</p>
+          <p>• Perdas e baixas</p>
+          <p>• 13º salário e férias</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="footer-cta">
+    <p>
+      <span class="emerald bold">Resultado prático:</span> Para uma empresa do Lucro Real com R$ 50M de despesas operacionais elegíveis/ano, a recuperação de PIS/COFINS no conceito amplo pode chegar a <span class="emerald bold">R$ 4,6 milhões/ano</span> (9,25% × despesas) — valores que <span class="emerald bold">passam despercebidos</span> em análises só do SPED Fiscal.
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 08 — DOCUMENTAÇÃO                                       -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="09">
+  <div class="header"><span class="num">08</span><div class="line"></div></div>
+  <h2>Documentação automatizada</h2>
+  <p class="subtitle">Cada análise vira um dossiê pronto para protocolo</p>
+
+  <div class="grid g3" style="margin-top: 12pt;">
+    <div class="card"><div style="font-size: 24pt;">📄</div><h4 style="margin-top: 4pt;">Memória de Cálculo (PDF)</h4><p class="small" style="margin-top: 3pt;">Cada R$ 1,00 de crédito identificado é rastreável até a linha do SPED original. Lista completa de operações, CFOPs, valores base, alíquotas aplicadas, valores recuperáveis. Blindada para auditoria fiscal.</p></div>
+    <div class="card"><div style="font-size: 24pt;">📊</div><h4 style="margin-top: 4pt;">Planilha de Apuração (Excel)</h4><p class="small" style="margin-top: 3pt;">Apuração mensal por tributo, com agrupamento por período, ano e grupo. Formato XLSX exportável para sistema contábil.</p></div>
+    <div class="card"><div style="font-size: 24pt;">⚖️</div><h4 style="margin-top: 4pt;">Parecer Técnico (PDF)</h4><p class="small" style="margin-top: 3pt;">Gerado por IA Claude com fundamentação legal completa, citação de jurisprudência (acórdãos do STF/STJ/CARF), análise de riscos e probabilidade.</p></div>
+    <div class="card"><div style="font-size: 24pt;">📋</div><h4 style="margin-top: 4pt;">Petição Administrativa (PDF)</h4><p class="small" style="margin-top: 3pt;">Modelo de petição com pedido formalizado, fundamentação, valor pleiteado e identificação completa do contribuinte. Pronta para protocolo no e-CAC.</p></div>
+    <div class="card"><div style="font-size: 24pt;">🏛️</div><h4 style="margin-top: 4pt;">PER/DCOMP</h4><p class="small" style="margin-top: 3pt;">Pedido Eletrônico de Restituição / Declaração de Compensação. Documentos no formato exigido pela Receita Federal.</p></div>
+    <div class="card"><div style="font-size: 24pt;">✅</div><h4 style="margin-top: 4pt;">Checklist de Validação</h4><p class="small" style="margin-top: 3pt;">Lista automatizada de documentos faltantes, validações contábeis e ações pendentes antes do protocolo. Reduz risco de devolução.</p></div>
+  </div>
+
+  <div class="footer-cta">
+    <p><span class="emerald bold">Tudo gerado em paralelo em ~15 segundos.</span> Pacote completo é baixado como ZIP, com cada documento marcado d'água invisível (rastreável a quem gerou — proteção contra vazamento).</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 09 — COMPLIANCE RT                                      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="10">
+  <div class="header"><span class="num">09</span><div class="line"></div></div>
+  <h2>Produto 2 — Compliance em Tempo Real</h2>
+  <p class="subtitle">Da auditoria pontual à inteligência fiscal contínua</p>
+
+  <div class="card-or" style="margin-top: 12pt;">
+    <p style="font-size: 11pt;">
+      O modelo tradicional de recuperação tributária olha pro <span class="orange">passado</span>:
+      identifica o que foi pago a maior e busca devolução. Mas a empresa continua pagando indevido todo mês.
+    </p>
+    <p style="font-size: 11pt; margin-top: 6pt;">
+      O <span class="orange bold">Compliance em Tempo Real</span> resolve isso. A plataforma monitora as
+      escriturações mensais e alerta sobre pagamentos indevidos
+      <span class="orange bold">antes que aconteçam</span> — economia direta no caixa do cliente, mês a mês.
+    </p>
+  </div>
+
+  <div class="grid g3" style="margin-top: 12pt;">
+    <div class="stat" style="background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.3);"><p class="label orange">Upload mensal</p><p class="value orange">SPED</p><p class="sub">EFD-ICMS, EFD-Contrib, ECF, ECD</p></div>
+    <div class="stat" style="background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.3);"><p class="label orange">Análise em</p><p class="value orange">&lt; 1 min</p><p class="sub">por arquivo enviado</p></div>
+    <div class="stat" style="background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.3);"><p class="label orange">Economia comprovada</p><p class="value orange">Dashboard</p><p class="sub">acumulada em tempo real</p></div>
+  </div>
+
+  <div class="grid g2" style="margin-top: 12pt;">
+    <div class="card">
+      <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 6pt;">Como funciona</p>
+      <ol style="list-style: none; font-size: 9pt; line-height: 1.7;">
+        <li><span class="orange bold">1.</span> Cliente cadastra CNPJ pra monitoramento</li>
+        <li><span class="orange bold">2.</span> Configura upload automático ou manual</li>
+        <li><span class="orange bold">3.</span> Cada SPED é analisado em segundos</li>
+        <li><span class="orange bold">4.</span> Plataforma gera alertas por severidade</li>
+        <li><span class="orange bold">5.</span> Cliente vê economia mensal no dashboard</li>
+        <li><span class="orange bold">6.</span> Relatório mensal de economia acumulada</li>
+      </ol>
+    </div>
+    <div class="card">
+      <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 6pt;">Vantagens estratégicas</p>
+      <ul class="check">
+        <li><span class="orange bold">Receita recorrente</span> pra Consultri</li>
+        <li>Cliente paga por valor entregue, não por horas</li>
+        <li>Economia é <span class="orange bold">comprovada na plataforma</span></li>
+        <li>Lock-in natural: quanto mais usa, mais valor gera</li>
+        <li>Auditabilidade total (cliente vê e valida)</li>
+        <li>Posicionamento de inovação no mercado</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 10 — ALERTAS                                            -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="11">
+  <div class="header"><span class="num">10</span><div class="line"></div></div>
+  <h2>Alertas automáticos</h2>
+  <p class="subtitle">Cada SPED gera alertas categorizados, com parecer e base legal</p>
+
+  <div style="margin-top: 10pt; flex: 1; display: flex; flex-direction: column; gap: 3pt;">
+    <div class="alert-row br-red">
+      <div style="display: flex; gap: 6pt; align-items: center; margin-bottom: 2pt;"><span class="pill pill-red">CRITICAL</span><span class="xs bold gray">PIS/COFINS</span></div>
+      <p class="bold small">Créditos sobre entradas não aproveitados</p>
+      <p class="xs gray">Empresa do Lucro Real com entradas sem registro de PIS/COFINS. Plataforma calcula crédito não aproveitado por CFOP e recomenda retificação da EFD-Contribuições.</p>
+      <p class="xs muted mono" style="font-style: italic; margin-top: 2pt;">Lei 10.637/02 art. 3° | Lei 10.833/03 art. 3° | STJ Tema 779</p>
+    </div>
+    <div class="alert-row br-am">
+      <div style="display: flex; gap: 6pt; align-items: center; margin-bottom: 2pt;"><span class="pill pill-amber">WARNING</span><span class="xs bold gray">ICMS</span></div>
+      <p class="bold small">Saldo credor acumulado não aproveitado</p>
+      <p class="xs gray">Ativo tributário parado. Plataforma identifica saldo credor e recomenda transferência a terceiros ou ressarcimento junto à SEFAZ-UF.</p>
+      <p class="xs muted mono" style="font-style: italic; margin-top: 2pt;">LC 87/96 art. 25 | RICMS estadual</p>
+    </div>
+    <div class="alert-row br-am">
+      <div style="display: flex; gap: 6pt; align-items: center; margin-bottom: 2pt;"><span class="pill pill-amber">WARNING</span><span class="xs bold gray">PIS/COFINS</span></div>
+      <p class="bold small">Tema 69 STF — exclusão ICMS da base</p>
+      <p class="xs gray">Cálculo automático da economia mensal pela exclusão do ICMS destacado da base de PIS/COFINS. Alerta gerado se a exclusão ainda não está sendo aplicada.</p>
+      <p class="xs muted mono" style="font-style: italic; margin-top: 2pt;">RE 574.706 STF (Tema 69) — repercussão geral</p>
+    </div>
+    <div class="alert-row br-bl">
+      <div style="display: flex; gap: 6pt; align-items: center; margin-bottom: 2pt;"><span class="pill pill-blue">INFO</span><span class="xs bold gray">ICMS-ST</span></div>
+      <p class="bold small">Ressarcimento da diferença de ICMS-ST</p>
+      <p class="xs gray">Operações com CFOP 1403/2403 detectadas. Plataforma sinaliza se base de cálculo presumida está superior à efetiva, gerando direito a ressarcimento.</p>
+      <p class="xs muted mono" style="font-style: italic; margin-top: 2pt;">LC 87/96 art. 10 | ADI 2.777 STF | Portaria CAT (SP)</p>
+    </div>
+    <div class="alert-row br-red">
+      <div style="display: flex; gap: 6pt; align-items: center; margin-bottom: 2pt;"><span class="pill pill-red">CRITICAL</span><span class="xs bold gray">INSS</span></div>
+      <p class="bold small">Verbas indenizatórias na folha</p>
+      <p class="xs gray">Análise da folha identifica verbas indenizatórias (aviso prévio, terço de férias, salário-maternidade) com INSS recolhido indevidamente.</p>
+      <p class="xs muted mono" style="font-style: italic; margin-top: 2pt;">STF Tema 985 | STJ REsp 1.230.957</p>
+    </div>
+    <div class="alert-row br-am">
+      <div style="display: flex; gap: 6pt; align-items: center; margin-bottom: 2pt;"><span class="pill pill-amber">WARNING</span><span class="xs bold gray">IRPJ/CSLL</span></div>
+      <p class="bold small">Subvenções para investimento na base</p>
+      <p class="xs gray">Benefícios fiscais de ICMS sendo tributados na base IRPJ/CSLL — possível exclusão conforme LC 160/2017.</p>
+      <p class="xs muted mono" style="font-style: italic; margin-top: 2pt;">LC 160/17 | STJ Tema 1.182</p>
+    </div>
+    <div class="alert-row br-red">
+      <div style="display: flex; gap: 6pt; align-items: center; margin-bottom: 2pt;"><span class="pill pill-red">CRITICAL</span><span class="xs bold gray">PIS/COFINS</span></div>
+      <p class="bold small">Monofásicos pagos a maior</p>
+      <p class="xs gray">Produtos monofásicos (combustíveis, bebidas, farmacêuticos, cosméticos, autopeças) com PIS/COFINS pagos no DAS — quando deveriam ser zero.</p>
+      <p class="xs muted mono" style="font-style: italic; margin-top: 2pt;">Lei 10.147/2000 | LC 123/2006 art. 18 §4°-A (Simples)</p>
+    </div>
+  </div>
+  <p class="xs muted center" style="margin-top: 5pt; font-style: italic;">
+    A plataforma mantém biblioteca de alertas em expansão. Cada novo julgamento STF/STJ pode gerar novo alerta sem necessidade de deploy.
+  </p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 11 — SIMPLES NACIONAL                                   -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="12">
+  <div class="header"><span class="num">11</span><div class="line"></div></div>
+  <h2>Produto 3 — Simples Nacional Recovery</h2>
+  <p class="subtitle">Recuperação de PIS/COFINS monofásicos e ICMS-ST no Simples</p>
+
+  <div class="card" style="margin-top: 12pt;">
+    <p style="margin-bottom: 6pt;">
+      Empresas do Simples Nacional <span class="emerald bold">não devem recolher</span> PIS, COFINS e ICMS sobre
+      produtos monofásicos ou já tributados por substituição tributária. Mas a imensa maioria recolhe — porque o
+      DAS não diferencia automaticamente.
+    </p>
+    <p>
+      A TaxCredit identifica esses valores <span class="emerald bold">a partir das NFes</span> da empresa, calcula
+      com precisão de centavo e gera o dossiê completo de recuperação.
+    </p>
+  </div>
+
+  <div class="grid g2" style="margin-top: 12pt;">
+    <div class="card">
+      <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 8pt;">Cobertura técnica</p>
+      <ul class="check">
+        <li><span class="bold">36+ NCMs monofásicos</span> mapeados em 7 grupos</li>
+        <li>Detecção automática de CSOSN 500/201/202/203 (ICMS-ST)</li>
+        <li>6 faixas do Anexo I do Simples (alíquotas embutidas)</li>
+        <li>Parser nativo de NFe XML (e ZIP em lote, 50 NFes)</li>
+        <li>Base legal específica em cada item identificado</li>
+        <li>Agrupamento por grupo de produto e por competência</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 8pt;">Grupos de produtos</p>
+      <div class="grid g2" style="gap: 2pt 8pt;">
+        <p class="small">• Combustíveis (4 NCMs)</p>
+        <p class="small">• Veículos (5 NCMs)</p>
+        <p class="small">• Autopeças (8 NCMs)</p>
+        <p class="small">• Bebidas (8 NCMs)</p>
+        <p class="small">• Farmacêuticos (6 NCMs)</p>
+        <p class="small">• Cosméticos (7 NCMs)</p>
+        <p class="small">• Máquinas agrícolas (6 NCMs)</p>
+        <p class="small">• ICMS-ST (qualquer CSOSN)</p>
+      </div>
+      <p class="xs muted" style="margin-top: 6pt; font-style: italic;">Tabela em expansão contínua conforme novos NCMs entram no regime monofásico.</p>
+    </div>
+  </div>
+
+  <div class="card-em" style="margin-top: 10pt;">
+    <div class="grid g2">
+      <div>
+        <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Base legal PIS/COFINS monofásico</p>
+        <p class="small" style="font-style: italic; margin-top: 2pt;">Lei 10.147/2000, Art. 2° — concentração na indústria.<br/>LC 123/2006, Art. 18, §4°-A, I — exclusão do DAS.</p>
+      </div>
+      <div>
+        <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Base legal ICMS-ST</p>
+        <p class="small" style="font-style: italic; margin-top: 2pt;">LC 123/2006, Art. 18, §4°-A, IV — ICMS já recolhido por substituição não entra no DAS.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 12 — INTEGRAÇÕES ERP                                    -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="13">
+  <div class="header"><span class="num">12</span><div class="line"></div></div>
+  <h2>Integrações com ERPs</h2>
+  <p class="subtitle">Onde os dados nascem, a TaxCredit conecta</p>
+
+  <p style="margin-top: 10pt;">A plataforma se conecta diretamente aos ERPs do cliente, eliminando completamente o processo manual de coleta de SPEDs e NFes. Suporte a webhook para qualquer ERP que envie dados via API.</p>
+
+  <div class="grid g3" style="margin-top: 12pt;">
+    <div class="card"><div style="display: flex; justify-content: space-between; align-items: center;"><h4>Omie</h4><span class="pill">Pronto</span></div><p class="small" style="margin-top: 4pt;">Conector nativo. Sincronização automática de NFes emitidas e recebidas. Captura de SPEDs gerados.</p></div>
+    <div class="card"><div style="display: flex; justify-content: space-between; align-items: center;"><h4>SAP</h4><span class="pill">Pronto</span></div><p class="small" style="margin-top: 4pt;">Webhook + ApiKey customizada. Suporta SAP Business One e S/4HANA. Sincronização por job agendado.</p></div>
+    <div class="card"><div style="display: flex; justify-content: space-between; align-items: center;"><h4>Oracle</h4><span class="pill">Pronto</span></div><p class="small" style="margin-top: 4pt;">Conector via REST API. Suporte a Oracle Cloud ERP e EBS. Autenticação OAuth 2.0.</p></div>
+    <div class="card"><div style="display: flex; justify-content: space-between; align-items: center;"><h4>TOTVS</h4><span class="pill">Pronto</span></div><p class="small" style="margin-top: 4pt;">Webhook nativo. Compatível com Protheus, RM e Datasul. Documentação técnica completa.</p></div>
+    <div class="card"><div style="display: flex; justify-content: space-between; align-items: center;"><h4>Conta Azul</h4><span class="pill">Pronto</span></div><p class="small" style="margin-top: 4pt;">Integração para empresas do Simples Nacional. Sincronização de NFes via API REST.</p></div>
+    <div class="card"><div style="display: flex; justify-content: space-between; align-items: center;"><h4>Webhook genérico</h4><span class="pill">Pronto</span></div><p class="small" style="margin-top: 4pt;">Qualquer ERP que aceite POST HTTP. Documentação OpenAPI. Suporte JSON e XML.</p></div>
+  </div>
+
+  <div class="footer-cta">
+    <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 4pt;">Segurança nas integrações</p>
+    <div class="grid g3" style="gap: 8pt;">
+      <div><p class="bold small">ApiKeys com escopo</p><p class="xs muted">Chaves específicas por integração. Permissões granulares (upload, read, sync).</p></div>
+      <div><p class="bold small">Rate limit dedicado</p><p class="xs muted">60 req/min por chave. Configurável. Bloqueio automático em caso de abuso.</p></div>
+      <div><p class="bold small">Logs auditáveis</p><p class="xs muted">Cada evento registrado com payload, status, tempo e erro (se houver).</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 13 — SERPRO                                             -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="14">
+  <div class="header"><span class="num">13</span><div class="line"></div></div>
+  <h2>SERPRO / Integra Contador</h2>
+  <p class="subtitle">Conexão oficial com a Receita Federal</p>
+
+  <div class="card-bl" style="margin-top: 12pt;">
+    <p style="margin-bottom: 6pt;">
+      Diferente de soluções que dependem de raspagem (scraping) do portal e-CAC — prática cada vez mais bloqueada
+      pela Receita — a TaxCredit usa o
+      <span class="blue bold">canal oficial Integra Contador do SERPRO</span>.
+    </p>
+    <p>
+      Isso significa <span class="blue bold">acesso oficial</span> aos dados do contribuinte, com procurações
+      digitais válidas, certificado A1/A3 e auditabilidade completa.
+    </p>
+  </div>
+
+  <div class="grid g2" style="margin-top: 12pt;">
+    <div class="card">
+      <p class="blue xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 6pt;">Serviços disponíveis</p>
+      <ul class="check">
+        <li>Consulta DCTF Web</li>
+        <li>Situação fiscal completa</li>
+        <li>Histórico de PER/DCOMP</li>
+        <li>Restituições em andamento</li>
+        <li>Parcelamentos ativos</li>
+        <li>Pendências e malhas</li>
+        <li>Consulta CNPJ completo</li>
+        <li>Análise de domicílio tributário</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="blue xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 6pt;">Infraestrutura técnica</p>
+      <ul class="check">
+        <li>OAuth 2.0 com consumer key/secret</li>
+        <li>Certificado digital A1/A3 (PFX/PEM)</li>
+        <li>Ambiente trial + produção</li>
+        <li>Procuração e-CAC integrada</li>
+        <li>Logs auditáveis por serviço/endpoint</li>
+        <li>Retry automático com backoff</li>
+        <li>Renovação automática de tokens</li>
+        <li>Conformidade LGPD</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 14 — PROCURAÇÕES                                        -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="15">
+  <div class="header"><span class="num">14</span><div class="line"></div></div>
+  <h2>Procurações Digitais</h2>
+  <p class="subtitle">Geração, assinatura e gestão integrada</p>
+
+  <p style="margin-top: 10pt;">Cada projeto de recuperação tributária exige procurações para acessar e-CAC, SEFAZ e protocolar documentos. A TaxCredit gera e gerencia procurações em três cenários distintos.</p>
+
+  <div class="grid g3" style="margin-top: 12pt;">
+    <div class="card">
+      <div style="width: 32pt; height: 32pt; background: rgba(16,185,129,0.2); border-radius: 8pt; display: flex; align-items: center; justify-content: center; font-size: 16pt; margin-bottom: 6pt;">⚖️</div>
+      <h4>Cenário 1 · Atom Lawyer</h4>
+      <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin: 2pt 0;">Advogado da TaxCredit</p>
+      <p class="small">Quando o cliente não tem advogado e prefere usar o advogado tributarista vinculado à plataforma. Procuração gerada para advogado interno com OAB cadastrada.</p>
+    </div>
+    <div class="card">
+      <div style="width: 32pt; height: 32pt; background: rgba(249,115,22,0.2); border-radius: 8pt; display: flex; align-items: center; justify-content: center; font-size: 16pt; margin-bottom: 6pt;">🤝</div>
+      <h4>Cenário 2 · Partner Lawyer</h4>
+      <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin: 2pt 0;">Advogado da Consultri</p>
+      <p class="small">Quando o parceiro tem advogado próprio que vai conduzir o protocolo. Procuração com OAB do advogado parceiro, vinculação no contrato tripartite.</p>
+    </div>
+    <div class="card">
+      <div style="width: 32pt; height: 32pt; background: rgba(59,130,246,0.2); border-radius: 8pt; display: flex; align-items: center; justify-content: center; font-size: 16pt; margin-bottom: 6pt;">👤</div>
+      <h4>Cenário 3 · Client Lawyer</h4>
+      <p class="blue xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin: 2pt 0;">Advogado do cliente</p>
+      <p class="small">Quando o próprio cliente já tem departamento jurídico ou escritório de confiança. Procuração personalizada com dados do advogado escolhido pelo cliente.</p>
+    </div>
+  </div>
+
+  <div class="footer-cta">
+    <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 6pt;">Tipos suportados</p>
+    <div class="grid g3">
+      <div><p class="bold small">Particular</p><p class="xs muted">Procuração ad judicia para representação geral</p></div>
+      <div><p class="bold small">e-CAC Guide</p><p class="xs muted">Habilitação no e-CAC com poderes específicos</p></div>
+      <div><p class="bold small">SEFAZ</p><p class="xs muted">Procuração estadual para protocolo em SEFAZ-UF</p></div>
+    </div>
+    <p class="xs muted" style="margin-top: 6pt; font-style: italic;">Prazo padrão 2 anos. Renovação automatizada. Assinatura digital com captura de IP, data e hora.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 15 — CONTRATOS                                          -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="16">
+  <div class="header"><span class="num">15</span><div class="line"></div></div>
+  <h2>Contratos Tripartite Digitais</h2>
+  <p class="subtitle">Modelo contratual pronto para rede de parceiros</p>
+
+  <p style="margin-top: 10pt;">
+    A TaxCredit já tem desenhado contratualmente o modelo de operação em rede — o que poupa meses de
+    estruturação jurídica pra Consultri. Suporta bipartite (TaxCredit + Cliente) e
+    <span class="emerald bold">tripartite (TaxCredit + Cliente + Parceiro)</span>.
+  </p>
+
+  <div class="card" style="margin-top: 12pt;">
+    <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 8pt;">Estrutura contratual já modelada</p>
+    <div class="grid g2">
+      <div>
+        <p class="bold small">Splits configuráveis</p>
+        <ul class="dot" style="margin-top: 2pt;">
+          <li>% cliente (default 80%)</li>
+          <li>% plataforma (configurável)</li>
+          <li>% parceiro/advogado (configurável)</li>
+          <li>Taxa de adesão (R$ 2.000 default)</li>
+          <li>Pagamento bipartite ou tripartite</li>
+        </ul>
+      </div>
+      <div>
+        <p class="bold small">Garantias e gestão</p>
+        <ul class="dot" style="margin-top: 2pt;">
+          <li>Conta escrow Banco Fibra</li>
+          <li>Assinaturas com captura de IP</li>
+          <li>Status flow: draft → signed → active → completed</li>
+          <li>Checklist de acompanhamento por etapa</li>
+          <li>Earnings rastreados por parte</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top: 10pt;">
+    <div class="card-em">
+      <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Bipartite (TaxCredit + Cliente)</p>
+      <p class="small" style="margin-top: 4pt;">Modelo usado quando o cliente final contrata direto a plataforma.</p>
+      <p class="xs muted" style="margin-top: 3pt;">Split padrão: 80% cliente / 20% TaxCredit</p>
+    </div>
+    <div class="card-or">
+      <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Tripartite (TaxCredit + Cliente + Consultri)</p>
+      <p class="small" style="margin-top: 4pt;">Modelo ideal pra rede de parceiros. Cliente continua sendo do parceiro 100%.</p>
+      <p class="xs muted" style="margin-top: 3pt;">Splits e papéis configuráveis por contrato</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 16 — IA + TESES                                         -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="17">
+  <div class="header"><span class="num">16</span><div class="line"></div></div>
+  <h2>IA + Teses + Jurisprudência</h2>
+  <p class="subtitle">Inteligência tributária viva, atualizada sem deploy</p>
+
+  <div class="grid g3" style="margin-top: 12pt;">
+    <div class="card">
+      <div style="width: 32pt; height: 32pt; background: rgba(168,85,247,0.2); border-radius: 8pt; display: flex; align-items: center; justify-content: center; font-size: 16pt; margin-bottom: 6pt;">🧠</div>
+      <h4>IA Claude (Anthropic)</h4>
+      <p class="small" style="margin-top: 4pt;">Modelo Opus 4.5 para análises profundas e Sonnet 4.5 para triagem rápida. Mix inteligente conforme complexidade. Custo controlado, qualidade preservada.</p>
+    </div>
+    <div class="card">
+      <div style="width: 32pt; height: 32pt; background: rgba(16,185,129,0.2); border-radius: 8pt; display: flex; align-items: center; justify-content: center; font-size: 16pt; margin-bottom: 6pt;">📚</div>
+      <h4>34 Teses Tributárias</h4>
+      <p class="small" style="margin-top: 4pt;">Cada tese tem código, descrição, fundamentação, tribunal, tema vinculante, setores aplicáveis, regimes, fórmula de cálculo, fonte e data da decisão. <span class="emerald">Editável pelo admin sem deploy.</span></p>
+    </div>
+    <div class="card">
+      <div style="width: 32pt; height: 32pt; background: rgba(249,115,22,0.2); border-radius: 8pt; display: flex; align-items: center; justify-content: center; font-size: 16pt; margin-bottom: 6pt;">⚖️</div>
+      <h4>Jurisprudência Vinculante</h4>
+      <p class="small" style="margin-top: 4pt;">Tabela de TeseJurisprudência ajusta probabilidade de sucesso por decisão recente (STF/STJ). Se uma tese teve julgamento desfavorável, probabilidade despenca. Se favorável, dispara.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 12pt;">
+    <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 6pt;">Varredura automática de jurisprudência</p>
+    <p style="margin-bottom: 8pt;">
+      Job cron diário roda às 6h (horário de Brasília), varre fontes públicas de jurisprudência (STF, STJ,
+      CARF, TRFs) e gera <span class="emerald bold">propostas de atualização</span> que ficam aguardando
+      aprovação no painel administrativo.
+    </p>
+    <div class="grid g3" style="gap: 8pt;">
+      <div class="card center" style="background: rgba(16,185,129,0.05);">
+        <p style="font-size: 18pt; font-weight: 900;" class="emerald">Diário</p>
+        <p class="xs muted">Varredura STF/STJ</p>
+      </div>
+      <div class="card center" style="background: rgba(16,185,129,0.05);">
+        <p style="font-size: 18pt; font-weight: 900;" class="emerald">Sem deploy</p>
+        <p class="xs muted">Atualização via painel</p>
+      </div>
+      <div class="card center" style="background: rgba(16,185,129,0.05);">
+        <p style="font-size: 18pt; font-weight: 900;" class="emerald">Auditável</p>
+        <p class="xs muted">Histórico de revisões</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 17 — SEGURANÇA                                          -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="18">
+  <div class="header"><span class="num">17</span><div class="line"></div></div>
+  <h2>Segurança nível bancário</h2>
+  <p class="subtitle">9 camadas de proteção · LGPD-compliant · Honeypot ativo</p>
+
+  <p style="margin-top: 10pt;">Dados fiscais são o ativo mais sensível da operação tributária. A TaxCredit aplica camadas de proteção que <span class="emerald bold">a maioria das fintechs e bancos brasileiros ainda não tem</span>.</p>
+
+  <div class="grid g2" style="margin-top: 10pt;">
+    <div class="card-red" style="padding: 8pt 10pt;">
+      <p class="red xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 4pt;">Anti-Scraping (Shield) — 9 camadas</p>
+      <ul style="font-size: 8.5pt; line-height: 1.45;">
+        <li>0 · Bloqueio de subnets cloud conhecidas</li>
+        <li>1 · Bloqueio permanente após reincidência</li>
+        <li>2 · Bloqueio temporário (24h)</li>
+        <li>3 · Honeypot paths (20 rotas-isca)</li>
+        <li>4 · Detecção de User-Agent de bot (60+ patterns)</li>
+        <li>5 · UA ausente ou inválido</li>
+        <li>6 · Rate limit em rotas sensíveis</li>
+        <li>7 · Janela de tempo (reset 5min)</li>
+        <li>8 · Score-based + Geo lookup automático</li>
+      </ul>
+      <p class="xs muted" style="margin-top: 4pt; font-style: italic;">Auto-lockdown em ataques coordenados (DDoS-lite): bloqueia qualquer IP não-BR durante a janela de ataque.</p>
+    </div>
+    <div class="card-pp" style="padding: 8pt 10pt;">
+      <p class="purple xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 4pt;">Deception (Honeypot Ativo)</p>
+      <p class="small" style="margin-bottom: 4pt;">
+        Quando um atacante toca em path-isca (.env, wp-admin, /api/internal/keys), o sistema serve
+        <span class="purple bold">dados falsos realistas</span> com canary tokens únicos embedded. Se esses tokens
+        aparecerem em qualquer lugar do mundo, sabemos que veio daqui.
+      </p>
+      <ul class="dot" style="font-size: 8pt;">
+        <li>16 tipos de bait (env, wp-config, swagger, graphql, etc)</li>
+        <li>Tarpit: delay artificial de 8-30s</li>
+        <li>Headers convincentes (fake Apache/PHP)</li>
+        <li>Persistência forense completa</li>
+        <li>Auto-bloqueio após mordida</li>
+      </ul>
+    </div>
+    <div class="card-bl" style="padding: 8pt 10pt;">
+      <p class="blue xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 4pt;">Watermark digital</p>
+      <p class="small" style="margin-bottom: 4pt;">
+        Todo documento gerado (parecer, petição, relatório) recebe marca d'água
+        <span class="blue bold">visível e invisível</span>:
+      </p>
+      <ul class="dot" style="font-size: 8pt;">
+        <li>Visual: CSS rotacionado 45°, opacidade 3%</li>
+        <li>Invisível: caracteres zero-width (U+200B/C/D)</li>
+        <li>ID rastreável (SHA-256 user+timestamp+secret)</li>
+        <li>Footer com ID e data de geração</li>
+        <li>Em vazamento: identifica exatamente quem gerou</li>
+      </ul>
+    </div>
+    <div class="card-em" style="padding: 8pt 10pt;">
+      <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 4pt;">Padrões aplicados</p>
+      <ul class="check" style="font-size: 8.5pt;">
+        <li>HTTPS obrigatório (HSTS preload)</li>
+        <li>JWT com expiração e refresh</li>
+        <li>Helmet completo (CSP, X-Frame-Options, etc)</li>
+        <li>Rate limit por tipo de rota</li>
+        <li>CORS com origens explícitas</li>
+        <li>Validação de payload via Zod</li>
+        <li>Logs forenses no Supabase</li>
+        <li>Classificação automática de ataques (11 tipos)</li>
+        <li>Dashboard de segurança em tempo real</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-cta">
+    <p><span class="emerald bold">Conformidade LGPD:</span> dados criptografados em trânsito e em repouso. Audit log completo. Direito ao esquecimento implementado. Procurações explícitas para tratamento de dados fiscais sensíveis.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 18 — COMERCIAL                                          -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="19">
+  <div class="header"><span class="num">18</span><div class="line"></div></div>
+  <h2>Modelo Comercial Consultri</h2>
+  <p class="subtitle">Dois jogos, duas lógicas, total previsibilidade</p>
+
+  <div class="grid g2" style="margin-top: 12pt;">
+    <div class="card-em">
+      <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Produto 1 · Passado</p>
+      <h3 style="margin: 2pt 0;">Recuperação 5 Anos</h3>
+      <p class="emerald xs">Mensalidade pura · sem performance</p>
+      <p class="xs muted" style="margin-top: 6pt; font-style: italic; border-left: 2px solid #10b981; padding-left: 6pt;">
+        Como o resultado depende de execução externa (protocolo, judiciário), não cobramos performance. Você usa, paga. Simples e auditável.
+      </p>
+      <div style="margin-top: 8pt;">
+        <div class="plan-box"><div><p class="bold small">Starter</p><p class="xs muted">25 análises · 5 batches</p></div><p class="emerald bold">R$ 3.900<span class="xs muted">/mês</span></p></div>
+        <div class="plan-box"><div><p class="bold small">Pro</p><p class="xs muted">100 análises · 25 batches</p></div><p class="emerald bold">R$ 9.900<span class="xs muted">/mês</span></p></div>
+        <div class="plan-box"><div><p class="bold small">Enterprise</p><p class="xs muted">500 análises · ilimitado batches</p></div><p class="emerald bold">R$ 24.900<span class="xs muted">/mês</span></p></div>
+        <div class="plan-box featured"><div><p class="bold">Custom Consultri</p><p class="xs muted">TUDO ilimitado · suporte dedicado · white-label opcional</p></div><p class="emerald bold" style="font-size: 14pt;">R$ 39.900<span class="xs muted">/mês</span></p></div>
+      </div>
+      <p class="xs muted" style="margin-top: 8pt;">+ Setup único <span class="emerald bold">R$ 30.000</span> (treinamento dos 120 consultores · onboarding · integração ERP)</p>
+    </div>
+    <div class="card-or">
+      <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Produto 2 · Presente</p>
+      <h3 style="margin: 2pt 0;">Compliance em Tempo Real</h3>
+      <p class="orange xs">Mensalidade por CNPJ + performance compartilhada</p>
+      <p class="xs muted" style="margin-top: 6pt; font-style: italic; border-left: 2px solid #f97316; padding-left: 6pt;">
+        Como a economia é gerada dentro da plataforma e auditável em tempo real, fazemos parceria de performance. Métrica é o número no dashboard — não tem como negar pra ninguém.
+      </p>
+      <div class="card" style="margin-top: 8pt; padding: 8pt;">
+        <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 4pt;">Mensalidade por CNPJ monitorado</p>
+        <div class="small">
+          <div style="display: flex; justify-content: space-between;"><span>1 a 100 CNPJs</span><span class="bold">R$ 750/mês</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>101 a 500 CNPJs</span><span class="bold">R$ 500/mês</span></div>
+          <div style="display: flex; justify-content: space-between;"><span>500+ CNPJs</span><span class="bold">R$ 350/mês</span></div>
+        </div>
+      </div>
+      <div style="background: rgba(249,115,22,0.15); border: 2px solid #f97316; border-radius: 8pt; padding: 8pt; margin-top: 6pt;">
+        <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 4pt;">Performance sobre economia comprovada</p>
+        <p class="small" style="margin-bottom: 6pt;">Cliente paga <span class="bold">20%</span> à Consultri sobre economia comprovada no dashboard. Desses 20%:</p>
+        <div style="background: rgba(11,15,23,0.6); border-radius: 6pt; padding: 6pt;" class="small">
+          <div style="display: flex; justify-content: space-between;"><span class="orange">Consultri fica com</span><span class="orange bold">70%</span></div>
+          <div style="display: flex; justify-content: space-between;"><span class="emerald">TaxCredit fica com</span><span class="emerald bold">30%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-cta">
+    <div class="grid g3" style="gap: 8pt;">
+      <div><p class="bold small">100% auditável</p><p class="xs muted">Tudo é métrica da plataforma. Ninguém precisa confiar em ninguém pela palavra.</p></div>
+      <div><p class="bold small">Alinhamento total</p><p class="xs muted">Quando o cliente economiza, todos ganham. Quando não economiza, ninguém ganha extra.</p></div>
+      <div><p class="bold small">Previsibilidade</p><p class="xs muted">Mensalidade segura a casa pra ambos os lados. Performance é o upside compartilhado.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 19 — PROJEÇÃO                                           -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="20">
+  <div class="header"><span class="num">19</span><div class="line"></div></div>
+  <h2>Projeção financeira</h2>
+  <p class="subtitle">Cenário realista com crescimento gradual</p>
+
+  <div class="grid g2" style="margin-top: 12pt; flex: 1;">
+    <div class="card-em">
+      <p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Ano 1 — operação inicial</p>
+      <h3 style="margin: 2pt 0 10pt 0;">50 CNPJs em compliance · economia média R$ 100K/cliente</h3>
+      <table>
+        <tr><td>Plano Custom (mensal)</td><td class="right bold">R$ 39.900</td></tr>
+        <tr><td>50 CNPJs RT × R$ 750</td><td class="right bold">R$ 37.500</td></tr>
+        <tr><td>Performance 30% (TaxCredit)</td><td class="right bold">R$ 300.000</td></tr>
+        <tr class="strong-row"><td class="emerald">Receita TaxCredit/mês</td><td class="right emerald" style="font-size: 12pt;">R$ 377.400</td></tr>
+        <tr class="strong-row" style="border-top: 2px solid #1f2330;"><td>Anualizado</td><td class="right black" style="font-size: 13pt;">R$ 4.528.800</td></tr>
+      </table>
+      <div style="border-top: 1px solid #1f2330; margin-top: 10pt; padding-top: 8pt;">
+        <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Pra Consultri</p>
+        <table style="margin-top: 4pt;">
+          <tr><td>Performance 70%</td><td class="right bold orange">R$ 700.000/mês</td></tr>
+          <tr class="strong-row"><td>Anualizado</td><td class="right black orange" style="font-size: 13pt;">R$ 8.400.000</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-or">
+      <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Ano 2 — operação madura</p>
+      <h3 style="margin: 2pt 0 10pt 0;">200 CNPJs em compliance · economia consistente</h3>
+      <table>
+        <tr><td>Plano Custom (mensal)</td><td class="right bold">R$ 39.900</td></tr>
+        <tr><td>200 CNPJs RT (média R$ 600)</td><td class="right bold">R$ 120.000</td></tr>
+        <tr><td>Performance 30% (escala)</td><td class="right bold">R$ 1.200.000</td></tr>
+        <tr class="strong-row"><td class="orange">Receita TaxCredit/mês</td><td class="right orange" style="font-size: 12pt;">R$ 1.359.900</td></tr>
+        <tr class="strong-row" style="border-top: 2px solid #1f2330;"><td>Anualizado</td><td class="right black" style="font-size: 13pt;">R$ 16.318.800</td></tr>
+      </table>
+      <div style="border-top: 1px solid #1f2330; margin-top: 10pt; padding-top: 8pt;">
+        <p class="orange xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Pra Consultri</p>
+        <table style="margin-top: 4pt;">
+          <tr><td>Performance 70%</td><td class="right bold orange">R$ 2.800.000/mês</td></tr>
+          <tr class="strong-row"><td>Anualizado</td><td class="right black orange" style="font-size: 13pt;">R$ 33.600.000</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-cta">
+    <p>
+      <span class="emerald bold">Premissas:</span> economia média de R$ 100K/cliente/mês no ano 1 (varejo médio), evoluindo para R$ 150-200K conforme adicionam clientes maiores. Performance fee de 20% sobre economia comprovada — padrão de mercado. Captação de 4-5 CNPJs novos por mês via 120 consultores. <span class="muted" style="font-style: italic;">Projeção conservadora — não considera Produto 1 (recuperação 5 anos) que é receita adicional do lado da Consultri.</span>
+    </p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 20 — ROADMAP                                            -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="21">
+  <div class="header"><span class="num">20</span><div class="line"></div></div>
+  <h2>Próximos passos</h2>
+  <p class="subtitle">Onboarding completo em 30 dias</p>
+
+  <div style="margin-top: 12pt; display: flex; flex-direction: column; gap: 6pt;">
+    <div class="card" style="display: flex; gap: 12pt;">
+      <div style="width: 80pt; flex-shrink: 0;"><p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Semana 1</p><p class="bold small" style="margin-top: 2pt;">Contratação e setup técnico</p></div>
+      <ul class="check" style="flex: 1;">
+        <li>Assinatura do contrato (Master Partner Consultri)</li>
+        <li>Pagamento da taxa de setup (R$ 30.000)</li>
+        <li>Provisionamento de infraestrutura dedicada</li>
+        <li>Configuração de DNS, certificados e domínio (se white-label)</li>
+        <li>Criação dos perfis admin da Consultri</li>
+      </ul>
+    </div>
+    <div class="card" style="display: flex; gap: 12pt;">
+      <div style="width: 80pt; flex-shrink: 0;"><p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Semana 2</p><p class="bold small" style="margin-top: 2pt;">Onboarding e treinamento</p></div>
+      <ul class="check" style="flex: 1;">
+        <li>Treinamento Tadeu + diretoria (1 dia presencial em SP)</li>
+        <li>Treinamento dos 120 consultores em grupos (online)</li>
+        <li>Material de apoio: vídeos, manuais, FAQ</li>
+        <li>Definição de processos internos da Consultri</li>
+        <li>Configuração de templates de procuração e contrato</li>
+      </ul>
+    </div>
+    <div class="card" style="display: flex; gap: 12pt;">
+      <div style="width: 80pt; flex-shrink: 0;"><p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Semana 3</p><p class="bold small" style="margin-top: 2pt;">Integrações</p></div>
+      <ul class="check" style="flex: 1;">
+        <li>Setup de integração com ERP do primeiro cliente piloto</li>
+        <li>Conexão SERPRO/Integra Contador (certificado)</li>
+        <li>Configuração de webhook (se aplicável)</li>
+        <li>Testes ponta-a-ponta com SPED real</li>
+        <li>Validação de saída (dossiê completo)</li>
+      </ul>
+    </div>
+    <div class="card" style="display: flex; gap: 12pt;">
+      <div style="width: 80pt; flex-shrink: 0;"><p class="emerald xs bold" style="text-transform: uppercase; letter-spacing: 0.5pt;">Semana 4</p><p class="bold small" style="margin-top: 2pt;">Lançamento operacional</p></div>
+      <ul class="check" style="flex: 1;">
+        <li>Primeiro projeto real em produção</li>
+        <li>Acompanhamento técnico dedicado</li>
+        <li>Monitoramento de performance</li>
+        <li>Ajustes finais</li>
+        <li>Marco de "Operação Plena" — review com Tadeu</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-cta" style="background: linear-gradient(to right, rgba(16,185,129,0.15), rgba(249,115,22,0.15)); border-color: rgba(16,185,129,0.3);">
+    <p style="font-size: 22pt; font-weight: 900;">30 dias</p>
+    <p class="small">do contrato à primeira recuperação rodando em produção. Acompanhamento dedicado durante todo o período.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- SLIDE 21 — CTA                                                -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section class="slide" data-num="22">
+  <div class="cover">
+    <h1 style="font-size: 44pt; line-height: 1.15;">Vamos construir juntos<br/><span class="emerald">o futuro da Consultri</span></h1>
+    <p style="font-size: 14pt; color: #9ca3af; max-width: 640pt; margin: 16pt 0 30pt 0; line-height: 1.5;">
+      120 consultores. R$ 400 milhões recuperados em 9 anos. Imagina dobrar esse resultado em 24 meses,
+      sem contratar uma pessoa a mais. <span class="emerald bold">É isso que a TaxCredit faz pela Consultri.</span>
+    </p>
+    <div class="grid g3" style="width: 100%; max-width: 640pt;">
+      <div class="card center"><p style="font-size: 22pt; font-weight: 900;" class="emerald">3 produtos</p><p class="xs muted">integrados em uma plataforma</p></div>
+      <div class="card center"><p style="font-size: 22pt; font-weight: 900;" class="orange">9 camadas</p><p class="xs muted">de segurança nível bancário</p></div>
+      <div class="card center"><p style="font-size: 22pt; font-weight: 900;" class="blue">30 dias</p><p class="xs muted">do contrato à operação plena</p></div>
+    </div>
+    <p class="xs muted" style="margin-top: 30pt;">TaxCredit Enterprise · ATOM BRASIL DIGITAL LTDA · Documento personalizado para Consultri Consultoria Tributária Ltda.</p>
+    <p class="xs muted" style="margin-top: 4pt;">taxcreditenterprise.com · 15 de maio de 2026</p>
+  </div>
+</section>
+
+</body>
+</html>
