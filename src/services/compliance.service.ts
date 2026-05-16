@@ -5,7 +5,7 @@
 import { SpedDocument, EfdContribData, EcfData, EcdData } from './zipProcessor.service';
 import { executarCruzamento } from './cruzamentoContabil.service';
 import { logger } from '../utils/logger';
-import { getRicms, getNomeOrgao } from './state-rules.service';
+import { getRicms, getNomeOrgao, getStateRule } from './state-rules.service';
 
 const PIS_RATE = 0.0165;
 const COFINS_RATE = 0.0760;
@@ -61,17 +61,38 @@ export class ComplianceAnalyzer {
 
     // 1. ICMS — Saldo credor não aproveitado
     if (sped.resumo?.saldoCredor > 0) {
+      const rule = getStateRule(sped.uf);
+      const hipoteseTipica = rule.hipoteses?.[0] || 'Saldo credor acumulado';
+      const limiteTransfTerceiros = rule.utilizacao?.limites?.transferenciaTerceiros;
+      const prazoDecadencia = rule.prazos?.decadencia || '5 anos';
+
+      const utilizacoesPossiveis: string[] = [];
+      if (rule.utilizacao?.compensacaoProprio) utilizacoesPossiveis.push('compensação no próprio estabelecimento');
+      if (rule.utilizacao?.transferenciaMesmoTitular) utilizacoesPossiveis.push('transferência entre estabelecimentos do mesmo titular');
+      if (rule.utilizacao?.transferenciaTerceiros) utilizacoesPossiveis.push('transferência a terceiros');
+      if (rule.utilizacao?.pagamentoFornecedores) utilizacoesPossiveis.push('pagamento a fornecedores');
+      if (rule.utilizacao?.pagamentoAtivoImobilizado) utilizacoesPossiveis.push('aquisição de ativo imobilizado');
+      if (rule.utilizacao?.ressarcimentoMoeda) utilizacoesPossiveis.push('ressarcimento em moeda');
+      const utilizacaoTexto = utilizacoesPossiveis.length > 0 ? utilizacoesPossiveis.join(', ') : 'transferência/ressarcimento conforme RICMS local';
+
+      let parecer = `Recomenda-se análise da viabilidade de utilização dos créditos acumulados junto à ${getNomeOrgao(sped.uf)}. `;
+      parecer += `Hipótese típica aplicável: ${hipoteseTipica}. `;
+      parecer += `Modalidades aceitas em ${rule.uf}: ${utilizacaoTexto}. `;
+      if (limiteTransfTerceiros) parecer += `Atenção ao limite de transferência a terceiros: ${limiteTransfTerceiros}. `;
+      parecer += `Prazo decadencial para pleitear o crédito: ${prazoDecadencia} a contar do fato gerador. `;
+      parecer += `O saldo credor de R$ ${fmt(sped.resumo.saldoCredor)} é um ativo tributário não utilizado.`;
+
       alerts.push({
         severity: 'warning',
         category: 'missing_credit',
         tributo: 'ICMS',
         title: `Saldo credor ICMS de R$ ${fmt(sped.resumo.saldoCredor)} acumulado`,
-        description: `A empresa possui R$ ${fmt(sped.resumo.saldoCredor)} em créditos de ICMS acumulados no período ${formatPeriod(periodo)}. Este saldo pode ser objeto de transferência a terceiros, ressarcimento ou compensação conforme a legislação estadual.`,
+        description: `A empresa possui R$ ${fmt(sped.resumo.saldoCredor)} em créditos de ICMS acumulados no período ${formatPeriod(periodo)}. Em ${rule.nome} (${rule.uf}), pode ser objeto de: ${utilizacaoTexto}.`,
         valorEnvolvido: sped.resumo.saldoCredor,
         economiaEstimada: sped.resumo.saldoCredor,
         baseLegal: `LC 87/96 art. 25 | ${getRicms(sped.uf)} — transferência/ressarcimento de créditos acumulados`,
         registroSped: 'E110 — Apuração do ICMS',
-        parecer: `Recomenda-se análise da viabilidade de transferência de créditos acumulados (art. 25, LC 87/96) ou pedido de ressarcimento junto à ${getNomeOrgao(sped.uf)}. O saldo credor de R$ ${fmt(sped.resumo.saldoCredor)} é um ativo tributário não utilizado.`,
+        parecer,
         periodo: formatPeriod(periodo),
       });
     }
@@ -121,9 +142,9 @@ export class ComplianceAnalyzer {
           description: `Operações com ICMS-ST (CFOPs 1403/2403) totalizando R$ ${fmt(totalST)}. Se a base de cálculo presumida for superior à efetiva, há direito ao ressarcimento da diferença.`,
           valorEnvolvido: totalST,
           economiaEstimada: totalST * 0.1,
-          baseLegal: 'LC 87/96 art. 10 | ADI 2.777 STF | Portaria CAT (SP)',
+          baseLegal: `LC 87/96 art. 10 | ADI 2.777 STF | ${getRicms(sped.uf)}`,
           registroSped: 'C190 — CFOP 1403/2403',
-          parecer: `Recomenda-se verificação da base de cálculo presumida vs. efetiva nas operações sujeitas a ICMS-ST. A diferença a maior pode ser objeto de pedido de ressarcimento junto à SEFAZ.`,
+          parecer: `Recomenda-se verificação da base de cálculo presumida vs. efetiva nas operações sujeitas a ICMS-ST. A diferença a maior pode ser objeto de pedido de ressarcimento junto à ${getNomeOrgao(sped.uf)}.`,
           periodo: formatPeriod(periodo),
         });
       }

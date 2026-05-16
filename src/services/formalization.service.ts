@@ -4,7 +4,11 @@
 // ============================================================
 
 import { logger } from '../utils/logger';
-import { getAutoridadeFormatada, getFundamentacaoLegal as engineFundamentacao } from './state-rules.service';
+import {
+  getAutoridadeFormatada,
+  getFundamentacaoLegal as engineFundamentacao,
+  getStateRule,
+} from './state-rules.service';
 
 // AUTORIDADES_UF migrado para StateRulesEngine.
 // Mantemos o helper local com a mesma assinatura, delegando para o engine,
@@ -1642,7 +1646,40 @@ function numberToWordsCurrency(value: number): string {
  */
 function getFundamentacaoUF(uf: string, tipoPedido: string): string {
   const base = engineFundamentacao(uf);
-  // engineFundamentacao retorna "<LC>. <RICMS>. <artigos>. ..."
-  // envelopamos no template juridico padrao + tipoPedido
-  return `No ambito do referido Estado, ${base} A ${tipoPedido.toLowerCase()} de credito acumulado encontra amparo nas normas acima.`;
+  const rule = getStateRule(uf);
+
+  const partes: string[] = [`No ambito do referido Estado, ${base}`];
+
+  if (rule.hipoteses?.length) {
+    partes.push(
+      `Sao hipoteses tipicas de credito acumulado em ${rule.nome}: ${rule.hipoteses.map(h => `(${(rule.hipoteses!.indexOf(h) + 1).toString()}) ${h}`).join('; ')}.`,
+    );
+  }
+
+  if (rule.utilizacao) {
+    const u = rule.utilizacao;
+    const modalidades: string[] = [];
+    if (u.compensacaoProprio) modalidades.push('compensacao no proprio estabelecimento');
+    if (u.transferenciaMesmoTitular) modalidades.push('transferencia entre estabelecimentos do mesmo titular');
+    if (u.transferenciaTerceiros) modalidades.push('transferencia a terceiros');
+    if (u.pagamentoFornecedores) modalidades.push('pagamento a fornecedores');
+    if (u.pagamentoAtivoImobilizado) modalidades.push('aquisicao de ativo imobilizado');
+    if (u.ressarcimentoMoeda) modalidades.push('ressarcimento em moeda');
+    if (modalidades.length > 0) {
+      partes.push(`O ordenamento estadual admite as seguintes modalidades de utilizacao: ${modalidades.join(', ')}.`);
+    }
+    if (u.limites?.transferenciaTerceiros) {
+      partes.push(`Limite/condicao para transferencia a terceiros: ${u.limites.transferenciaTerceiros}.`);
+    }
+  }
+
+  if (rule.prazos?.decadencia) {
+    partes.push(
+      `O prazo decadencial para pleitear o credito e de ${rule.prazos.decadencia} a contar do fato gerador (CTN art. 173)${rule.prazos.prescricao ? `, com prazo prescricional de ${rule.prazos.prescricao}` : ''}.`,
+    );
+  }
+
+  partes.push(`A ${tipoPedido.toLowerCase()} de credito acumulado encontra amparo nas normas e modalidades acima.`);
+
+  return partes.join(' ');
 }
