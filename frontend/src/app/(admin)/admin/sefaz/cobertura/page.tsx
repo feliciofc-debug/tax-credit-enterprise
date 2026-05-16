@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { authedFetcher } from '@/lib/fetcher';
+import BrazilTileMap from '@/components/BrazilTileMap';
 
 type StateTier = 'A' | 'B' | 'C';
 type StateStatus = 'covered' | 'planned' | 'pending';
@@ -109,7 +110,27 @@ export default function SefazCoberturaPage() {
         <Kpi label="Pendentes" value={`${s.porStatus.pending} UFs`} sub={`${s.pibPendente.toFixed(1)}% PIB restante`} color="#6b7280" />
       </section>
 
-      {/* Mapa visual por regiao */}
+      {/* Mapa do Brasil em tiles */}
+      <section style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 24, marginBottom: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Mapa do Brasil — cobertura SEFAZ</h2>
+        <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 8 }}>
+          Cada UF e' um tile com o mesmo peso visual. Cor = status de integracao. Click para ver autoridade, RICMS, sistema e regras de procuracao.
+        </p>
+        <BrazilTileMap
+          items={(data.items || []).map(i => ({
+            uf: i.uf,
+            status: i.status,
+            tier: i.tier,
+            pibPct: i.pibPct,
+            nome: i.nome,
+            sistema: i.sistemaCreditoAcumulado,
+          }))}
+          selecionada={selecionada}
+          onSelect={uf => setSelecionada(prev => (prev === uf ? null : uf))}
+        />
+      </section>
+
+      {/* Distribuicao por regiao (mantida abaixo como visao alternativa) */}
       <section style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 24, marginBottom: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700 }}>Distribuicao por regiao</h2>
