@@ -552,6 +552,158 @@ export const CHECKLISTS: Record<string, ChecklistEstado> = {
       },
     ],
   },
+  DF: {
+    uf: 'DF',
+    nome: 'Distrito Federal',
+    sistema: 'Agencia Net / SEI-GDF',
+    legislacao: 'RICMS/DF Decreto 18.955/1997, Arts. 56-61',
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa',
+        itens: [
+          { id: 'DF-01', descricao: 'Contrato Social consolidado', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'DF-02', descricao: 'CNPJ e IE ativa no CF/DF', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'DF-03', descricao: 'Procuracao para acesso a Agencia Net / SEI-GDF', obrigatorio: true, tipo: 'procuracao' },
+          { id: 'DF-04', descricao: 'CND SEFAZ/DF', obrigatorio: true, tipo: 'certidao' },
+          { id: 'DF-05', descricao: 'Certificado digital e-CNPJ para Agencia Net', obrigatorio: true, tipo: 'certificado' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal',
+        itens: [
+          { id: 'DF-06', descricao: 'EFD ICMS/IPI dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'DF-07', descricao: 'NF-es entrada e saida', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'DF-08', descricao: 'DAS (Declaracao Anual Simplificada) ou GIA-DF', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'DF-09', descricao: 'Demonstrativo do saldo credor acumulado', obrigatorio: true, tipo: 'demonstrativo' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo na Agencia Net / SEI-GDF',
+        itens: [
+          { id: 'DF-10', descricao: 'Acessar Agencia Net com certificado digital', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'DF-11', descricao: 'Abrir processo no SEI-GDF / SISCONT-ICMS', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'DF-12', descricao: 'Anexar requerimento e documentacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'DF-13', descricao: 'Aguardar analise da Subsecretaria da Receita', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'DF-14', descricao: 'Se transferencia a terceiros: solicitar autorizacao previa', obrigatorio: false, tipo: 'procedimento', condicao: 'Transferencia a terceiros' },
+        ],
+      },
+    ],
+  },
+  MS: {
+    uf: 'MS',
+    nome: 'Mato Grosso do Sul',
+    sistema: 'e-Fazenda MS / e-Process',
+    legislacao: 'RICMS/MS Decreto 9.203/1998, Arts. 65-70',
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa',
+        itens: [
+          { id: 'MS-01', descricao: 'Contrato Social consolidado', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'MS-02', descricao: 'CNPJ e IE ativa no CCE-MS', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'MS-03', descricao: 'Procuracao para acesso ao e-Fazenda MS', obrigatorio: true, tipo: 'procuracao' },
+          { id: 'MS-04', descricao: 'CND SEFAZ/MS', obrigatorio: true, tipo: 'certidao' },
+          { id: 'MS-05', descricao: 'Certificado digital e-CNPJ para Portal do Contribuinte MS', obrigatorio: true, tipo: 'certificado' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal',
+        itens: [
+          { id: 'MS-06', descricao: 'EFD ICMS/IPI dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'MS-07', descricao: 'NF-es entrada e saida (com foco em diferimento agroindustrial)', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'MS-08', descricao: 'GIA-MS dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'MS-09', descricao: 'Demonstrativo do saldo credor', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: 'MS-10', descricao: 'Termos de regime especial (se beneficiario agroindustrial)', obrigatorio: false, tipo: 'fiscal', condicao: 'Regime especial agroindustria' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo no e-Fazenda MS',
+        itens: [
+          { id: 'MS-11', descricao: 'Acessar e-Fazenda MS com certificado digital', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'MS-12', descricao: 'Abrir e-Process de credito acumulado', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'MS-13', descricao: 'Anexar requerimento e documentacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'MS-14', descricao: 'Aguardar analise da Superintendencia de Administracao Tributaria', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'MS-15', descricao: 'Se transferencia a terceiros: respeitar limite por exercicio', obrigatorio: false, tipo: 'procedimento', condicao: 'Transferencia a terceiros' },
+        ],
+      },
+    ],
+  },
+  AM: {
+    uf: 'AM',
+    nome: 'Amazonas',
+    sistema: 'DTe-AM (Domicilio Tributario Eletronico) / SUFRAMA',
+    legislacao: 'RICMS/AM Decreto 20.686/1999, Arts. 73-79 + Lei 2.826/2003 (PPB ZFM)',
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa',
+        itens: [
+          { id: 'AM-01', descricao: 'Contrato Social consolidado', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'AM-02', descricao: 'CNPJ e IE ativa no CAD-ICMS/AM', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'AM-03', descricao: 'Procuracao para acesso ao DTe-AM e SUFRAMA', obrigatorio: true, tipo: 'procuracao' },
+          { id: 'AM-04', descricao: 'CND SEFAZ/AM', obrigatorio: true, tipo: 'certidao' },
+          { id: 'AM-05', descricao: 'Certificado digital e-CNPJ para DTe-AM', obrigatorio: true, tipo: 'certificado' },
+          { id: 'AM-06', descricao: 'Certidao SUFRAMA (se beneficiario ZFM)', obrigatorio: false, tipo: 'certidao', condicao: 'Beneficiario ZFM' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal',
+        itens: [
+          { id: 'AM-07', descricao: 'EFD ICMS/IPI dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'AM-08', descricao: 'NF-es entrada e saida', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'AM-09', descricao: 'DAM (Declaracao de Apuracao Mensal) ou GIA-AM', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'AM-10', descricao: 'Demonstrativo do saldo credor acumulado', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: 'AM-11', descricao: 'Termos PPB / Resolucao SUFRAMA (se ZFM)', obrigatorio: false, tipo: 'fiscal', condicao: 'Beneficiario ZFM' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo no DTe-AM',
+        itens: [
+          { id: 'AM-12', descricao: 'Acessar DTe-AM com certificado digital', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'AM-13', descricao: 'Abrir processo eletronico de credito acumulado', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'AM-14', descricao: 'Anexar requerimento e documentacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'AM-15', descricao: 'Aguardar analise do Departamento de Tributacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'AM-16', descricao: 'Se incentivo ZFM: validacao cruzada com SUFRAMA', obrigatorio: false, tipo: 'procedimento', condicao: 'Incentivo ZFM' },
+        ],
+      },
+    ],
+  },
+  PA: {
+    uf: 'PA',
+    nome: 'Para',
+    sistema: 'e-CAC SEFA-PA / Portal do Contribuinte',
+    legislacao: 'RICMS/PA Decreto 4.676/2001, Arts. 105-111',
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa',
+        itens: [
+          { id: 'PA-01', descricao: 'Contrato Social consolidado', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'PA-02', descricao: 'CNPJ e IE ativa no CAD-ICMS/PA', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'PA-03', descricao: 'Procuracao para acesso ao e-CAC SEFA-PA', obrigatorio: true, tipo: 'procuracao' },
+          { id: 'PA-04', descricao: 'CND SEFA/PA', obrigatorio: true, tipo: 'certidao' },
+          { id: 'PA-05', descricao: 'Certificado digital e-CNPJ para Portal do Contribuinte', obrigatorio: true, tipo: 'certificado' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal',
+        itens: [
+          { id: 'PA-06', descricao: 'EFD ICMS/IPI dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'PA-07', descricao: 'NF-es entrada e saida (foco em exportacao mineral/agro)', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'PA-08', descricao: 'DIEF/PA dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'PA-09', descricao: 'Demonstrativo do saldo credor acumulado', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: 'PA-10', descricao: 'Registros de Exportacao (DDE) e licenca SISCOMEX', obrigatorio: true, tipo: 'fiscal', condicao: 'Exportacao' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo no e-CAC SEFA-PA',
+        itens: [
+          { id: 'PA-11', descricao: 'Acessar e-CAC SEFA-PA com certificado digital', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'PA-12', descricao: 'Abrir requerimento eletronico de credito acumulado', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'PA-13', descricao: 'Anexar requerimento e documentacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'PA-14', descricao: 'Aguardar analise da Diretoria de Tributacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'PA-15', descricao: 'Se transferencia a terceiros: solicitar autorizacao SEFA-PA', obrigatorio: false, tipo: 'procedimento', condicao: 'Transferencia a terceiros' },
+        ],
+      },
+    ],
+  },
   FEDERAL: {
     uf: 'FEDERAL',
     nome: 'Federal (PER/DCOMP)',

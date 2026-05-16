@@ -9,9 +9,10 @@
  * Cada nova UF = 1 entrada nesse arquivo. Sem refactor de logica.
  *
  * Cobertura atual:
- *   - covered (8): SP, RJ, MG, RS, PR, SC, BA, MT  ~78% PIB
- *   - planned (5): PE, CE, MA, ES, GO              priorizados Nordeste/Sudeste
- *   - pending (14): DF, MS, AL, SE, RN, PB, PI, AM, PA, RO, RR, AP, AC, TO
+ *   - covered (8):  SP, RJ, MG, RS, PR, SC, BA, MT       ~74% PIB
+ *   - planned (9):  PE, CE, MA, ES, GO (Onda 1)          ~11% PIB
+ *                   DF, MS, AM, PA (Onda 2)              ~9% PIB
+ *   - pending (10): AL, SE, RN, PB, PI, RO, RR, AP, AC, TO  ~6% PIB
  *
  * Tiers de integracao:
  *   - A: API/Webservice oficial (SP e-CredAc, PR SISCRED)
@@ -613,7 +614,187 @@ const GO: StateRule = {
 };
 
 // ============================================================
-// PENDING (14) — entrada futura, registrados apenas para
+// ONDA 2 — PLANNED (4): DF, MS, AM, PA
+// Estados tier B com regras detalhadas, PIB combinado ~7.9%
+// ============================================================
+
+const DF: StateRule = {
+  uf: 'DF', nome: 'Distrito Federal', regiao: 'CO', status: 'planned', tier: 'B', pibPct: 3.6,
+  sefaz: {
+    nomeOrgao: 'SEFAZ-DF',
+    nomeOficial: 'SECRETARIA DE ESTADO DE ECONOMIA DO DISTRITO FEDERAL',
+    autoridade: 'Sr. Auditor Fiscal — Subsecretaria da Receita/DF',
+    autoridadeOficial: 'ILMO. SR. SUBSECRETARIO DA RECEITA — SEFAZ/DF',
+    cadastroEstadual: 'CF/DF (Cadastro Fiscal do Distrito Federal)',
+    siteUrl: 'https://www.receita.fazenda.df.gov.br',
+    portalProcessos: 'Agencia Net (Agencia Virtual da SEFAZ-DF) / SEI-GDF',
+    sistemaCreditoAcumulado: 'Agencia Net (modulo Credito Acumulado) / SISCONT-ICMS',
+  },
+  baseLegal: {
+    leiComplementar: 'LC 87/1996',
+    ricms: 'RICMS/DF — Decreto 18.955/1997',
+    artigosPrincipais: ['Art. 56-60 (Saldo Credor Acumulado)', 'Art. 61 (Transferencia)'],
+    resolucoesRelevantes: ['Lei 1.254/1996', 'Decreto 33.269/2011 (PROIN-DF)'],
+  },
+  hipoteses: [
+    'Exportacao (LC 87/96 Art. 32, II)',
+    'Diferimento e suspensao com manutencao de credito',
+    'Aquisicoes para insumos de produtos exportados ou diferidos',
+  ],
+  utilizacao: {
+    compensacaoProprio: true,
+    transferenciaMesmoTitular: true,
+    transferenciaTerceiros: true,
+    pagamentoFornecedores: false,
+    pagamentoAtivoImobilizado: false,
+    ressarcimentoMoeda: false,
+    limites: { transferenciaTerceiros: 'mediante autorizacao previa SEFAZ-DF' },
+  },
+  procuracao: {
+    requerInstrumentoProprio: false,
+    nomeInstrumento: 'Procuracao para acesso a Agencia Net / SEI-GDF',
+    aceitaProcuracaoGenerica: true,
+    poderesNecessarios: ['acesso Agencia Net', 'transmitir SEI-GDF', 'assinar requerimentos'],
+    prazoMaximoMeses: 24,
+  },
+  prazos: { decadencia: '5 anos', prescricao: '5 anos' },
+  observacoes: 'PIB concentrado em servicos publicos e comercio. Industria menor, mas creditos acumulados aparecem em distribuicao de combustiveis e operacoes interestaduais.',
+};
+
+const MS: StateRule = {
+  uf: 'MS', nome: 'Mato Grosso do Sul', regiao: 'CO', status: 'planned', tier: 'B', pibPct: 1.5,
+  sefaz: {
+    nomeOrgao: 'SEFAZ-MS',
+    nomeOficial: 'SECRETARIA DE ESTADO DE FAZENDA DE MATO GROSSO DO SUL',
+    autoridade: 'Sr. Auditor Fiscal — Superintendencia de Administracao Tributaria/MS',
+    autoridadeOficial: 'ILMO. SR. SUPERINTENDENTE DE ADMINISTRACAO TRIBUTARIA — SEFAZ/MS',
+    cadastroEstadual: 'CCE-MS (Cadastro de Contribuintes do Estado)',
+    siteUrl: 'https://www.efazenda.ms.gov.br',
+    portalProcessos: 'e-Fazenda MS (Portal do Contribuinte) / e-Process',
+    sistemaCreditoAcumulado: 'e-Fazenda MS (modulo Credito Acumulado)',
+  },
+  baseLegal: {
+    leiComplementar: 'LC 87/1996',
+    ricms: 'RICMS/MS — Decreto 9.203/1998',
+    artigosPrincipais: ['Art. 65-69 (Saldo Credor Acumulado)', 'Art. 70 (Transferencia entre estabelecimentos)'],
+    resolucoesRelevantes: ['Lei 1.810/1997', 'Decreto 11.803/2005 (regimes especiais agroindustria)'],
+  },
+  hipoteses: [
+    'Exportacao (LC 87/96 Art. 32, II)',
+    'Saidas com diferimento (forte em agroindustria: soja, carne, etanol)',
+    'Aquisicoes para insumos de produtos exportados',
+  ],
+  utilizacao: {
+    compensacaoProprio: true,
+    transferenciaMesmoTitular: true,
+    transferenciaTerceiros: true,
+    pagamentoFornecedores: true,
+    pagamentoAtivoImobilizado: false,
+    ressarcimentoMoeda: false,
+    limites: {
+      transferenciaTerceiros: 'mediante autorizacao SEFAZ-MS, observado limite por exercicio',
+      pagamentoFornecedores: 'restrito a fornecedores cadastrados no estado e setor agroindustrial',
+    },
+  },
+  procuracao: {
+    requerInstrumentoProprio: false,
+    nomeInstrumento: 'Procuracao para acesso ao e-Fazenda MS',
+    aceitaProcuracaoGenerica: true,
+    poderesNecessarios: ['acesso e-Fazenda', 'transmitir requerimentos', 'assinar peticoes'],
+    prazoMaximoMeses: 24,
+  },
+  prazos: { decadencia: '5 anos', prescricao: '5 anos' },
+  observacoes: 'Estado com forte concentracao em agroindustria (frigorificos, esmagadoras de soja, usinas de etanol). Diferimento gera saldo credor relevante.',
+};
+
+const AM: StateRule = {
+  uf: 'AM', nome: 'Amazonas', regiao: 'N', status: 'planned', tier: 'B', pibPct: 1.6,
+  sefaz: {
+    nomeOrgao: 'SEFAZ-AM',
+    nomeOficial: 'SECRETARIA DE ESTADO DA FAZENDA DO AMAZONAS',
+    autoridade: 'Sr. Auditor Fiscal — Departamento de Tributacao/AM',
+    autoridadeOficial: 'ILMO. SR. SECRETARIO EXECUTIVO ADJUNTO DA RECEITA — SEFAZ/AM',
+    cadastroEstadual: 'CAD-ICMS/AM',
+    siteUrl: 'https://www.sefaz.am.gov.br',
+    portalProcessos: 'DTe-AM (Domicilio Tributario Eletronico) / SUFRAMA (interface ZFM)',
+    sistemaCreditoAcumulado: 'DTe-AM (modulo Credito Acumulado / Incentivos ZFM)',
+  },
+  baseLegal: {
+    leiComplementar: 'LC 87/1996; CF/88 Art. 40 ADCT (Zona Franca de Manaus)',
+    ricms: 'RICMS/AM — Decreto 20.686/1999',
+    artigosPrincipais: ['Art. 73-78 (Saldo Credor Acumulado)', 'Art. 79 (Transferencia)'],
+    resolucoesRelevantes: ['Lei Complementar AM 19/1997', 'Lei 2.826/2003 (PPB ZFM)', 'Decreto 23.992/2003 (regimes especiais)'],
+  },
+  hipoteses: [
+    'Exportacao (LC 87/96 Art. 32, II)',
+    'Operacoes amparadas pelos incentivos da Zona Franca de Manaus (ZFM/SUFRAMA)',
+    'Saidas com diferimento e isencao com manutencao de credito',
+  ],
+  utilizacao: {
+    compensacaoProprio: true,
+    transferenciaMesmoTitular: true,
+    transferenciaTerceiros: true,
+    pagamentoFornecedores: false,
+    pagamentoAtivoImobilizado: false,
+    ressarcimentoMoeda: false,
+    limites: { transferenciaTerceiros: 'sujeita a autorizacao SEFAZ-AM e validacao SUFRAMA quando incentivo ZFM' },
+  },
+  procuracao: {
+    requerInstrumentoProprio: false,
+    nomeInstrumento: 'Procuracao para acesso ao DTe-AM e SUFRAMA',
+    aceitaProcuracaoGenerica: true,
+    poderesNecessarios: ['acesso DTe-AM', 'acesso SUFRAMA', 'transmitir requerimentos', 'assinar peticoes'],
+    prazoMaximoMeses: 24,
+  },
+  prazos: { decadencia: '5 anos', prescricao: '5 anos' },
+  observacoes: 'Polo Industrial de Manaus (ZFM) gera regimes especiais complexos. Pedidos de credito acumulado costumam exigir validacao cruzada com SUFRAMA.',
+};
+
+const PA: StateRule = {
+  uf: 'PA', nome: 'Para', regiao: 'N', status: 'planned', tier: 'B', pibPct: 2.2,
+  sefaz: {
+    nomeOrgao: 'SEFAZ-PA',
+    nomeOficial: 'SECRETARIA DE ESTADO DA FAZENDA DO PARA',
+    autoridade: 'Sr. Auditor Fiscal — Diretoria de Tributacao/PA',
+    autoridadeOficial: 'ILMO. SR. DIRETOR DE TRIBUTACAO — SEFA/PA',
+    cadastroEstadual: 'CAD-ICMS/PA',
+    siteUrl: 'https://www.sefa.pa.gov.br',
+    portalProcessos: 'e-CAC SEFA-PA / Portal do Contribuinte / SISCOMEX (mineracao)',
+    sistemaCreditoAcumulado: 'e-CAC SEFA-PA (modulo Credito Acumulado)',
+  },
+  baseLegal: {
+    leiComplementar: 'LC 87/1996',
+    ricms: 'RICMS/PA — Decreto 4.676/2001',
+    artigosPrincipais: ['Art. 105-110 (Saldo Credor Acumulado)', 'Art. 111 (Transferencia)'],
+    resolucoesRelevantes: ['Lei 5.530/1989', 'Decreto 4.676/2001', 'Lei 6.913/2006 (politica mineral)'],
+  },
+  hipoteses: [
+    'Exportacao (LC 87/96 Art. 32, II) — predominante em mineracao e agroindustria',
+    'Saidas com diferimento e suspensao',
+    'Aquisicoes para insumos de produtos exportados (minerios, soja, carne, madeira)',
+  ],
+  utilizacao: {
+    compensacaoProprio: true,
+    transferenciaMesmoTitular: true,
+    transferenciaTerceiros: true,
+    pagamentoFornecedores: false,
+    pagamentoAtivoImobilizado: false,
+    ressarcimentoMoeda: false,
+    limites: { transferenciaTerceiros: 'mediante autorizacao SEFA-PA, com prioridade para setor exportador' },
+  },
+  procuracao: {
+    requerInstrumentoProprio: false,
+    nomeInstrumento: 'Procuracao para acesso ao e-CAC SEFA-PA',
+    aceitaProcuracaoGenerica: true,
+    poderesNecessarios: ['acesso e-CAC SEFA-PA', 'transmitir requerimentos', 'assinar peticoes'],
+    prazoMaximoMeses: 24,
+  },
+  prazos: { decadencia: '5 anos', prescricao: '5 anos' },
+  observacoes: 'Estado mineral-exportador (Vale, Hydro, agroindustria). Saldo credor de exportacao costuma ser elevado e gera demanda continua.',
+};
+
+// ============================================================
+// PENDING (10) — entrada futura, registrados apenas para
 // aparecerem no mapa de cobertura.
 // ============================================================
 
@@ -628,15 +809,11 @@ function pending(uf: string, nome: string, regiao: Regiao, pibPct: number, tier:
   };
 }
 
-const DF = pending('DF', 'Distrito Federal',     'CO',  3.6, 'B');
-const MS = pending('MS', 'Mato Grosso do Sul',   'CO',  1.5, 'B');
 const AL = pending('AL', 'Alagoas',              'NE',  0.8);
 const SE = pending('SE', 'Sergipe',              'NE',  0.6);
 const RN = pending('RN', 'Rio Grande do Norte',  'NE',  1.0);
 const PB = pending('PB', 'Paraiba',              'NE',  1.0);
 const PI = pending('PI', 'Piaui',                'NE',  0.7);
-const AM = pending('AM', 'Amazonas',             'N',   1.6, 'B');
-const PA = pending('PA', 'Para',                 'N',   2.2, 'B');
 const RO = pending('RO', 'Rondonia',             'N',   0.7);
 const RR = pending('RR', 'Roraima',              'N',   0.2);
 const AP = pending('AP', 'Amapa',                'N',   0.2);
@@ -650,10 +827,10 @@ const TO = pending('TO', 'Tocantins',            'N',   0.6);
 export const STATE_RULES: Record<string, StateRule> = {
   // covered
   SP, RJ, MG, RS, PR, SC, BA, MT,
-  // planned
-  PE, CE, MA, ES, GO,
+  // planned (Onda 1 + Onda 2)
+  PE, CE, MA, ES, GO, DF, MS, AM, PA,
   // pending
-  DF, MS, AL, SE, RN, PB, PI, AM, PA, RO, RR, AP, AC, TO,
+  AL, SE, RN, PB, PI, RO, RR, AP, AC, TO,
 };
 
 export const ALL_UFS: string[] = Object.keys(STATE_RULES);
