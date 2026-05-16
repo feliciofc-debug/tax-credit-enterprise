@@ -9,10 +9,13 @@
  * Cada nova UF = 1 entrada nesse arquivo. Sem refactor de logica.
  *
  * Cobertura atual:
- *   - covered (8):  SP, RJ, MG, RS, PR, SC, BA, MT       ~74% PIB
- *   - planned (9):  PE, CE, MA, ES, GO (Onda 1)          ~11% PIB
- *                   DF, MS, AM, PA (Onda 2)              ~9% PIB
- *   - pending (10): AL, SE, RN, PB, PI, RO, RR, AP, AC, TO  ~6% PIB
+ *   - covered (8):  SP, RJ, MG, RS, PR, SC, BA, MT             ~74% PIB
+ *   - planned (19): PE, CE, MA, ES, GO (Onda 1, tier B)        ~11% PIB
+ *                   DF, MS, AM, PA (Onda 2, tier B)            ~9% PIB
+ *                   AL, SE, RN, PB, PI, RO, RR, AP, AC, TO     ~6% PIB
+ *                   (Onda 3, tier C — manual/upload guiado)
+ *   - pending (0): zero. As 27 UFs ja tem regras minimamente
+ *     completas. Backlog opera por evolucao C->B->A sob demanda.
  *
  * Tiers de integracao:
  *   - A: API/Webservice oficial (SP e-CredAc, PR SISCRED)
@@ -794,42 +797,187 @@ const PA: StateRule = {
 };
 
 // ============================================================
-// PENDING (10) — entrada futura, registrados apenas para
-// aparecerem no mapa de cobertura.
+// ONDA 3 — PLANNED (10) tier C — UFs com baixa digitalizacao
+// SEFAZ. Template padronizado (manual/upload guiado), suficiente
+// para gerar peticao com fundamentacao correta e checklist
+// minimamente confiavel. Evoluem para tier B quando o estado
+// disponibilizar portal/RPA.
 // ============================================================
 
-function pending(uf: string, nome: string, regiao: Regiao, pibPct: number, tier: StateTier = 'C'): StateRule {
+interface TierCSeed {
+  uf: string;
+  nome: string;
+  regiao: Regiao;
+  pibPct: number;
+  ricmsDecreto: string;
+  nomeOficialSEFAZ: string;
+  autoridadeOficial: string;
+  cadastro: string;
+  siteUrl: string;
+  observacoes: string;
+}
+
+function tierCPlanned(s: TierCSeed): StateRule {
   return {
-    uf, nome, regiao, status: 'pending', tier, pibPct,
+    uf: s.uf,
+    nome: s.nome,
+    regiao: s.regiao,
+    status: 'planned',
+    tier: 'C',
+    pibPct: s.pibPct,
     sefaz: {
-      nomeOrgao: `SEFAZ-${uf}`,
-      autoridade: `Sr. Auditor Fiscal — SEFAZ/${uf}`,
+      nomeOrgao: `SEFAZ-${s.uf}`,
+      nomeOficial: s.nomeOficialSEFAZ,
+      autoridade: `Sr. Auditor Fiscal — SEFAZ/${s.uf}`,
+      autoridadeOficial: s.autoridadeOficial,
+      cadastroEstadual: s.cadastro,
+      siteUrl: s.siteUrl,
+      portalProcessos: 'Portal SEFAZ + protocolo presencial / e-mail institucional',
+      sistemaCreditoAcumulado: 'Procedimento manual (formulario + EFD + memoria de calculo)',
     },
-    baseLegal: { leiComplementar: 'LC 87/1996' },
+    baseLegal: {
+      leiComplementar: 'LC 87/1996',
+      ricms: `RICMS/${s.uf} — ${s.ricmsDecreto}`,
+      artigosPrincipais: ['Disposicoes gerais sobre saldo credor acumulado e transferencia', 'Verificar capitulo especifico no RICMS local'],
+    },
+    hipoteses: [
+      'Exportacao (LC 87/96 Art. 32, II)',
+      'Saidas com diferimento ou suspensao com manutencao de credito',
+      'Aquisicoes para insumos de produtos exportados',
+    ],
+    utilizacao: {
+      compensacaoProprio: true,
+      transferenciaMesmoTitular: true,
+      transferenciaTerceiros: true,
+      pagamentoFornecedores: false,
+      pagamentoAtivoImobilizado: false,
+      ressarcimentoMoeda: false,
+      limites: { transferenciaTerceiros: 'mediante autorizacao previa SEFAZ; verificar regras especificas no RICMS local' },
+    },
+    procuracao: {
+      requerInstrumentoProprio: false,
+      nomeInstrumento: `Procuracao para representar perante SEFAZ-${s.uf}`,
+      aceitaProcuracaoGenerica: true,
+      poderesNecessarios: ['representar perante SEFAZ', 'transmitir requerimentos', 'assinar peticoes', 'receber intimacoes'],
+      prazoMaximoMeses: 24,
+    },
+    prazos: { decadencia: '5 anos', prescricao: '5 anos' },
+    observacoes: s.observacoes,
   };
 }
 
-const AL = pending('AL', 'Alagoas',              'NE',  0.8);
-const SE = pending('SE', 'Sergipe',              'NE',  0.6);
-const RN = pending('RN', 'Rio Grande do Norte',  'NE',  1.0);
-const PB = pending('PB', 'Paraiba',              'NE',  1.0);
-const PI = pending('PI', 'Piaui',                'NE',  0.7);
-const RO = pending('RO', 'Rondonia',             'N',   0.7);
-const RR = pending('RR', 'Roraima',              'N',   0.2);
-const AP = pending('AP', 'Amapa',                'N',   0.2);
-const AC = pending('AC', 'Acre',                 'N',   0.2);
-const TO = pending('TO', 'Tocantins',            'N',   0.6);
+const AL = tierCPlanned({
+  uf: 'AL', nome: 'Alagoas', regiao: 'NE', pibPct: 0.8,
+  ricmsDecreto: 'Decreto 35.245/1991',
+  nomeOficialSEFAZ: 'SECRETARIA DE ESTADO DA FAZENDA DE ALAGOAS',
+  autoridadeOficial: 'ILMO. SR. SUPERINTENDENTE DA RECEITA ESTADUAL — SEFAZ/AL',
+  cadastro: 'CACEAL (Cadastro de Contribuintes do Estado de Alagoas)',
+  siteUrl: 'https://www.sefaz.al.gov.br',
+  observacoes: 'Estado com forte presenca sucroalcooleira (etanol e acucar) gerando saldo credor de exportacao. Fluxo predominantemente manual.',
+});
+
+const SE = tierCPlanned({
+  uf: 'SE', nome: 'Sergipe', regiao: 'NE', pibPct: 0.6,
+  ricmsDecreto: 'Decreto 21.400/2002',
+  nomeOficialSEFAZ: 'SECRETARIA DE ESTADO DA FAZENDA DE SERGIPE',
+  autoridadeOficial: 'ILMO. SR. SUPERINTENDENTE DE GESTAO TRIBUTARIA — SEFAZ/SE',
+  cadastro: 'CACESE (Cadastro de Contribuintes do Estado de Sergipe)',
+  siteUrl: 'https://www.sefaz.se.gov.br',
+  observacoes: 'Menor estado por area do Brasil, com industria petroquimica e agroindustria. Fluxo manual via Inspetoria Fazendaria.',
+});
+
+const RN = tierCPlanned({
+  uf: 'RN', nome: 'Rio Grande do Norte', regiao: 'NE', pibPct: 1.0,
+  ricmsDecreto: 'Decreto 13.640/1997',
+  nomeOficialSEFAZ: 'SECRETARIA DE ESTADO DA TRIBUTACAO DO RIO GRANDE DO NORTE',
+  autoridadeOficial: 'ILMO. SR. SECRETARIO ADJUNTO DA TRIBUTACAO — SET/RN',
+  cadastro: 'CCE-RN (Cadastro de Contribuintes do Estado)',
+  siteUrl: 'https://www.set.rn.gov.br',
+  observacoes: 'Setor textil, fruticultura irrigada e energia eolica. Saldos credores de exportacao concentrados em fruticultura e textil.',
+});
+
+const PB = tierCPlanned({
+  uf: 'PB', nome: 'Paraiba', regiao: 'NE', pibPct: 1.0,
+  ricmsDecreto: 'Decreto 18.930/1997',
+  nomeOficialSEFAZ: 'SECRETARIA DE ESTADO DA RECEITA DA PARAIBA',
+  autoridadeOficial: 'ILMO. SR. SECRETARIO EXECUTIVO DA RECEITA — SER/PB',
+  cadastro: 'CCICMS-PB (Cadastro de Contribuintes do ICMS)',
+  siteUrl: 'https://www.receita.pb.gov.br',
+  observacoes: 'Industria calçadista, textil e sucroalcooleira. Programa FAIN (incentivos) gera situacoes especificas.',
+});
+
+const PI = tierCPlanned({
+  uf: 'PI', nome: 'Piaui', regiao: 'NE', pibPct: 0.7,
+  ricmsDecreto: 'Decreto 13.500/2008',
+  nomeOficialSEFAZ: 'SECRETARIA DE ESTADO DA FAZENDA DO PIAUI',
+  autoridadeOficial: 'ILMO. SR. SUPERINTENDENTE DA RECEITA ESTADUAL — SEFAZ/PI',
+  cadastro: 'CAGEP (Cadastro de Contribuintes do Estado do Piaui)',
+  siteUrl: 'https://www.sefaz.pi.gov.br',
+  observacoes: 'Agronegocio em expansao (soja, milho na regiao do MATOPIBA). Saldo credor de exportacao crescente.',
+});
+
+const RO = tierCPlanned({
+  uf: 'RO', nome: 'Rondonia', regiao: 'N', pibPct: 0.7,
+  ricmsDecreto: 'Decreto 22.721/2018',
+  nomeOficialSEFAZ: 'SECRETARIA DE ESTADO DE FINANCAS DE RONDONIA',
+  autoridadeOficial: 'ILMO. SR. COORDENADOR-GERAL DA RECEITA ESTADUAL — SEFIN/RO',
+  cadastro: 'CAD-ICMS/RO',
+  siteUrl: 'https://www.sefin.ro.gov.br',
+  observacoes: 'Frigorificos, agroindustria de soja e madeira. Diferimento gera saldo credor relevante.',
+});
+
+const RR = tierCPlanned({
+  uf: 'RR', nome: 'Roraima', regiao: 'N', pibPct: 0.2,
+  ricmsDecreto: 'Decreto 4.335-E/2001',
+  nomeOficialSEFAZ: 'SECRETARIA DE ESTADO DA FAZENDA DE RORAIMA',
+  autoridadeOficial: 'ILMO. SR. SECRETARIO ADJUNTO DA RECEITA — SEFAZ/RR',
+  cadastro: 'CAD-ICMS/RR',
+  siteUrl: 'https://www.sefaz.rr.gov.br',
+  observacoes: 'Estado pequeno, fluxo predominantemente manual. Operacoes de exportacao para Venezuela podem gerar regimes especiais.',
+});
+
+const AP = tierCPlanned({
+  uf: 'AP', nome: 'Amapa', regiao: 'N', pibPct: 0.2,
+  ricmsDecreto: 'Decreto 2.269/1998',
+  nomeOficialSEFAZ: 'SECRETARIA DE ESTADO DA FAZENDA DO AMAPA',
+  autoridadeOficial: 'ILMO. SR. SECRETARIO ADJUNTO DA RECEITA — SEFAZ/AP',
+  cadastro: 'CAD-ICMS/AP',
+  siteUrl: 'https://www.sefaz.ap.gov.br',
+  observacoes: 'Area de Livre Comercio de Macapa-Santana (ALC) cria regime especial. Mineracao (manganes, ferro) gera exportacao.',
+});
+
+const AC = tierCPlanned({
+  uf: 'AC', nome: 'Acre', regiao: 'N', pibPct: 0.2,
+  ricmsDecreto: 'Decreto 8/1998',
+  nomeOficialSEFAZ: 'SECRETARIA DE ESTADO DA FAZENDA DO ACRE',
+  autoridadeOficial: 'ILMO. SR. DIRETOR DE ADMINISTRACAO TRIBUTARIA — SEFAZ/AC',
+  cadastro: 'CAD-ICMS/AC',
+  siteUrl: 'https://www.sefaz.ac.gov.br',
+  observacoes: 'Madeira, castanha e borracha. Volumes pequenos, fluxo majoritariamente presencial.',
+});
+
+const TO = tierCPlanned({
+  uf: 'TO', nome: 'Tocantins', regiao: 'N', pibPct: 0.6,
+  ricmsDecreto: 'Decreto 2.912/2006',
+  nomeOficialSEFAZ: 'SECRETARIA DA FAZENDA E PLANEJAMENTO DO ESTADO DO TOCANTINS',
+  autoridadeOficial: 'ILMO. SR. SUPERINTENDENTE DA RECEITA ESTADUAL — SEFAZ/TO',
+  cadastro: 'CAD-ICMS/TO',
+  siteUrl: 'https://www.sefaz.to.gov.br',
+  observacoes: 'Membro do MATOPIBA: agronegocio em forte expansao (soja, milho, algodao). Diferimento e exportacao predominam.',
+});
 
 // ============================================================
 // EXPORT
 // ============================================================
 
 export const STATE_RULES: Record<string, StateRule> = {
-  // covered
+  // covered (8) - tier A/B em producao
   SP, RJ, MG, RS, PR, SC, BA, MT,
-  // planned (Onda 1 + Onda 2)
-  PE, CE, MA, ES, GO, DF, MS, AM, PA,
-  // pending
+  // planned Onda 1 (5) - tier B, regras detalhadas
+  PE, CE, MA, ES, GO,
+  // planned Onda 2 (4) - tier B, regras detalhadas
+  DF, MS, AM, PA,
+  // planned Onda 3 (10) - tier C, template padronizado
   AL, SE, RN, PB, PI, RO, RR, AP, AC, TO,
 };
 

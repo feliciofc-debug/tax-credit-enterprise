@@ -1531,16 +1531,16 @@ export default function ConsultriDeckPage() {
               <div className="text-xs text-emerald-400/80 mt-2">~78% do PIB nacional</div>
             </div>
             <div className="bg-amber-500/5 border border-amber-500/30 rounded-2xl p-5">
-              <div className="text-xs uppercase tracking-wider text-amber-400 font-bold mb-2">Planejados (Ondas 1+2)</div>
+              <div className="text-xs uppercase tracking-wider text-amber-400 font-bold mb-2">Onda 1+2 (tier B)</div>
               <div className="text-4xl font-extrabold text-amber-300 mb-1">9 UFs</div>
               <div className="text-sm text-gray-300">PE · CE · MA · ES · GO · DF · MS · AM · PA</div>
-              <div className="text-xs text-amber-400/80 mt-2">Regras completas no engine, prontas para ativar</div>
+              <div className="text-xs text-amber-400/80 mt-2">Regras detalhadas, faltam adapters de portal/RPA</div>
             </div>
-            <div className="bg-gray-500/5 border border-gray-500/30 rounded-2xl p-5">
-              <div className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-2">Backlog (mapeados)</div>
-              <div className="text-4xl font-extrabold text-gray-300 mb-1">10 UFs</div>
+            <div className="bg-orange-500/5 border border-orange-500/30 rounded-2xl p-5">
+              <div className="text-xs uppercase tracking-wider text-orange-400 font-bold mb-2">Onda 3 (tier C)</div>
+              <div className="text-4xl font-extrabold text-orange-300 mb-1">10 UFs</div>
               <div className="text-sm text-gray-300">AL · SE · RN · PB · PI · RO · RR · AP · AC · TO</div>
-              <div className="text-xs text-gray-400/80 mt-2">Visiveis no mapa, prontas para entrar</div>
+              <div className="text-xs text-orange-400/80 mt-2">Template manual + protocolo presencial / e-mail</div>
             </div>
           </div>
 
@@ -1580,13 +1580,13 @@ export default function ConsultriDeckPage() {
             <p className="text-xs uppercase tracking-wider font-bold text-emerald-300 mb-2">Proximas ondas (alinhado com a forca da Consultri)</p>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
               <div>
-                <strong className="text-emerald-300">Onda 1 (regras prontas):</strong> PE, CE, MA, ES, GO — Nordeste forte + ES/GO. Adiciona <strong>11% do PIB</strong> ao cobrir.
+                <strong className="text-emerald-300">Onda 1+2 (tier B):</strong> 9 UFs com regras ricas — PE, CE, MA, ES, GO, DF, MS, AM, PA. Inclui regimes especiais ZFM (AM), agroindustria diferida (MS), exportacao mineral (PA). Adiciona ~20% do PIB.
               </div>
               <div>
-                <strong className="text-emerald-300">Onda 2 (regras prontas):</strong> DF, MS, AM, PA — Centro-Oeste + Norte exportador (mineracao + agroindustria). Adiciona <strong>9% do PIB</strong>.
+                <strong className="text-emerald-300">Onda 3 (tier C):</strong> 10 UFs com template manual padronizado — AL, SE, RN, PB, PI, RO, RR, AP, AC, TO. Plataforma gera peticao com fundamentacao do RICMS local; protocolo presencial/e-mail. Cobre os ~6% restantes.
               </div>
               <div>
-                <strong className="text-amber-300">Onda 3 (mapeada):</strong> AL, SE, RN, PB, PI, RO, RR, AP, AC, TO — fecha o mapa. Estrategia tier C (manual/upload) inicialmente, evolui para B sob demanda.
+                <strong className="text-amber-300">Resultado:</strong> <strong className="text-emerald-300">27/27 UFs com regras ativas</strong>. Mapa nacional completo, zero estado em "pendente". Evolucao tier C → B → A acontece sob demanda comercial, sem refactor de logica.
               </div>
             </div>
           </div>

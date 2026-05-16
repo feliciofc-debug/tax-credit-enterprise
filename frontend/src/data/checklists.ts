@@ -26,6 +26,67 @@ export interface ChecklistEstado {
   etapas: ChecklistEtapa[];
 }
 
+// Factory para Onda 3 (tier C). Gera checklist padronizado com base
+// no nome da UF, RICMS local e nome do cadastro. Mantem 13 itens
+// canonicos cobrindo doc previa, fiscal e protocolo manual.
+function buildTierC(uf: string, nome: string, ricms: string, cadastro: string, sistema: string): ChecklistEstado {
+  return {
+    uf, nome, sistema, legislacao: ricms,
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa',
+        itens: [
+          { id: `${uf}-01`, descricao: 'Contrato Social consolidado', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: `${uf}-02`, descricao: `CNPJ e IE ativa no ${cadastro}`, obrigatorio: true, tipo: 'documento_empresa' },
+          { id: `${uf}-03`, descricao: `Procuracao para representar perante SEFAZ-${uf}`, obrigatorio: true, tipo: 'procuracao' },
+          { id: `${uf}-04`, descricao: `CND SEFAZ/${uf}`, obrigatorio: true, tipo: 'certidao' },
+          { id: `${uf}-05`, descricao: 'Certificado digital e-CNPJ (ICP-Brasil)', obrigatorio: true, tipo: 'certificado' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal',
+        itens: [
+          { id: `${uf}-06`, descricao: 'EFD ICMS/IPI dos periodos de acumulo', obrigatorio: true, tipo: 'fiscal' },
+          { id: `${uf}-07`, descricao: 'NF-es entrada e saida (foco em exportacao/diferimento)', obrigatorio: true, tipo: 'fiscal' },
+          { id: `${uf}-08`, descricao: `GIA / DIEF / DAM da SEFAZ-${uf} dos periodos`, obrigatorio: true, tipo: 'fiscal' },
+          { id: `${uf}-09`, descricao: 'Memoria de calculo do saldo credor acumulado', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: `${uf}-10`, descricao: 'Registros de Exportacao (DDE) / SISCOMEX', obrigatorio: false, tipo: 'fiscal', condicao: 'Exportacao' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo (manual / presencial / e-mail institucional)',
+        itens: [
+          { id: `${uf}-11`, descricao: `Imprimir requerimento de credito acumulado (gerado pela plataforma com fundamentacao do RICMS/${uf})`, obrigatorio: true, tipo: 'procedimento' },
+          { id: `${uf}-12`, descricao: `Protocolar na Inspetoria Fazendaria mais proxima (presencial) ou via e-mail institucional da SEFAZ-${uf}`, obrigatorio: true, tipo: 'procedimento' },
+          { id: `${uf}-13`, descricao: 'Acompanhar processo e responder intimacoes', obrigatorio: true, tipo: 'procedimento' },
+          { id: `${uf}-14`, descricao: 'Se transferencia a terceiros: solicitar autorizacao previa SEFAZ', obrigatorio: false, tipo: 'procedimento', condicao: 'Transferencia a terceiros' },
+        ],
+      },
+    ],
+  };
+}
+
+function buildTierCChecklists(): Record<string, ChecklistEstado> {
+  const seeds: Array<[string, string, string, string]> = [
+    ['AL', 'Alagoas',              'RICMS/AL Decreto 35.245/1991', 'CACEAL'],
+    ['SE', 'Sergipe',              'RICMS/SE Decreto 21.400/2002', 'CACESE'],
+    ['RN', 'Rio Grande do Norte',  'RICMS/RN Decreto 13.640/1997', 'CCE-RN'],
+    ['PB', 'Paraiba',              'RICMS/PB Decreto 18.930/1997', 'CCICMS-PB'],
+    ['PI', 'Piaui',                'RICMS/PI Decreto 13.500/2008', 'CAGEP'],
+    ['RO', 'Rondonia',             'RICMS/RO Decreto 22.721/2018', 'CAD-ICMS/RO'],
+    ['RR', 'Roraima',              'RICMS/RR Decreto 4.335-E/2001', 'CAD-ICMS/RR'],
+    ['AP', 'Amapa',                'RICMS/AP Decreto 2.269/1998', 'CAD-ICMS/AP'],
+    ['AC', 'Acre',                 'RICMS/AC Decreto 8/1998', 'CAD-ICMS/AC'],
+    ['TO', 'Tocantins',            'RICMS/TO Decreto 2.912/2006', 'CAD-ICMS/TO'],
+  ];
+  const out: Record<string, ChecklistEstado> = {};
+  for (const [uf, nome, ricms, cadastro] of seeds) {
+    const sistema = `Portal SEFAZ-${uf} + protocolo presencial / e-mail institucional`;
+    out[uf] = buildTierC(uf, nome, ricms, cadastro, sistema);
+  }
+  return out;
+}
+
 export const CHECKLISTS: Record<string, ChecklistEstado> = {
   SP: {
     uf: 'SP',
@@ -704,6 +765,13 @@ export const CHECKLISTS: Record<string, ChecklistEstado> = {
       },
     ],
   },
+  // ==========================================================
+  // ONDA 3 - tier C: checklist padronizado
+  // Estados sem portal automatizado para credito acumulado.
+  // Fluxo: documentacao + protocolo presencial / e-mail / SEI
+  // ==========================================================
+  ...buildTierCChecklists(),
+
   FEDERAL: {
     uf: 'FEDERAL',
     nome: 'Federal (PER/DCOMP)',
