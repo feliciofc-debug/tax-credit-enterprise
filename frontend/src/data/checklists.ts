@@ -402,6 +402,156 @@ export const CHECKLISTS: Record<string, ChecklistEstado> = {
       },
     ],
   },
+  PE: {
+    uf: 'PE',
+    nome: 'Pernambuco',
+    sistema: 'e-Fisco / ARE Virtual',
+    legislacao: 'RICMS/PE Decreto 44.650/2017, Arts. 32-39 + Anexo 32',
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa', prazo: 'Antes do protocolo',
+        itens: [
+          { id: 'PE-01', descricao: 'Contrato Social consolidado', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'PE-02', descricao: 'CNPJ e IE ativa no CACEPE', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'PE-03', descricao: 'Procuracao para acesso ARE Virtual (e-Fisco)', obrigatorio: true, tipo: 'procuracao' },
+          { id: 'PE-04', descricao: 'CND Tributaria Estadual SEFAZ/PE', obrigatorio: true, tipo: 'certidao' },
+          { id: 'PE-05', descricao: 'Certificado digital e-CNPJ para ARE Virtual', obrigatorio: true, tipo: 'certificado' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal',
+        itens: [
+          { id: 'PE-06', descricao: 'EFD ICMS/IPI dos periodos de acumulo', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'PE-07', descricao: 'NF-es entrada e saida (com foco em exportacao)', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'PE-08', descricao: 'Memorias de Calculo / DEC (Declaracao Eletronica do Contribuinte)', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'PE-09', descricao: 'Demonstrativo do saldo credor acumulado', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: 'PE-10', descricao: 'DDE / Registros de Exportacao (se hipotese de exportacao)', obrigatorio: false, tipo: 'fiscal', condicao: 'Exportacao' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo no e-Fisco',
+        itens: [
+          { id: 'PE-11', descricao: 'Acessar ARE Virtual com certificado digital', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'PE-12', descricao: 'Transmitir requerimento de credito acumulado', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'PE-13', descricao: 'Anexar demonstrativos e documentacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'PE-14', descricao: 'Aguardar analise da DPC (Diretoria de Politica Tributaria)', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'PE-15', descricao: 'Se transferencia a terceiros: respeitar limite de 30% (exportacao sem teto)', obrigatorio: false, tipo: 'procedimento', condicao: 'Transferencia a terceiros' },
+        ],
+      },
+    ],
+  },
+  CE: {
+    uf: 'CE',
+    nome: 'Ceara',
+    sistema: 'SITRAM / ContaFazenda / ARE Virtual',
+    legislacao: 'RICMS/CE Decreto 33.327/2019, Arts. 65-67',
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa',
+        itens: [
+          { id: 'CE-01', descricao: 'Contrato Social consolidado', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'CE-02', descricao: 'CNPJ e IE ativa no CGF (Cadastro Geral da Fazenda)', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'CE-03', descricao: 'Procuracao para ARE Virtual SEFAZ-CE', obrigatorio: true, tipo: 'procuracao' },
+          { id: 'CE-04', descricao: 'CND SEFAZ/CE', obrigatorio: true, tipo: 'certidao' },
+          { id: 'CE-05', descricao: 'Certificado digital e-CNPJ para SITRAM', obrigatorio: true, tipo: 'certificado' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal',
+        itens: [
+          { id: 'CE-06', descricao: 'EFD ICMS/IPI dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'CE-07', descricao: 'NF-es entrada e saida', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'CE-08', descricao: 'DIEF/CE ou GIM dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'CE-09', descricao: 'Demonstrativo de saldo credor acumulado', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: 'CE-10', descricao: 'Comprovantes de operacoes FDI (se aplicavel)', obrigatorio: false, tipo: 'fiscal', condicao: 'Beneficiarios FDI' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo no SITRAM',
+        itens: [
+          { id: 'CE-11', descricao: 'Acessar SITRAM e abrir processo eletronico', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'CE-12', descricao: 'Anexar requerimento e documentacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'CE-13', descricao: 'Aguardar analise da CATRI (Coordenadoria de Administracao Tributaria)', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'CE-14', descricao: 'Se transferencia a terceiros: solicitar autorizacao SEFAZ-CE', obrigatorio: false, tipo: 'procedimento', condicao: 'Transferencia a terceiros' },
+        ],
+      },
+    ],
+  },
+  MA: {
+    uf: 'MA',
+    nome: 'Maranhao',
+    sistema: 'SIAT-e / Portal do Contribuinte',
+    legislacao: 'RICMS/MA Decreto 19.714/2003, Arts. 47-51',
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa',
+        itens: [
+          { id: 'MA-01', descricao: 'Contrato Social consolidado', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'MA-02', descricao: 'CNPJ e IE ativa no CAD-ICMS/MA', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'MA-03', descricao: 'Procuracao para acesso ao SIAT-e', obrigatorio: true, tipo: 'procuracao' },
+          { id: 'MA-04', descricao: 'CND SEFAZ/MA', obrigatorio: true, tipo: 'certidao' },
+          { id: 'MA-05', descricao: 'Certificado digital e-CNPJ para Portal do Contribuinte MA', obrigatorio: true, tipo: 'certificado' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal',
+        itens: [
+          { id: 'MA-06', descricao: 'EFD ICMS/IPI dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'MA-07', descricao: 'NF-es entrada e saida', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'MA-08', descricao: 'DIEF/MA dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'MA-09', descricao: 'Demonstrativo do saldo credor acumulado', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: 'MA-10', descricao: 'Documentos do PROIN (se beneficiario)', obrigatorio: false, tipo: 'fiscal', condicao: 'PROIN' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo no SIAT-e',
+        itens: [
+          { id: 'MA-11', descricao: 'Abrir processo eletronico no SIAT-e', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'MA-12', descricao: 'Anexar requerimento e documentacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'MA-13', descricao: 'Aguardar analise da Celula de Gestao da Acao Fiscal', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'MA-14', descricao: 'Se transferencia a terceiros: solicitar autorizacao previa', obrigatorio: false, tipo: 'procedimento', condicao: 'Transferencia a terceiros' },
+        ],
+      },
+    ],
+  },
+  GO: {
+    uf: 'GO',
+    nome: 'Goias',
+    sistema: 'SARE / Portal do Contribuinte',
+    legislacao: 'RICMS/GO Decreto 4.852/1997, Arts. 58-61 + Lei 11.651/1991 (CTE)',
+    etapas: [
+      {
+        ordem: 1, titulo: 'Documentacao Previa',
+        itens: [
+          { id: 'GO-01', descricao: 'Contrato Social consolidado', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'GO-02', descricao: 'CNPJ e IE ativa no CCE-GO', obrigatorio: true, tipo: 'documento_empresa' },
+          { id: 'GO-03', descricao: 'Procuracao para acesso ao SARE', obrigatorio: true, tipo: 'procuracao' },
+          { id: 'GO-04', descricao: 'CND SEFAZ/GO', obrigatorio: true, tipo: 'certidao' },
+          { id: 'GO-05', descricao: 'Certificado digital e-CNPJ para Portal do Contribuinte GO', obrigatorio: true, tipo: 'certificado' },
+        ],
+      },
+      {
+        ordem: 2, titulo: 'Documentacao Fiscal',
+        itens: [
+          { id: 'GO-06', descricao: 'EFD ICMS/IPI dos periodos', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'GO-07', descricao: 'NF-es entrada e saida', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'GO-08', descricao: 'GIA-GO ou equivalente', obrigatorio: true, tipo: 'fiscal' },
+          { id: 'GO-09', descricao: 'Demonstrativo do saldo credor', obrigatorio: true, tipo: 'demonstrativo' },
+          { id: 'GO-10', descricao: 'Termos PRODUZIR / FOMENTAR (se beneficiario)', obrigatorio: false, tipo: 'fiscal', condicao: 'PRODUZIR/FOMENTAR' },
+        ],
+      },
+      {
+        ordem: 3, titulo: 'Protocolo no SARE',
+        itens: [
+          { id: 'GO-11', descricao: 'Acessar SARE com certificado digital', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'GO-12', descricao: 'Abrir requerimento eletronico de credito acumulado', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'GO-13', descricao: 'Anexar documentacao', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'GO-14', descricao: 'Aguardar analise da Superintendencia da Receita', obrigatorio: true, tipo: 'procedimento' },
+          { id: 'GO-15', descricao: 'Se transferencia a terceiros: respeitar teto definido em ato SEFAZ-GO', obrigatorio: false, tipo: 'procedimento', condicao: 'Transferencia a terceiros' },
+        ],
+      },
+    ],
+  },
   FEDERAL: {
     uf: 'FEDERAL',
     nome: 'Federal (PER/DCOMP)',

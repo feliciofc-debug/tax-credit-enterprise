@@ -14,17 +14,28 @@ import { CONSULTRI_PRESET } from '../src/services/procuration.service';
 
 const prisma = new PrismaClient();
 
-const DEMO_CLIENTS = [
-  { cnpj: '11.111.111/0001-11', company: 'Industria Alfa Ltda',          email: 'alfa@demo.local',     scenario: 'active_ok' },
-  { cnpj: '22.222.222/0001-22', company: 'Comercio Beta S/A',            email: 'beta@demo.local',     scenario: 'active_ok' },
-  { cnpj: '33.333.333/0001-33', company: 'Servicos Gama EIRELI',         email: 'gama@demo.local',     scenario: 'expiring_30' },
-  { cnpj: '44.444.444/0001-44', company: 'Logistica Delta Express',      email: 'delta@demo.local',    scenario: 'expiring_7' },
-  { cnpj: '55.555.555/0001-55', company: 'Construtora Epsilon',          email: 'epsilon@demo.local',  scenario: 'partial' },
-  { cnpj: '66.666.666/0001-66', company: 'Quimica Zeta Industrial',      email: 'zeta@demo.local',     scenario: 'pending' },
-  { cnpj: '77.777.777/0001-77', company: 'Tecnologia Eta Solucoes',      email: 'eta@demo.local',      scenario: 'not_found' },
-  { cnpj: '88.888.888/0001-88', company: 'Distribuidora Theta',          email: 'theta@demo.local',    scenario: 'active_ok' },
-  { cnpj: '99.999.999/0001-99', company: 'Agropecuaria Iota',            email: 'iota@demo.local',     scenario: 'risk_caixa' },
-  { cnpj: '10.101.010/0001-10', company: 'Metalurgica Kappa',            email: 'kappa@demo.local',    scenario: 'risk_sitfis' },
+interface DemoClient {
+  cnpj: string;
+  company: string;
+  email: string;
+  scenario: string;
+  cidade?: string;
+  estado?: string;
+}
+
+const DEMO_CLIENTS: DemoClient[] = [
+  { cnpj: '11.111.111/0001-11', company: 'Industria Alfa Ltda',          email: 'alfa@demo.local',     scenario: 'active_ok',   cidade: 'Sao Paulo',     estado: 'SP' },
+  { cnpj: '22.222.222/0001-22', company: 'Comercio Beta S/A',            email: 'beta@demo.local',     scenario: 'active_ok',   cidade: 'Rio de Janeiro',estado: 'RJ' },
+  { cnpj: '33.333.333/0001-33', company: 'Servicos Gama EIRELI',         email: 'gama@demo.local',     scenario: 'expiring_30', cidade: 'Belo Horizonte',estado: 'MG' },
+  { cnpj: '44.444.444/0001-44', company: 'Logistica Delta Express',      email: 'delta@demo.local',    scenario: 'expiring_7',  cidade: 'Curitiba',      estado: 'PR' },
+  { cnpj: '55.555.555/0001-55', company: 'Construtora Epsilon',          email: 'epsilon@demo.local',  scenario: 'partial',     cidade: 'Salvador',      estado: 'BA' },
+  { cnpj: '66.666.666/0001-66', company: 'Quimica Zeta Industrial',      email: 'zeta@demo.local',     scenario: 'pending',     cidade: 'Porto Alegre',  estado: 'RS' },
+  { cnpj: '77.777.777/0001-77', company: 'Tecnologia Eta Solucoes',      email: 'eta@demo.local',      scenario: 'not_found',   cidade: 'Florianopolis', estado: 'SC' },
+  { cnpj: '88.888.888/0001-88', company: 'Distribuidora Theta',          email: 'theta@demo.local',    scenario: 'active_ok',   cidade: 'Cuiaba',        estado: 'MT' },
+  { cnpj: '99.999.999/0001-99', company: 'Agropecuaria Iota',            email: 'iota@demo.local',     scenario: 'risk_caixa',  cidade: 'Sao Paulo',     estado: 'SP' },
+  { cnpj: '10.101.010/0001-10', company: 'Metalurgica Kappa',            email: 'kappa@demo.local',    scenario: 'risk_sitfis', cidade: 'Belo Horizonte',estado: 'MG' },
+  { cnpj: '11.222.333/0001-44', company: 'Tecidos Lambda Nordeste S/A',  email: 'lambda@demo.local',   scenario: 'active_ok',   cidade: 'Recife',        estado: 'PE' },
+  { cnpj: '12.333.444/0001-55', company: 'Frutas Mu Exportadora EIRELI', email: 'mu@demo.local',       scenario: 'expiring_30', cidade: 'Fortaleza',     estado: 'CE' },
 ];
 
 function daysFromNow(d: number) {
@@ -36,9 +47,11 @@ async function main() {
 
   for (const c of DEMO_CLIENTS) {
     // 1. User
+    const cidade = c.cidade ?? 'Rio de Janeiro';
+    const estado = c.estado ?? 'RJ';
     const user = await prisma.user.upsert({
       where: { email: c.email },
-      update: { company: c.company, cnpj: c.cnpj },
+      update: { company: c.company, cnpj: c.cnpj, cidade, estado },
       create: {
         email: c.email,
         password: 'demo-only-no-login',
@@ -47,8 +60,8 @@ async function main() {
         cnpj: c.cnpj,
         role: 'user',
         endereco: 'Av. Demo, 100',
-        cidade: 'Rio de Janeiro',
-        estado: 'RJ',
+        cidade,
+        estado,
         legalRepName: 'Responsavel Demo',
         legalRepCpf: '000.000.000-00',
         legalRepCargo: 'Diretor',
@@ -218,7 +231,7 @@ async function main() {
       ],
     });
 
-    console.log(`✓ ${c.company.padEnd(35)} cenario=${c.scenario.padEnd(15)} status=${serproStatus}`);
+    console.log(`✓ ${c.company.padEnd(38)} ${(estado).padEnd(2)} cenario=${c.scenario.padEnd(15)} status=${serproStatus}`);
   }
 
   // SerproConnection demo (vazia, apenas para o painel listar)
