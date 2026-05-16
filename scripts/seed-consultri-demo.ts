@@ -36,6 +36,8 @@ const DEMO_CLIENTS: DemoClient[] = [
   { cnpj: '10.101.010/0001-10', company: 'Metalurgica Kappa',            email: 'kappa@demo.local',    scenario: 'risk_sitfis', cidade: 'Belo Horizonte',estado: 'MG' },
   { cnpj: '11.222.333/0001-44', company: 'Tecidos Lambda Nordeste S/A',  email: 'lambda@demo.local',   scenario: 'active_ok',   cidade: 'Recife',        estado: 'PE' },
   { cnpj: '12.333.444/0001-55', company: 'Frutas Mu Exportadora EIRELI', email: 'mu@demo.local',       scenario: 'expiring_30', cidade: 'Fortaleza',     estado: 'CE' },
+  { cnpj: '13.444.555/0001-66', company: 'Logistica Nu Federal Ltda',    email: 'nu@demo.local',       scenario: 'active_ok',   cidade: 'Brasilia',      estado: 'DF' },
+  { cnpj: '14.555.666/0001-77', company: 'Mineracao Xi Amazonia S/A',    email: 'xi@demo.local',       scenario: 'partial',     cidade: 'Belem',         estado: 'PA' },
 ];
 
 function daysFromNow(d: number) {

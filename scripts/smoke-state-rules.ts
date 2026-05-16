@@ -2,11 +2,11 @@
  * Smoke test do StateRulesEngine
  * ---------------------------------------------------------------
  * Verifica deterministicamente, sem subir o servidor:
- *  - 27 UFs catalogadas (8 covered + 5 planned + 14 pending)
+ *  - 27 UFs catalogadas (8 covered + 9 planned + 10 pending)
  *  - PIB consistente (~100%)
- *  - 13 UFs com baseLegal.ricms preenchido (covered + planned)
- *  - 13 UFs com procuracao detalhada (covered + planned)
- *  - Funcoes de fundamentacao retornam texto nao-vazio para SP, RJ, PE, CE, MA, ES, GO
+ *  - 17 UFs com baseLegal.ricms preenchido (covered + planned)
+ *  - 17 UFs com procuracao detalhada (covered + planned)
+ *  - Funcoes de fundamentacao retornam texto nao-vazio para todos os 17 UFs
  *
  * Uso: npx tsx scripts/smoke-state-rules.ts
  * Saida 0 = OK, 1 = falha (apropriado para CI/Vercel pre-deploy).
@@ -31,7 +31,9 @@ function check(name: string, ok: boolean, detail?: string) {
 }
 
 const UFS_COVERED = ['SP', 'RJ', 'MG', 'RS', 'PR', 'SC', 'BA', 'MT'];
-const UFS_PLANNED = ['PE', 'CE', 'MA', 'ES', 'GO'];
+const UFS_PLANNED_ONDA1 = ['PE', 'CE', 'MA', 'ES', 'GO'];
+const UFS_PLANNED_ONDA2 = ['DF', 'MS', 'AM', 'PA'];
+const UFS_PLANNED = [...UFS_PLANNED_ONDA1, ...UFS_PLANNED_ONDA2];
 const UFS_DETALHADAS = [...UFS_COVERED, ...UFS_PLANNED];
 
 // 1. Total de UFs
@@ -41,8 +43,8 @@ check('27 UFs catalogadas', cobertura.length === 27, `recebido: ${cobertura.leng
 // 2. Distribuicao por status
 const summary = getCoberturaSummary();
 check(
-  '8 covered + 5 planned + 14 pending',
-  summary.porStatus.covered === 8 && summary.porStatus.planned === 5 && summary.porStatus.pending === 14,
+  '8 covered + 9 planned + 10 pending',
+  summary.porStatus.covered === 8 && summary.porStatus.planned === 9 && summary.porStatus.pending === 10,
   JSON.stringify(summary.porStatus),
 );
 
@@ -83,9 +85,15 @@ for (const uf of UFS_DETALHADAS) {
 const fallback = getStateRule('XX');
 check('Fallback retorna SP quando UF invalido', fallback.uf === 'SP', `recebido: ${fallback.uf}`);
 
-// 9. Status === 'pending' para 14 UFs do backlog
+// 9. Status === 'pending' para 10 UFs do backlog
 const pending = cobertura.filter(c => c.status === 'pending');
-check('14 UFs em status pending', pending.length === 14, `recebido: ${pending.length}`);
+check('10 UFs em status pending', pending.length === 10, `recebido: ${pending.length}`);
+
+// 10. Onda 2 esta em planned (nao mais pending)
+for (const uf of UFS_PLANNED_ONDA2) {
+  const r = STATE_RULES[uf];
+  check(`Onda 2 promovida a planned (${uf})`, r.status === 'planned', `status atual: ${r.status}`);
+}
 
 // === Relatorio ===
 const passed = results.filter(r => r.ok).length;

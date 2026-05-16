@@ -14,7 +14,7 @@ A plataforma cobre **3 trilhas integradas**:
 2. **Conformidade contínua** — uma vez outorgada, o sistema varre Caixa Postal eCAC, Situação Fiscal (SITFIS), DCTFWeb e marca alertas em dashboard. CONSULTRI vê 1 painel para todos os clientes em vez de logar em 50 contas.
 3. **Formalização de Crédito Acumulado** — para cada cliente com saldo credor, o sistema gera petição, demonstrativo, checklist de documentos por UF e envia ao protocolo certo (e-CredAc/SP, SITRAM/CE, e-Fisco/PE, SARE/GO, SIAT-e/MA, e-Docs/ES e mais 7 estados em produção).
 
-**Cobertura nacional hoje:** 8 UFs em produção (78% PIB) + 5 UFs com regras detalhadas prontas (PE, CE, MA, ES, GO — 11% PIB) → **13 UFs prontas, 14 mapeadas para próximas ondas**.
+**Cobertura nacional hoje:** 8 UFs em produção (74% PIB) + 9 UFs com regras detalhadas prontas — Onda 1: PE, CE, MA, ES, GO (11% PIB) e Onda 2: DF, MS, AM, PA (9% PIB) → **17 UFs prontas (~94% PIB), 10 mapeadas para próximas ondas**.
 
 ---
 
@@ -128,14 +128,14 @@ Para clientes com saldo credor, em `/admin/producao/formalizacao`:
 
 ## 6. Próximas ondas (alinhado com força CONSULTRI)
 
-**Onda 1 (já mapeada — 2-4 semanas para entrar em produção):**
-PE, CE, MA, ES, GO → 5 UFs com regras completas no `state-rules.config.ts` (autoridade, RICMS, hipóteses, utilização, procuração detalhada). Faltam só os adapters de protocolo automatizado (RPA/portal).
+**Onda 1 (regras completas no engine — pronta para ativar):**
+PE, CE, MA, ES, GO → 5 UFs com `state-rules.config.ts` completo (autoridade, RICMS, hipóteses, utilização, procuração detalhada) e checklists no frontend. Faltam só os adapters de protocolo automatizado (RPA/portal). Adiciona ~11% do PIB.
 
-**Onda 2 (mapeada, dados básicos):**
-DF, MS, AM, PA → tier B (portal + RPA), priorizadas pelo PIB.
+**Onda 2 (regras completas no engine — pronta para ativar):**
+DF, MS, AM, PA → 4 UFs tier B com mesmas peças completas. AM inclui regimes especiais ZFM/SUFRAMA, PA cobre exportação mineral/agro, MS cobre agroindústria com diferimento, DF cobre o eixo Brasília. Adiciona ~9% do PIB.
 
-**Onda 3 (backlog menor):**
-AL, SE, RN, PB, PI, RO, RR, AP, AC, TO → tier C (manual/upload) inicialmente, podem evoluir para B sob demanda.
+**Onda 3 (mapeada, dados básicos):**
+AL, SE, RN, PB, PI, RO, RR, AP, AC, TO → tier C (manual/upload) inicialmente, podem evoluir para B sob demanda. Adiciona os ~6% restantes para fechar o mapa.
 
 > **Adicionar uma nova UF** = 1 entrada em `src/config/state-rules.config.ts` + 1 entrada em `frontend/src/data/checklists.ts`. Sem refactor de lógica.
 

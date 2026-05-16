@@ -1531,15 +1531,15 @@ export default function ConsultriDeckPage() {
               <div className="text-xs text-emerald-400/80 mt-2">~78% do PIB nacional</div>
             </div>
             <div className="bg-amber-500/5 border border-amber-500/30 rounded-2xl p-5">
-              <div className="text-xs uppercase tracking-wider text-amber-400 font-bold mb-2">Onda 1 (planejados)</div>
-              <div className="text-4xl font-extrabold text-amber-300 mb-1">5 UFs</div>
-              <div className="text-sm text-gray-300">PE · CE · MA · ES · GO</div>
-              <div className="text-xs text-amber-400/80 mt-2">Nordeste forte da Consultri</div>
+              <div className="text-xs uppercase tracking-wider text-amber-400 font-bold mb-2">Planejados (Ondas 1+2)</div>
+              <div className="text-4xl font-extrabold text-amber-300 mb-1">9 UFs</div>
+              <div className="text-sm text-gray-300">PE · CE · MA · ES · GO · DF · MS · AM · PA</div>
+              <div className="text-xs text-amber-400/80 mt-2">Regras completas no engine, prontas para ativar</div>
             </div>
             <div className="bg-gray-500/5 border border-gray-500/30 rounded-2xl p-5">
               <div className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-2">Backlog (mapeados)</div>
-              <div className="text-4xl font-extrabold text-gray-300 mb-1">14 UFs</div>
-              <div className="text-sm text-gray-300">DF · MS · AL · SE · RN · PB · PI · AM · PA · ...</div>
+              <div className="text-4xl font-extrabold text-gray-300 mb-1">10 UFs</div>
+              <div className="text-sm text-gray-300">AL · SE · RN · PB · PI · RO · RR · AP · AC · TO</div>
               <div className="text-xs text-gray-400/80 mt-2">Visiveis no mapa, prontas para entrar</div>
             </div>
           </div>
@@ -1580,13 +1580,13 @@ export default function ConsultriDeckPage() {
             <p className="text-xs uppercase tracking-wider font-bold text-emerald-300 mb-2">Proximas ondas (alinhado com a forca da Consultri)</p>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
               <div>
-                <strong className="text-amber-300">Onda 1 (3-4 sem):</strong> PE, CE, MA, ES, GO — atinge <strong>94% do PIB</strong> e cobre todo Nordeste forte da Consultri.
+                <strong className="text-emerald-300">Onda 1 (regras prontas):</strong> PE, CE, MA, ES, GO — Nordeste forte + ES/GO. Adiciona <strong>11% do PIB</strong> ao cobrir.
               </div>
               <div>
-                <strong className="text-amber-300">Onda 2 (2-3 meses):</strong> DF, MS, AL, SE, RN, PB, PI — cobertura Sul + Nordeste integral, <strong>98% PIB</strong>.
+                <strong className="text-emerald-300">Onda 2 (regras prontas):</strong> DF, MS, AM, PA — Centro-Oeste + Norte exportador (mineracao + agroindustria). Adiciona <strong>9% do PIB</strong>.
               </div>
               <div>
-                <strong className="text-amber-300">Onda 3 (definir prioridade):</strong> AM, PA, RO, RR, AP, AC, TO — Norte completo. Estrategia: portal + Tier C (manual) onde nao houver API.
+                <strong className="text-amber-300">Onda 3 (mapeada):</strong> AL, SE, RN, PB, PI, RO, RR, AP, AC, TO — fecha o mapa. Estrategia tier C (manual/upload) inicialmente, evolui para B sob demanda.
               </div>
             </div>
           </div>
