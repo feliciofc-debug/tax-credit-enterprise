@@ -38,6 +38,7 @@ const SLIDES: Slide[] = [
   { id: 'consultri-hub-timeline', num: '14l', title: 'Hub de Notificações + Timeline Unificada' },
   { id: 'consultri-autorenew', num: '14m', title: 'Auto-Renovação Híbrida — zero gap' },
   { id: 'consultri-executive', num: '14n', title: 'Executive Summary + Filtros por Procurador' },
+  { id: 'consultri-cobertura', num: '14o', title: 'Cobertura Nacional SEFAZ — engine + 27 UFs' },
   { id: 'contratos', num: '15', title: 'Contratos Tripartite' },
   { id: 'ia', num: '16', title: 'IA + Teses + Jurisprudência' },
   { id: 'seguranca', num: '17', title: 'Segurança nível bancário' },
@@ -114,6 +115,9 @@ export default function ConsultriDeckPage() {
             </a>
             <a href="/consultri/notificacoes" className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded text-xs font-medium border border-gray-700 hidden md:inline-block">
               Hub
+            </a>
+            <a href="/admin/sefaz/cobertura" className="px-3 py-1.5 bg-emerald-900/40 hover:bg-emerald-900/60 rounded text-xs font-medium border border-emerald-700/60 hidden md:inline-block" title="Mapa nacional SEFAZ">
+              Cobertura BR
             </a>
             <NotifBell />
             
@@ -1511,8 +1515,85 @@ export default function ConsultriDeckPage() {
           </div>
         </Slide>
 
+        {/* Slide 14o — Cobertura Nacional SEFAZ */}
+        <Slide active={current === 28} id="consultri-cobertura">
+          <SlideHeader
+            num="14o"
+            title="Cobertura Nacional SEFAZ — engine parametrizado + 27 UFs"
+            subtitle="Hoje 8 estados (78% do PIB). Arquitetura pronta para os outros 19 — Nordeste priorizado"
+          />
+
+          <div className="grid md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-emerald-500/5 border border-emerald-500/30 rounded-2xl p-5">
+              <div className="text-xs uppercase tracking-wider text-emerald-400 font-bold mb-2">Hoje em producao</div>
+              <div className="text-4xl font-extrabold text-emerald-300 mb-1">8 UFs</div>
+              <div className="text-sm text-gray-300">SP · RJ · MG · RS · PR · SC · BA · MT</div>
+              <div className="text-xs text-emerald-400/80 mt-2">~78% do PIB nacional</div>
+            </div>
+            <div className="bg-amber-500/5 border border-amber-500/30 rounded-2xl p-5">
+              <div className="text-xs uppercase tracking-wider text-amber-400 font-bold mb-2">Onda 1 (planejados)</div>
+              <div className="text-4xl font-extrabold text-amber-300 mb-1">5 UFs</div>
+              <div className="text-sm text-gray-300">PE · CE · MA · ES · GO</div>
+              <div className="text-xs text-amber-400/80 mt-2">Nordeste forte da Consultri</div>
+            </div>
+            <div className="bg-gray-500/5 border border-gray-500/30 rounded-2xl p-5">
+              <div className="text-xs uppercase tracking-wider text-gray-400 font-bold mb-2">Backlog (mapeados)</div>
+              <div className="text-4xl font-extrabold text-gray-300 mb-1">14 UFs</div>
+              <div className="text-sm text-gray-300">DF · MS · AL · SE · RN · PB · PI · AM · PA · ...</div>
+              <div className="text-xs text-gray-400/80 mt-2">Visiveis no mapa, prontas para entrar</div>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-blue-500/5 border border-blue-500/30 rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">⚙️</span>
+                <h3 className="font-bold text-blue-300">StateRulesEngine</h3>
+              </div>
+              <p className="text-xs uppercase tracking-wider text-blue-400/80 font-bold mb-3">src/config/state-rules.config.ts</p>
+              <ul className="text-sm text-gray-300 space-y-2">
+                <li>✓ <strong>Uma config canonica</strong> de cada UF: SEFAZ, autoridade, RICMS, cadastro, sistema (e-CredAc, SISCRED...)</li>
+                <li>✓ <strong>Procuracao parametrizada</strong>: requer instrumento proprio? prazo? poderes?</li>
+                <li>✓ <strong>Tier de integracao</strong>: A (API), B (portal/RPA), C (manual)</li>
+                <li>✓ Adicionar nova UF = <strong>1 entrada no JSON</strong>, zero refactor</li>
+                <li>✓ Migrado: <code className="text-emerald-400">formalization · compliance · demonstrativo · procuration</code></li>
+              </ul>
+            </div>
+
+            <div className="bg-purple-500/5 border border-purple-500/30 rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">🗺️</span>
+                <h3 className="font-bold text-purple-300">Mapa /admin/sefaz/cobertura</h3>
+              </div>
+              <p className="text-xs uppercase tracking-wider text-purple-400/80 font-bold mb-3">visualizacao executiva</p>
+              <ul className="text-sm text-gray-300 space-y-2">
+                <li>✓ Mapa visual por <strong>regiao</strong> com 5 grupos (N, NE, CO, SE, S)</li>
+                <li>✓ Cores por status: verde · amarelo · cinza</li>
+                <li>✓ Click na UF revela: autoridade, cadastro, sistema, RICMS, regras</li>
+                <li>✓ KPIs: % PIB coberto, % planejado, % pendente</li>
+                <li>✓ Backend: <code className="text-emerald-400">GET /api/sefaz/cobertura</code> e <code className="text-emerald-400">/api/sefaz/uf/:uf</code></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-emerald-900/30 to-amber-900/30 border border-emerald-500/30 rounded-2xl p-5">
+            <p className="text-xs uppercase tracking-wider font-bold text-emerald-300 mb-2">Proximas ondas (alinhado com a forca da Consultri)</p>
+            <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-300">
+              <div>
+                <strong className="text-amber-300">Onda 1 (3-4 sem):</strong> PE, CE, MA, ES, GO — atinge <strong>94% do PIB</strong> e cobre todo Nordeste forte da Consultri.
+              </div>
+              <div>
+                <strong className="text-amber-300">Onda 2 (2-3 meses):</strong> DF, MS, AL, SE, RN, PB, PI — cobertura Sul + Nordeste integral, <strong>98% PIB</strong>.
+              </div>
+              <div>
+                <strong className="text-amber-300">Onda 3 (definir prioridade):</strong> AM, PA, RO, RR, AP, AC, TO — Norte completo. Estrategia: portal + Tier C (manual) onde nao houver API.
+              </div>
+            </div>
+          </div>
+        </Slide>
+
         {/* Slide 15 — Contratos */}
-        <Slide active={current === 28} id="contratos">
+        <Slide active={current === 29} id="contratos">
           <SlideHeader num="15" title="Contratos Tripartite Digitais" subtitle="Modelo contratual pronto para rede de parceiros" />
           <p className="text-gray-400 mb-8 max-w-3xl">
             A TaxCredit já tem desenhado contratualmente o modelo de operação em rede — o que poupa meses de
@@ -1559,7 +1640,7 @@ export default function ConsultriDeckPage() {
         </Slide>
 
         {/* Slide 16 — IA + Teses + Jurisprudência */}
-        <Slide active={current === 29} id="ia">
+        <Slide active={current === 30} id="ia">
           <SlideHeader num="16" title="IA + Teses + Jurisprudência" subtitle="Inteligência tributária viva, atualizada sem deploy" />
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             <Card>
@@ -1618,7 +1699,7 @@ export default function ConsultriDeckPage() {
         </Slide>
 
         {/* Slide 17 — Segurança */}
-        <Slide active={current === 30} id="seguranca">
+        <Slide active={current === 31} id="seguranca">
           <SlideHeader num="17" title="Segurança nível bancário" subtitle="9 camadas de proteção · LGPD-compliant · Honeypot ativo" />
           <p className="text-gray-400 mb-8 max-w-3xl">
             Dados fiscais são o ativo mais sensível da operação tributária. A TaxCredit aplica camadas de proteção
@@ -1698,7 +1779,7 @@ export default function ConsultriDeckPage() {
         </Slide>
 
         {/* Slide 18 — Modelo Comercial */}
-        <Slide active={current === 31} id="comercial">
+        <Slide active={current === 32} id="comercial">
           <SlideHeader num="18" title="Modelo Comercial Consultri" subtitle="Dois jogos, duas lógicas, total previsibilidade" />
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div className="bg-gradient-to-br from-emerald-950/40 to-gray-900 border border-emerald-700/40 rounded-2xl p-8">
@@ -1774,7 +1855,7 @@ export default function ConsultriDeckPage() {
         </Slide>
 
         {/* Slide 19 — Projeção */}
-        <Slide active={current === 32} id="projecao">
+        <Slide active={current === 33} id="projecao">
           <SlideHeader num="19" title="Projeção financeira" subtitle="Cenário realista com crescimento gradual" />
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <div className="bg-gradient-to-br from-emerald-950/30 to-gray-900 border border-emerald-700/30 rounded-2xl p-6">
@@ -1864,7 +1945,7 @@ export default function ConsultriDeckPage() {
         </Slide>
 
         {/* Slide 20 — Roadmap */}
-        <Slide active={current === 33} id="roadmap">
+        <Slide active={current === 34} id="roadmap">
           <SlideHeader num="20" title="Próximos passos" subtitle="Onboarding completo em 30 dias" />
           <div className="space-y-4 mb-8">
             <RoadmapRow semana="Semana 1" titulo="Contratação e setup técnico" itens={['Assinatura do contrato (Master Partner Consultri)', 'Pagamento da taxa de setup (R$ 30.000)', 'Provisionamento de infraestrutura dedicada', 'Configuração de DNS e certificados internos', 'Criação dos perfis admin da Consultri']} />
@@ -1879,7 +1960,7 @@ export default function ConsultriDeckPage() {
         </Slide>
 
         {/* Slide 21 — CTA */}
-        <Slide active={current === 34} id="cta">
+        <Slide active={current === 35} id="cta">
           <div className="flex flex-col items-center justify-center min-h-[80vh] text-center">
             <h2 className="text-4xl md:text-6xl font-black mb-6">
               Vamos construir juntos<br/>

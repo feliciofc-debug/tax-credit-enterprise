@@ -5,6 +5,7 @@
 import { ZipProcessResult, SpedDocument, EfdContribData, EcfData, EcdData } from './zipProcessor.service';
 import { TaxAnalysisResult } from './claude.service';
 import { logger } from '../utils/logger';
+import { getRicms } from './state-rules.service';
 
 // CFOPs típicos de importação
 const CFOP_IMPORTACAO = ['3102', '3101', '3103', '2102', '2101', '2103'];
@@ -104,7 +105,7 @@ export function buildDemonstrativo(
         vlrPis: 0,
         vlrCofins: 0,
         total: saldoCredor,
-        baseLegal: 'LC 87/96 art. 25 | RICMS-RJ Livro III | Ressarcimento/transferência',
+        baseLegal: `LC 87/96 art. 25 | ${getRicms(sped.uf)} | Ressarcimento/transferência`,
         tipo: 'real',
         observacao: 'Dado extraído do registro E110 do SPED EFD Fiscal',
       });

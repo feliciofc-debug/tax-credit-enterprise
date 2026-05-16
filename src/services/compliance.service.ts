@@ -5,6 +5,7 @@
 import { SpedDocument, EfdContribData, EcfData, EcdData } from './zipProcessor.service';
 import { executarCruzamento } from './cruzamentoContabil.service';
 import { logger } from '../utils/logger';
+import { getRicms, getNomeOrgao } from './state-rules.service';
 
 const PIS_RATE = 0.0165;
 const COFINS_RATE = 0.0760;
@@ -68,9 +69,9 @@ export class ComplianceAnalyzer {
         description: `A empresa possui R$ ${fmt(sped.resumo.saldoCredor)} em créditos de ICMS acumulados no período ${formatPeriod(periodo)}. Este saldo pode ser objeto de transferência a terceiros, ressarcimento ou compensação conforme a legislação estadual.`,
         valorEnvolvido: sped.resumo.saldoCredor,
         economiaEstimada: sped.resumo.saldoCredor,
-        baseLegal: 'LC 87/96 art. 25 | RICMS estadual — transferência/ressarcimento de créditos acumulados',
+        baseLegal: `LC 87/96 art. 25 | ${getRicms(sped.uf)} — transferência/ressarcimento de créditos acumulados`,
         registroSped: 'E110 — Apuração do ICMS',
-        parecer: `Recomenda-se análise da viabilidade de transferência de créditos acumulados (art. 25, LC 87/96) ou pedido de ressarcimento junto à SEFAZ-${sped.uf || 'UF'}. O saldo credor de R$ ${fmt(sped.resumo.saldoCredor)} é um ativo tributário não utilizado.`,
+        parecer: `Recomenda-se análise da viabilidade de transferência de créditos acumulados (art. 25, LC 87/96) ou pedido de ressarcimento junto à ${getNomeOrgao(sped.uf)}. O saldo credor de R$ ${fmt(sped.resumo.saldoCredor)} é um ativo tributário não utilizado.`,
         periodo: formatPeriod(periodo),
       });
     }

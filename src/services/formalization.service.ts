@@ -4,55 +4,15 @@
 // ============================================================
 
 import { logger } from '../utils/logger';
+import { getAutoridadeFormatada, getFundamentacaoLegal as engineFundamentacao } from './state-rules.service';
 
-// Mapeamento autoridade por UF
-const AUTORIDADES_UF: Record<string, { autoridade: string; orgao: string; cadastro: string }> = {
-  SP: {
-    autoridade: 'ILMO. SR. DELEGADO REGIONAL TRIBUTARIO',
-    orgao: 'SECRETARIA DA FAZENDA E PLANEJAMENTO DO ESTADO DE SAO PAULO',
-    cadastro: 'CADESP',
-  },
-  RJ: {
-    autoridade: 'EXMO. SR. SECRETARIO DE ESTADO DE FAZENDA',
-    orgao: 'SECRETARIA DE ESTADO DE FAZENDA DO RIO DE JANEIRO',
-    cadastro: 'CADERJ',
-  },
-  MG: {
-    autoridade: 'ILMO. SR. DELEGADO FISCAL',
-    orgao: 'SECRETARIA DE ESTADO DE FAZENDA DE MINAS GERAIS',
-    cadastro: 'Cadastro de Contribuintes ICMS/MG',
-  },
-  RS: {
-    autoridade: 'ILMO. SR. DELEGADO DA RECEITA ESTADUAL',
-    orgao: 'SECRETARIA DA FAZENDA DO ESTADO DO RIO GRANDE DO SUL',
-    cadastro: 'Cadastro de Contribuintes ICMS/RS',
-  },
-  PR: {
-    autoridade: 'ILMO. SR. INSPETOR GERAL DE FISCALIZACAO',
-    orgao: 'SECRETARIA DA FAZENDA DO ESTADO DO PARANA',
-    cadastro: 'CAD/ICMS-PR',
-  },
-  SC: {
-    autoridade: 'ILMO. SR. DIRETOR DE ADMINISTRACAO TRIBUTARIA',
-    orgao: 'SECRETARIA DE ESTADO DA FAZENDA DE SANTA CATARINA',
-    cadastro: 'CCICMS/SC',
-  },
-  BA: {
-    autoridade: 'ILMO. SR. INSPETOR FAZENDARIO',
-    orgao: 'SECRETARIA DA FAZENDA DO ESTADO DA BAHIA',
-    cadastro: 'CAD-ICMS/BA',
-  },
-  MT: {
-    autoridade: 'ILMO. SR. SUPERINTENDENTE DE NORMAS DA RECEITA PUBLICA',
-    orgao: 'SECRETARIA DE ESTADO DE FAZENDA DE MATO GROSSO',
-    cadastro: 'CCE/MT',
-  },
-  ES: {
-    autoridade: 'ILMO. SR. SUBSECRETARIO DE ESTADO DA RECEITA',
-    orgao: 'SECRETARIA DE ESTADO DA FAZENDA DO ESPIRITO SANTO',
-    cadastro: 'Cadastro de Contribuintes ICMS/ES',
-  },
-};
+// AUTORIDADES_UF migrado para StateRulesEngine.
+// Mantemos o helper local com a mesma assinatura, delegando para o engine,
+// para nao quebrar codigo existente. Adicionar novo estado = editar
+// src/config/state-rules.config.ts, nao mais este arquivo.
+function getAutoridadesUf(uf: string) {
+  return getAutoridadeFormatada(uf);
+}
 
 export interface SefazDocumentParams {
   // Empresa (da analise)
@@ -93,7 +53,7 @@ export interface SefazDocumentParams {
 }
 
 export function generateSefazDocument(params: SefazDocumentParams): string {
-  const ufData = AUTORIDADES_UF[params.uf] || AUTORIDADES_UF['SP'];
+  const ufData = getAutoridadesUf(params.uf);
   const dataAtual = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
   const valorExtenso = numberToWords(params.valorTotalCredito);
 
@@ -1673,43 +1633,16 @@ function numberToWordsCurrency(value: number): string {
   return `R$ ${formatNumber(value)}`;
 }
 
+/**
+ * Texto de fundamentacao normativa para o requerimento SEFAZ.
+ * Migrado para StateRulesEngine — para customizar por UF, edite
+ * src/config/state-rules.config.ts (baseLegal + sefaz).
+ *
+ * Mantem template "ambito do Estado de X, ..." e injeta tipoPedido.
+ */
 function getFundamentacaoUF(uf: string, tipoPedido: string): string {
-  const fundamentacoes: Record<string, string> = {
-    SP: `No ambito do Estado de Sao Paulo, o RICMS/SP (Decreto 45.490/2000),
-Arts. 71 a 81, disciplina a apropriacao e utilizacao de creditos acumulados
-de ICMS, regulamentada pelo sistema e-CredAc.`,
-    RJ: `No ambito do Estado do Rio de Janeiro, o RICMS/RJ (Decreto 27.427/2000),
-Livro III, com redacao dada pelo Decreto 46.668/2019, disciplina o saldo
-credor de ICMS, complementado pela Resolucao SEFAZ 720/2014 (Anexo XX)
-e Resolucao SEFAZ 35/2019. A ${tipoPedido.toLowerCase()} de credito acumulado
-encontra amparo nos Arts. 2 a 18 do Livro III.`,
-    MG: `No ambito do Estado de Minas Gerais, o RICMS/MG (Decreto 43.080/2002),
-Anexo VIII, disciplina os procedimentos relativos a credito acumulado de
-ICMS, administrado pelo sistema DCA-ICMS no SIARE.`,
-    RS: `No ambito do Estado do Rio Grande do Sul, o RICMS/RS (Decreto 37.699/1997),
-Arts. 58 e 59, disciplina a transferencia e utilizacao de saldo credor
-de ICMS.`,
-    PR: `No ambito do Estado do Parana, o RICMS/PR (Decreto 7.871/2017),
-Arts. 47 a 61, disciplina o credito acumulado de ICMS, administrado pelo
-sistema SISCRED.`,
-    SC: `No ambito do Estado de Santa Catarina, o RICMS/SC (Decreto 2.870/2001),
-Arts. 40 a 52, disciplina a utilizacao e transferencia de creditos acumulados,
-com sistema de Reserva de Credito e TTD.`,
-    BA: `No ambito do Estado da Bahia, o RICMS/BA (Decreto 13.780/2012),
-Art. 317, disciplina os procedimentos para utilizacao de credito acumulado
-de ICMS.`,
-    MT: `No ambito do Estado de Mato Grosso, o RICMS/MT (Decreto 2.212/2014),
-Arts. 99 a 125, disciplina o credito acumulado de ICMS, administrado pelo
-sistema PAC-e/RUC-e.`,
-    ES: `No ambito do Estado do Espirito Santo, o RICMS/ES (Decreto 1.090-R/2002),
-Arts. 103 e seguintes, disciplina a transferencia e utilizacao de credito
-acumulado de ICMS. O credito acumulado de exportacao pode ser transferido
-a outros contribuintes do ES, utilizado para pagamento de debitos proprios
-ou pedido de ressarcimento. A legislacao permite transferencia para
-fornecedores locais de materia-prima, embalagem e outros insumos.
-Regulamentacao complementar: Portaria SEFAZ n. 015-R/2018 e instrucoes
-normativas vigentes. O protocolo pode ser feito via DT-e (Domicilio
-Tributario Eletronico) ou presencialmente na Agencia da Receita Estadual.`,
-  };
-  return fundamentacoes[uf] || fundamentacoes['SP'];
+  const base = engineFundamentacao(uf);
+  // engineFundamentacao retorna "<LC>. <RICMS>. <artigos>. ..."
+  // envelopamos no template juridico padrao + tipoPedido
+  return `No ambito do referido Estado, ${base} A ${tipoPedido.toLowerCase()} de credito acumulado encontra amparo nas normas acima.`;
 }

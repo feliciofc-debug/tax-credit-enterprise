@@ -455,7 +455,8 @@ WhatsApp: (21) 96752-0706
 
 function generateSefaz(p: ProcurationParams): string {
   const prazo = p.prazoAnos || 2;
-  const uf = p.uf || 'RJ';
+  // UF do cliente; engine resolve default em fallbacks downstream.
+  const uf = (p.uf || 'SP').toUpperCase();
   const poderes = p.poderes && p.poderes.length > 0 ? p.poderes : DEFAULT_PODERES;
   const dataStr = p.data || new Date().toLocaleDateString('pt-BR');
   const cidade = p.cidade || 'Rio de Janeiro';
