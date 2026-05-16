@@ -587,7 +587,7 @@ model Procuration {
   contractId       String?
   clientId         String
   partnerId        String?
-  type             String    // particular, ecac_guide, sefaz
+  type             String    // particular, ecac_guide, ecac_preset, sefaz
   lawyerScenario   String    // atom_lawyer, partner_lawyer, client_lawyer
   status           String    @default("generated")
   outorgadoAtom    Boolean   @default(true)
@@ -602,6 +602,38 @@ model Procuration {
   documentText     String?   @db.Text
   dataAssinatura   DateTime?
   dataValidade     DateTime?
+
+  // === Preset + verificacao SERPRO (Onda 1 CONSULTRI) ===
+  presetKey         String?   // consultri | atom | <outro escritorio>
+  procuradorCnpj    String?   // CNPJ do procurador PJ outorgado
+  procuradorNome    String?   // razao social do procurador
+  lastSerproCheckAt DateTime? // ultima vez que rodamos OBTERPROCURACAO41
+  serproStatus      String?   // active | pending_serpro | inactive | error | not_found | partial
+  serproDiff        Json?     // { granted: string[], missing: string[], extras: string[] }
+  serproRaw         Json?     // payload bruto da ultima checagem (debug/audit)
+
+  // === Onda 2 — Automacao ===
+  alert60SentAt     DateTime? // notificou 60 dias antes do vencimento
+  alert30SentAt     DateTime?
+  alert7SentAt      DateTime?
+  responsavelEmail  String?   // email do responsavel CONSULTRI/parceiro
+  responsavelPhone  String?   // WhatsApp E.164 do responsavel (ex: +5521... )
+
+  // === Modo Hibrido — Outorga Automatica via AUTENTICAPROCURADOR ===
+  grantMode             String?   // 'manual_invite' (default) | 'auto_serpro' | 'hybrid_attempted'
+  autoGrantStatus       String?   // 'not_attempted' | 'attempting' | 'success' | 'failed' | 'not_supported'
+  autoGrantAttemptedAt  DateTime?
+  autoGrantError        String?   @db.Text
+  autoGrantProtocol     String?   // protocolo SERPRO de retorno
+  revocationDetectedAt  DateTime? // quando o scheduler detectou revogacao no e-CAC
+
+  // === Onda 4D — Multi-procurador ===
+  procuradorEntityId String?
+  procuradorEntity   ProcuradorEntity? @relation(fields: [procuradorEntityId], references: [id])
+
+  audits           ProcurationAudit[]
+  invites          ProcurationInvite[]
+
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -609,6 +641,134 @@ model Procuration {
   @@index([contractId])
   @@index([partnerId])
   @@index([status])
+  @@index([presetKey])
+  @@index([dataValidade])
+  @@index([serproStatus])
+  @@index([procuradorEntityId])
+}
+
+// ========================================
+// Onda 4D — Multi-procurador
+// Permite que a CONSULTRI atenda via MULTIPLOS CNPJs procuradores
+// (Holding, Filial, Escritorios Parceiros) numa mesma carteira.
+// ========================================
+model ProcuradorEntity {
+  id           String   @id @default(cuid())
+  cnpj         String   @unique
+  razaoSocial  String
+  nomeFantasia String?
+  presetKey    String?  // qual preset esse procurador usa por padrao
+  ativo        Boolean  @default(true)
+  cor          String?  // cor hex para destacar no painel ex #7c3aed
+  observacao   String?  @db.Text
+
+  procurations Procuration[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([ativo])
+}
+
+// ========================================
+// Onda 2 — Audit log + Convites + Notificacoes + Coletas
+// ========================================
+
+// Trilha de auditoria de cada procuracao. Cada operacao relevante
+// (criacao, geracao guia, envio convite, verificacao SERPRO, alerta,
+// renovacao, revogacao, ativacao) deixa um registro com payload livre.
+model ProcurationAudit {
+  id             String       @id @default(cuid())
+  procurationId  String
+  procuration    Procuration  @relation(fields: [procurationId], references: [id], onDelete: Cascade)
+  event          String       // created | guide_generated | invite_sent | serpro_check | serpro_active | serpro_partial | alert_sent | renewed | revoked | note
+  message        String?      // texto humano-leitura
+  actorType      String?      // system | user | cron | client_self
+  actorId        String?      // userId quando aplicavel
+  payload        Json?        // dados estruturados do evento (diff, raw, etc.)
+  createdAt      DateTime     @default(now())
+
+  @@index([procurationId])
+  @@index([event])
+  @@index([createdAt])
+}
+
+// Convite por link magico para o cliente final outorgar a procuracao
+// sem precisar de login na plataforma. Token unico, expiravel.
+model ProcurationInvite {
+  id             String       @id @default(cuid())
+  procurationId  String
+  procuration    Procuration  @relation(fields: [procurationId], references: [id], onDelete: Cascade)
+  token          String       @unique
+  recipientEmail String?
+  recipientPhone String?
+  recipientName  String?
+  status         String       @default("pending") // pending | opened | acknowledged | completed | expired | revoked
+  openedAt       DateTime?
+  acknowledgedAt DateTime?    // cliente marcou "fiz tudo, podem verificar"
+  completedAt    DateTime?    // sistema detectou via SERPRO
+  expiresAt      DateTime
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([procurationId])
+  @@index([token])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// Centralizador de notificacoes outbound (email, whatsapp, in-app).
+// Permite reprocessar, auditar, retentar e exibir timeline.
+model Notification {
+  id           String   @id @default(cuid())
+  channel      String   // email | whatsapp | inapp | webhook
+  recipient    String   // email, telefone E.164 ou userId
+  subject      String?
+  body         String   @db.Text
+  template     String?  // ex: procuration_invite, procuration_expiry_60d
+  refType      String?  // procuration | invite | etc.
+  refId        String?
+  status       String   @default("queued") // queued | sent | failed | skipped
+  attempts     Int      @default(0)
+  lastError    String?  @db.Text
+  sentAt       DateTime?
+  readAt       DateTime?  // marcado quando usuario abre o hub e visualiza
+  severity     String?    // info | warning | critical (para destacar no hub)
+  link         String?    // deep-link da plataforma para abrir contexto
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([channel])
+  @@index([status])
+  @@index([refType, refId])
+  @@index([createdAt])
+  @@index([readAt])
+}
+
+// Snapshot diario do estado tributario (Caixa Postal / Situacao Fiscal /
+// DCTFWeb) para construir o dashboard de Conformidade da carteira.
+model ConformidadeSnapshot {
+  id                  String   @id @default(cuid())
+  clientId            String   // mesmo padrao da Procuration.clientId
+  cnpj                String
+  procurationId       String?
+  caixaPostalUnread   Int      @default(0)
+  caixaPostalNewSince DateTime?
+  caixaPostalSummary  Json?
+  situacaoStatus      String?  // limpo | pendencias | erro | nao_consultado
+  situacaoPendencias  Int      @default(0)
+  situacaoResumo      String?  @db.Text
+  dctfwebAtrasos      Int      @default(0)
+  dctfwebUltimoPa     String?
+  score               Int?     // 0-100 score de conformidade (calculado)
+  raw                 Json?
+  collectedAt         DateTime @default(now())
+
+  @@index([clientId])
+  @@index([cnpj])
+  @@index([collectedAt])
+  @@index([score])
 }
 
 // ========================================
