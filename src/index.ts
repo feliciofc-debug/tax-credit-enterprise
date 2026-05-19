@@ -251,6 +251,15 @@ const server = app.listen(PORT, () => {
   logger.info(`HPC Gateway: ${process.env.HPC_GATEWAY_URL ? 'ATIVO (' + process.env.HPC_GATEWAY_URL + ')' : 'DESATIVADO'}`);
   logger.info(`Upload: limite 2GB/arquivo, disk storage, cleanup a cada 30min`);
   startTempCleanupJob();
+
+  // Garante tabelas runtime (SerproConnection, SerproLog, SecurityEvent,
+  // DeceptionEvent, CanaryToken). Idempotente — fallback caso prisma db push
+  // tenha falhado no startup (timeout, sem TTY, etc.).
+  import('./utils/ensure-runtime-tables').then(({ ensureRuntimeTables }) => {
+    ensureRuntimeTables().catch(err => {
+      logger.warn(`[DB] ensureRuntimeTables falhou: ${err?.message || err}`);
+    });
+  }).catch(() => {});
 });
 server.timeout = 600000;
 server.keepAliveTimeout = 620000;
