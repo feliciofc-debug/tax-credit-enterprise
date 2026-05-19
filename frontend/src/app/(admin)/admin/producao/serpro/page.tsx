@@ -210,13 +210,32 @@ export default function SerproPage() {
       {/* NEW CONNECTION */}
       {view === 'new' && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Nova Conexao SERPRO</h2>
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <h2 className="text-lg font-bold text-gray-900">Nova Conexao SERPRO</h2>
+            <button
+              type="button"
+              onClick={() => setForm({
+                cnpj: '22.003.550/0001-05',
+                companyName: 'ATOM BRASIL DIGITAL LTDA',
+                consumerKey: 'trial-key-demo',
+                consumerSecret: 'trial-secret-demo',
+                certBase64: '',
+                certPassword: '',
+                environment: 'trial',
+              })}
+              className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg border border-emerald-200 transition-colors flex items-center gap-1.5"
+              title="Preenche todos os campos com dados de teste TRIAL"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Preencher Dados de Teste
+            </button>
+          </div>
           <div className="bg-blue-50 rounded-xl p-4 border border-blue-200 mb-4 text-xs text-blue-800">
             <p className="font-bold mb-1">Como obter credenciais:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li>Contrate o produto Integra Contador em <a href="https://cliente.serpro.gov.br" target="_blank" className="underline">cliente.serpro.gov.br</a></li>
               <li>Obtenha Consumer Key e Consumer Secret na Area do Cliente</li>
-              <li>Para ambiente TRIAL (gratuito), use credenciais de teste</li>
+              <li>Para ambiente TRIAL (gratuito), use credenciais de teste — ou clique em <span className="font-bold">"Preencher Dados de Teste"</span> acima</li>
             </ol>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
