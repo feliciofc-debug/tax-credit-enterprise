@@ -1,7 +1,26 @@
 import { Request, Response, NextFunction } from 'express';
 import http from 'http';
+import jwt from 'jsonwebtoken';
 import { logger } from '../utils/logger';
 import { prisma } from '../utils/prisma';
+
+// Bypass do Shield para usuarios autenticados (JWT valido).
+// Se a requisicao traz um Bearer token assinado pelo nosso JWT_SECRET,
+// significa que ja passou pelo /api/auth/login - usuario humano legitimo.
+// Sem esse bypass, qualquer admin pode ser bloqueado por rajada de
+// requests do dashboard, deslogamento por troca de IP, etc.
+function hasValidJwt(req: Request): boolean {
+  const auth = req.headers['authorization'];
+  if (typeof auth !== 'string' || !auth.startsWith('Bearer ')) return false;
+  const token = auth.slice(7).trim();
+  if (!token || token === 'null' || token === 'undefined') return false;
+  try {
+    jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -586,6 +605,10 @@ const WHITELIST_PATHS = [
   '/api/auth/partner-register',
   '/api/partner/login',
   '/api/partner/register',
+  // Admin so consegue destravar o Shield se essas rotas ficarem livres
+  '/api/security/whitelist',
+  '/api/security/unblock',
+  '/api/security/dashboard',
 ];
 
 // Admin IPs that should never be blocked
@@ -604,6 +627,13 @@ export function getWhitelistIps(): string[] {
 export function antiScrapingMiddleware(req: Request, res: Response, next: NextFunction): void {
   // Whitelist paths — never block auth and public routes
   if (WHITELIST_PATHS.some(p => req.path.startsWith(p))) {
+    next();
+    return;
+  }
+
+  // Whitelist authenticated users — Bearer JWT valido = humano legitimo
+  // (so chega aqui quem ja passou pelo /api/auth/login)
+  if (hasValidJwt(req)) {
     next();
     return;
   }
