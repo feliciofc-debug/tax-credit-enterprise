@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import useSWR from 'swr';
 import { authedFetcher, SWR_OPTIONS_FAST } from '@/lib/fetcher';
 import { CHECKLISTS, UF_OPTIONS, TIPO_LABELS, TIPO_COLORS, type ChecklistEstado, type ChecklistEtapa } from '@/data/checklists';
@@ -1145,6 +1145,83 @@ function PerdcompGuideTab({
   const [loadingGuide, setLoadingGuide] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // ───────────────────────────────────────────────────────────────────
+  // Persistencia local de protocolos PER/DCOMP transmitidos
+  // (audit trail offline; futuramente migrar para POST /api/formalization/protocols)
+  // ───────────────────────────────────────────────────────────────────
+  type SubmittedProtocol = {
+    protocolo: string;
+    transmitidoEm: string;
+    tributo?: string;
+    codigoReceita?: string;
+    valor?: number;
+    operador?: string;
+    obs?: string;
+  };
+  const [protocols, setProtocols] = useState<SubmittedProtocol[]>([]);
+  const [protocolDraft, setProtocolDraft] = useState<{ numero: string; tributo: string; codigo: string; valor: string; obs: string }>({
+    numero: '', tributo: '', codigo: '', valor: '', obs: '',
+  });
+
+  const protocolsKey = selectedAnalysis ? `perdcomp-protocols-${selectedAnalysis.id}` : null;
+
+  useEffect(() => {
+    if (!protocolsKey) { setProtocols([]); return; }
+    try {
+      const raw = localStorage.getItem(protocolsKey);
+      setProtocols(raw ? JSON.parse(raw) : []);
+    } catch { setProtocols([]); }
+  }, [protocolsKey]);
+
+  const persistProtocols = (list: SubmittedProtocol[]) => {
+    if (!protocolsKey) return;
+    try { localStorage.setItem(protocolsKey, JSON.stringify(list)); } catch { /* quota */ }
+    setProtocols(list);
+  };
+
+  const addProtocol = () => {
+    const numero = (protocolDraft.numero || '').trim();
+    if (!numero) { alert('Informe o numero do protocolo retornado pelo e-CAC'); return; }
+    const next: SubmittedProtocol = {
+      protocolo: numero,
+      transmitidoEm: new Date().toISOString(),
+      tributo: protocolDraft.tributo || undefined,
+      codigoReceita: protocolDraft.codigo || undefined,
+      valor: protocolDraft.valor ? Number(protocolDraft.valor.replace(/[^\d.,]/g, '').replace('.', '').replace(',', '.')) : undefined,
+      obs: protocolDraft.obs || undefined,
+    };
+    persistProtocols([next, ...protocols]);
+    setProtocolDraft({ numero: '', tributo: '', codigo: '', valor: '', obs: '' });
+  };
+
+  const removeProtocol = (idx: number) => {
+    if (!confirm('Remover este protocolo do historico local?')) return;
+    persistProtocols(protocols.filter((_, i) => i !== idx));
+  };
+
+  const copyToClipboard = async (key: string, value: string | number | null | undefined) => {
+    if (value === null || value === undefined) return;
+    const text = typeof value === 'number' ? String(value) : String(value);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(prev => (prev === key ? null : prev)), 1500);
+    } catch { /* clipboard pode falhar em http nao-seguro */ }
+  };
+
+  // Abrir e-CAC em janela paralela ao lado direito da tela
+  const openEcac = () => {
+    const w = Math.min(900, Math.floor(window.screen.availWidth * 0.55));
+    const h = window.screen.availHeight - 60;
+    const left = window.screen.availWidth - w;
+    const features = `width=${w},height=${h},left=${left},top=0,resizable=yes,scrollbars=yes,status=yes`;
+    const win = window.open('https://cav.receita.fazenda.gov.br/autenticacao/Login', 'taxcredit-ecac', features);
+    if (!win) {
+      alert('Habilite popups para esta pagina ou abra manualmente: https://cav.receita.fazenda.gov.br');
+    }
+  };
 
   const loadGuideData = async (analysisId: string) => {
     setLoadingGuide(true);
@@ -1255,18 +1332,34 @@ function PerdcompGuideTab({
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700">
                       {guideData.totalOportunidades || 0} oportunidades federais
                     </span>
+                    {protocols.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-700">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        {protocols.length} {protocols.length === 1 ? 'protocolo registrado' : 'protocolos registrados'}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-indigo-600">{completedCount}/{GUIDE_STEPS.length}</div>
-                <p className="text-gray-500 text-xs">etapas concluidas</p>
-                <div className="mt-2 w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-500"
-                    style={{ width: `${Math.round((completedCount / GUIDE_STEPS.length) * 100)}%` }}
-                  />
+              <div className="flex flex-col items-end gap-3">
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-indigo-600">{completedCount}/{GUIDE_STEPS.length}</div>
+                  <p className="text-gray-500 text-xs">etapas concluidas</p>
+                  <div className="mt-2 w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-500"
+                      style={{ width: `${Math.round((completedCount / GUIDE_STEPS.length) * 100)}%` }}
+                    />
+                  </div>
                 </div>
+                <button
+                  onClick={openEcac}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold shadow-md hover:shadow-lg transition-all"
+                  title="Abre o e-CAC em janela paralela. Login com seu certificado digital fica do lado da plataforma."
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  Abrir e-CAC com Certificado
+                </button>
               </div>
             </div>
           </div>
@@ -1390,38 +1483,53 @@ function PerdcompGuideTab({
                   {activeStep === 2 && (
                     <div className="space-y-4">
                       <h3 className="text-lg font-bold text-gray-900">Tela 3 — Dados do Credito</h3>
-                      <p className="text-sm text-gray-600">Preencha os campos conforme os dados da analise:</p>
+                      <p className="text-sm text-gray-600">Cada campo abaixo tem um botao <strong>Copiar</strong> — cole direto no e-CAC:</p>
                       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                         <table className="w-full text-sm">
                           <tbody className="divide-y divide-gray-100">
                             <tr className="bg-gray-50">
                               <td className="px-4 py-3 font-medium text-gray-600 w-1/3">Tipo de Credito</td>
-                              <td className="px-4 py-3 font-mono text-indigo-700 font-semibold">
-                                {guideData?.guideSteps?.[0]?.campos?.tipoCredito || 'Pagamento Indevido'}
+                              <td className="px-4 py-3 font-mono text-indigo-700 font-semibold flex items-center justify-between gap-2">
+                                <span>{guideData?.guideSteps?.[0]?.campos?.tipoCredito || 'Pagamento Indevido'}</span>
+                                <button onClick={() => copyToClipboard('tipoCredito', guideData?.guideSteps?.[0]?.campos?.tipoCredito || 'Pagamento Indevido')} className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${copiedKey === 'tipoCredito' ? 'bg-emerald-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700'}`}>{copiedKey === 'tipoCredito' ? 'Copiado!' : 'Copiar'}</button>
                               </td>
                             </tr>
                             <tr>
                               <td className="px-4 py-3 font-medium text-gray-600">Qualificacao</td>
-                              <td className="px-4 py-3 font-mono">Outra Qualificacao</td>
+                              <td className="px-4 py-3 font-mono flex items-center justify-between gap-2">
+                                <span>Outra Qualificacao</span>
+                                <button onClick={() => copyToClipboard('qualif', 'Outra Qualificacao')} className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${copiedKey === 'qualif' ? 'bg-emerald-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700'}`}>{copiedKey === 'qualif' ? 'Copiado!' : 'Copiar'}</button>
+                              </td>
                             </tr>
                             <tr className="bg-gray-50">
                               <td className="px-4 py-3 font-medium text-gray-600">Periodo Apuracao</td>
-                              <td className="px-4 py-3 font-mono text-indigo-700 font-semibold">
-                                {guideData?.periodo || 'Conforme SPED'}
+                              <td className="px-4 py-3 font-mono text-indigo-700 font-semibold flex items-center justify-between gap-2">
+                                <span>{guideData?.periodo || 'Conforme SPED'}</span>
+                                <button onClick={() => copyToClipboard('periodo', guideData?.periodo || '')} className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${copiedKey === 'periodo' ? 'bg-emerald-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700'}`}>{copiedKey === 'periodo' ? 'Copiado!' : 'Copiar'}</button>
                               </td>
                             </tr>
                             <tr>
                               <td className="px-4 py-3 font-medium text-gray-600">Valor do Credito (R$)</td>
-                              <td className="px-4 py-3 font-mono text-emerald-700 font-bold text-lg">
-                                {formatCurrency(guideData?.totalCreditos || 0)}
+                              <td className="px-4 py-3 font-mono text-emerald-700 font-bold text-lg flex items-center justify-between gap-2">
+                                <span>{formatCurrency(guideData?.totalCreditos || 0)}</span>
+                                <button onClick={() => copyToClipboard('valor', String((guideData?.totalCreditos || 0).toFixed(2)).replace('.', ','))} className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${copiedKey === 'valor' ? 'bg-emerald-500 text-white' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700'}`} title="Copia o valor sem R$ no formato BR (ex: 117900,00) para colar no e-CAC">{copiedKey === 'valor' ? 'Copiado!' : 'Copiar valor'}</button>
                               </td>
                             </tr>
+                            {guideData?.cnpj && (
+                              <tr className="bg-gray-50">
+                                <td className="px-4 py-3 font-medium text-gray-600">CNPJ Contribuinte</td>
+                                <td className="px-4 py-3 font-mono flex items-center justify-between gap-2">
+                                  <span>{guideData.cnpj}</span>
+                                  <button onClick={() => copyToClipboard('cnpj', guideData.cnpj.replace(/\D/g, ''))} className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${copiedKey === 'cnpj' ? 'bg-emerald-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700'}`} title="Copia o CNPJ sem mascara (apenas digitos)">{copiedKey === 'cnpj' ? 'Copiado!' : 'Copiar (so digitos)'}</button>
+                                </td>
+                              </tr>
+                            )}
                           </tbody>
                         </table>
                       </div>
                       {guideData?.guideSteps && guideData.guideSteps.length > 0 && (
                         <div>
-                          <p className="text-sm font-semibold text-gray-800 mb-2">Detalhamento por Tributo:</p>
+                          <p className="text-sm font-semibold text-gray-800 mb-2">Detalhamento por Tributo (1 DCOMP por linha):</p>
                           <div className="grid gap-2">
                             {guideData.guideSteps.map((s: any, i: number) => (
                               <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
@@ -1429,9 +1537,18 @@ function PerdcompGuideTab({
                                   <span className="text-sm font-medium text-gray-900">{s.tributo}</span>
                                   <span className="text-xs text-gray-400 ml-2">{s.tipoCredito}</span>
                                 </div>
-                                <div className="text-right">
-                                  <span className="text-sm font-bold text-emerald-600">{formatCurrency(s.valorCredito)}</span>
-                                  <span className="text-xs text-gray-400 ml-2">Cod. {s.codigoReceita}</span>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    <span className="text-sm font-bold text-emerald-600">{formatCurrency(s.valorCredito)}</span>
+                                    <span className="text-xs text-gray-400 ml-2">Cod. {s.codigoReceita}</span>
+                                  </div>
+                                  <button
+                                    onClick={() => copyToClipboard(`tributo-${i}`, `${s.codigoReceita}\t${String((s.valorCredito || 0).toFixed(2)).replace('.', ',')}`)}
+                                    className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${copiedKey === `tributo-${i}` ? 'bg-emerald-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700'}`}
+                                    title="Copia codigo + valor separados por tab (cole em duas celulas adjacentes)"
+                                  >
+                                    {copiedKey === `tributo-${i}` ? 'Copiado!' : 'Copiar linha'}
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -1480,24 +1597,29 @@ function PerdcompGuideTab({
                   {activeStep === 4 && (
                     <div className="space-y-4">
                       <h3 className="text-lg font-bold text-gray-900">Tela 5 — Debito a Compensar</h3>
-                      <p className="text-sm text-gray-600">Informe o debito que sera compensado com o credito:</p>
+                      <p className="text-sm text-gray-600">Informe o debito que sera compensado com o credito (cada campo tem botao Copiar):</p>
                       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                         <table className="w-full text-sm">
                           <tbody className="divide-y divide-gray-100">
                             <tr className="bg-gray-50">
                               <td className="px-4 py-3 font-medium text-gray-600 w-1/3">Codigo Receita</td>
-                              <td className="px-4 py-3 font-mono text-indigo-700 font-bold">
-                                {guideData?.guideSteps?.[0]?.codigoReceita || '—'}
+                              <td className="px-4 py-3 font-mono text-indigo-700 font-bold flex items-center justify-between gap-2">
+                                <span>{guideData?.guideSteps?.[0]?.codigoReceita || '—'}</span>
+                                <button onClick={() => copyToClipboard('codreceita', guideData?.guideSteps?.[0]?.codigoReceita || '')} className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${copiedKey === 'codreceita' ? 'bg-emerald-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700'}`}>{copiedKey === 'codreceita' ? 'Copiado!' : 'Copiar'}</button>
                               </td>
                             </tr>
                             <tr>
                               <td className="px-4 py-3 font-medium text-gray-600">Periodo Debito</td>
-                              <td className="px-4 py-3 font-mono">{guideData?.periodo || 'Mes corrente'}</td>
+                              <td className="px-4 py-3 font-mono flex items-center justify-between gap-2">
+                                <span>{guideData?.periodo || 'Mes corrente'}</span>
+                                <button onClick={() => copyToClipboard('perdebito', guideData?.periodo || '')} className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${copiedKey === 'perdebito' ? 'bg-emerald-500 text-white' : 'bg-indigo-100 hover:bg-indigo-200 text-indigo-700'}`}>{copiedKey === 'perdebito' ? 'Copiado!' : 'Copiar'}</button>
+                              </td>
                             </tr>
                             <tr className="bg-gray-50">
                               <td className="px-4 py-3 font-medium text-gray-600">Valor a Compensar</td>
-                              <td className="px-4 py-3 font-mono text-emerald-700 font-bold text-lg">
-                                {formatCurrency(guideData?.totalCreditos || 0)}
+                              <td className="px-4 py-3 font-mono text-emerald-700 font-bold text-lg flex items-center justify-between gap-2">
+                                <span>{formatCurrency(guideData?.totalCreditos || 0)}</span>
+                                <button onClick={() => copyToClipboard('valdebito', String((guideData?.totalCreditos || 0).toFixed(2)).replace('.', ','))} className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${copiedKey === 'valdebito' ? 'bg-emerald-500 text-white' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-700'}`}>{copiedKey === 'valdebito' ? 'Copiado!' : 'Copiar valor'}</button>
                               </td>
                             </tr>
                           </tbody>
@@ -1595,6 +1717,102 @@ function PerdcompGuideTab({
                       </div>
                       <div className="bg-red-50 rounded-xl p-4 border border-red-200 text-xs text-red-800">
                         <strong>ATENCAO:</strong> Apos a transmissao NAO e possivel alterar. Se errou, transmita uma PER/DCOMP RETIFICADORA.
+                      </div>
+
+                      {/* Registrar protocolo retornado pelo e-CAC */}
+                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200 p-5 mt-4">
+                        <div className="flex items-start gap-3 mb-4">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-bold text-amber-900">Registrar protocolo retornado pelo e-CAC</h4>
+                            <p className="text-xs text-amber-800 mt-0.5">Apos transmitir no e-CAC, cole aqui o numero do protocolo. Fica salvo localmente como prova de transmissao para auditoria.</p>
+                          </div>
+                        </div>
+                        <div className="grid md:grid-cols-12 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Numero do PER/DCOMP (ex: 12345678901234567890)"
+                            value={protocolDraft.numero}
+                            onChange={e => setProtocolDraft(d => ({ ...d, numero: e.target.value }))}
+                            className="md:col-span-5 px-3 py-2 text-sm border border-amber-300 rounded-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-mono"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Tributo (ex: PIS)"
+                            value={protocolDraft.tributo}
+                            onChange={e => setProtocolDraft(d => ({ ...d, tributo: e.target.value }))}
+                            className="md:col-span-2 px-3 py-2 text-sm border border-amber-300 rounded-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Cod. (ex: 8109)"
+                            value={protocolDraft.codigo}
+                            onChange={e => setProtocolDraft(d => ({ ...d, codigo: e.target.value }))}
+                            className="md:col-span-2 px-3 py-2 text-sm border border-amber-300 rounded-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-mono"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Valor"
+                            value={protocolDraft.valor}
+                            onChange={e => setProtocolDraft(d => ({ ...d, valor: e.target.value }))}
+                            className="md:col-span-2 px-3 py-2 text-sm border border-amber-300 rounded-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-mono"
+                          />
+                          <button
+                            onClick={addProtocol}
+                            className="md:col-span-1 px-3 py-2 text-sm font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+                          >
+                            Salvar
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Observacao (opcional) — ex: Transmitido por Felicio em 19/05"
+                          value={protocolDraft.obs}
+                          onChange={e => setProtocolDraft(d => ({ ...d, obs: e.target.value }))}
+                          className="mt-2 w-full px-3 py-2 text-xs border border-amber-200 rounded-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                        />
+
+                        {/* Historico */}
+                        {protocols.length > 0 && (
+                          <div className="mt-5 pt-4 border-t border-amber-200">
+                            <p className="text-xs font-bold text-amber-900 mb-2">Historico de transmissoes ({protocols.length})</p>
+                            <div className="space-y-2">
+                              {protocols.map((p, i) => (
+                                <div key={i} className="bg-white rounded-lg border border-amber-100 p-3 flex items-start justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <code className="text-xs font-mono font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 break-all">{p.protocolo}</code>
+                                      {p.tributo && <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded">{p.tributo}</span>}
+                                      {p.codigoReceita && <span className="text-[10px] font-mono text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">Cod. {p.codigoReceita}</span>}
+                                      {p.valor !== undefined && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">{formatCurrency(p.valor)}</span>}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-500">
+                                      <span>Transmitido em {new Date(p.transmitidoEm).toLocaleString('pt-BR')}</span>
+                                      {p.obs && <span className="italic">— {p.obs}</span>}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      onClick={() => copyToClipboard(`proto-${i}`, p.protocolo)}
+                                      className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${copiedKey === `proto-${i}` ? 'bg-emerald-500 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                                    >
+                                      {copiedKey === `proto-${i}` ? 'Copiado!' : 'Copiar'}
+                                    </button>
+                                    <button
+                                      onClick={() => removeProtocol(i)}
+                                      className="px-2 py-1 rounded text-[10px] font-bold bg-red-50 hover:bg-red-100 text-red-600"
+                                      title="Remover do historico local"
+                                    >
+                                      Remover
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
